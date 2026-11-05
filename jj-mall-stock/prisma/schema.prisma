@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  PURCHASE_IN     // รับสินค้าจากการซื้อ
+  ADJUST_ADD      // ปรับปรุงเพิ่ม
+  SALE_DEDUCT     // ตัดวัตถุดิบจากการขาย
+  TRANSFER_OUT    // จ่าย/โอนอื่น
+  DAMAGE_OUT      // จ่ายทำลาย
+  ADJUST_SUB      // ปรับปรุงลด
+  PHYSICAL_COUNT  // ตรวจนับสต็อก
+}
+
+model User {
+  id                  Int               @id @default(autoincrement())
+  username            String            @unique
+  password            String
+  name                String
+  role                Role              @default(STAFF)
+  avatar              String?
+  status              String            @default("ACTIVE")
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  sales               Sale[]
+  stockTransactions   StockTransaction[]
+  stockCounts         StockCount[]
+  requestedAdjustments StockAdjustment[] @relation("RequestedAdjustments")
+  approvedAdjustments  StockAdjustment[] @relation("ApprovedAdjustments")
+
+  @@map("users")
+}
+
+model Product {
+  id           Int         @id @default(autoincrement())
+  code         String      @unique
+  name         String
+  category     String?
+  unit         String      @default("แก้ว")
+  price        Decimal     @db.Decimal(10, 2)
+  cost         Decimal?    @db.Decimal(10, 2)
+  currentStock Decimal     @default(0) @db.Decimal(10, 2)
+  minStock     Decimal     @default(10) @db.Decimal(10, 2)
+  image        String?
+  status       String      @default("ACTIVE")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  recipe       Recipe?
+  saleItems    SaleItem[]
+
+  @@map("products")
+}
+
+model Ingredient {
+  id                   Int                   @id @default(autoincrement())
+  code                 String                @unique
+  name                 String
+  category             String?
+  unit                 String                // กรัม, ใบ, ชิ้น, หลอด, ลิตร, ฯลฯ
+  currentStock         Decimal               @default(0) @db.Decimal(12, 3)
+  minStock             Decimal               @default(10) @db.Decimal(12, 3)
+  costPerUnit          Decimal               @default(0) @db.Decimal(10, 2)
+  status               String                @default("ACTIVE")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  recipeItems          RecipeItem[]
+  stockTransactions    StockTransaction[]
+  stockCountItems      StockCountItem[]
+  stockAdjustmentItems StockAdjustmentItem[]
+
+  @@map("ingredients")
+}
+
+model Recipe {
+  id          Int          @id @default(autoincrement())
+  productId   Int          @unique
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  items       RecipeItem[]
+
+  @@map("recipes")
+}
+
+model RecipeItem {
+  id           Int        @id @default(autoincrement())
+  recipeId     Int
+  recipe       Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredientId Int
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  quantity     Decimal    @db.Decimal(12, 3) // ปริมาณที่ใช้ต่อสินค้า 1 หน่วย
+  unit         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("recipe_items")
+}
+
+model Sale {
+  id            Int        @id @default(autoincrement())
+  saleNumber    String     @unique
+  totalAmount   Decimal    @db.Decimal(10, 2)
+  totalItems    Int
+  paymentMethod String     @default("CASH")
+  note          String?
+  createdById   Int
+  createdBy     User       @relation(fields: [createdById], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  items         SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(10, 2)
+  subtotal  Decimal  @db.Decimal(10, 2)
+
+  @@map("sale_items")
+}
+
+model StockTransaction {
+  id                Int             @id @default(autoincrement())
+  transactionNumber String          @unique
+  ingredientId      Int
+  ingredient        Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  type              TransactionType
+  quantityIn        Decimal         @default(0) @db.Decimal(12, 3)
+  quantityOut       Decimal         @default(0) @db.Decimal(12, 3)
+  balanceAfter      Decimal         @db.Decimal(12, 3)
+  refType           String?         // SALE, PURCHASE, COUNT, ADJUSTMENT, OTHER
+  refId             String?
+  note              String?
+  createdById       Int
+  createdBy         User            @relation(fields: [createdById], references: [id])
+  createdAt         DateTime        @default(now())
+
+  @@map("stock_transactions")
+}
+
+model StockCount {
+  id          Int              @id @default(autoincrement())
+  countNumber String           @unique
+  countDate   DateTime         @default(now())
+  status      String           @default("COMPLETED")
+  note        String?
+  createdById Int
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  items       StockCountItem[]
+
+  @@map("stock_counts")
+}
+
+model StockCountItem {
+  id             Int        @id @default(autoincrement())
+  stockCountId   Int
+  stockCount     StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  ingredientId   Int
+  ingredient     Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  systemQuantity Decimal    @db.Decimal(12, 3)
+  actualQuantity Decimal    @db.Decimal(12, 3)
+  diffQuantity   Decimal    @db.Decimal(12, 3)
+  status         String     // MATCH, SHORTAGE, SURPLUS
+
+  @@map("stock_count_items")
+}
+
+model StockAdjustment {
+  id               Int                   @id @default(autoincrement())
+  adjustmentNumber String                @unique
+  reason           String                @db.Text
+  status           AdjustmentStatus      @default(PENDING)
+  requestedById    Int
+  requestedBy      User                  @relation("RequestedAdjustments", fields: [requestedById], references: [id])
+  approvedById     Int?
+  approvedBy       User?                 @relation("ApprovedAdjustments", fields: [approvedById], references: [id])
+  approvedAt       DateTime?
+  rejectReason     String?               @db.Text
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  items            StockAdjustmentItem[]
+
+  @@map("stock_adjustments")
+}
+
+model StockAdjustmentItem {
+  id             Int             @id @default(autoincrement())
+  adjustmentId   Int
+  adjustment     StockAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+  ingredientId   Int
+  ingredient     Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  systemQuantity Decimal         @db.Decimal(12, 3)
+  actualQuantity Decimal         @db.Decimal(12, 3)
+  diffQuantity   Decimal         @db.Decimal(12, 3)
+
+  @@map("stock_adjustment_items")
+}
