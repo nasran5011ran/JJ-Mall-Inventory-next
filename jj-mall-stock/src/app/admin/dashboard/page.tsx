@@ -24,6 +24,7 @@ import {
   Clock,
   Sparkles,
   Wheat,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -108,70 +109,102 @@ export default function DashboardPage() {
       {/* 2. Key Metrics Grid (8 KPI Cards) */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Today Sales */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all">
+        <Link
+          href="/admin/reports/sales"
+          className="group bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all block cursor-pointer"
+          title="คลิกเพื่อดูรายงานวิเคราะห์ยอดขายประจำวัน"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">ยอดขายวันนี้</span>
-            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-700 uppercase tracking-wider transition-colors">
+              ยอดขายวันนี้
+            </span>
+            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all flex items-center justify-center">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-800">
+            <div className="text-2xl sm:text-3xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors">
               ฿{Number(kpis.todaySalesAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
             </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
-              <span>สรุปยอดขายทั้งหมดในวันนี้</span>
+            <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+                <span>สรุปยอดขายทั้งหมดในวันนี้</span>
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Card 2: Today Cups Sold */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all">
+        <Link
+          href="/admin/reports/sales"
+          className="group bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-amber-300 transition-all block cursor-pointer"
+          title="คลิกเพื่อดูสรุปจำนวนแก้วและยอดขาย"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">จำนวนแก้วที่ขายวันนี้</span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-400 group-hover:text-amber-700 uppercase tracking-wider transition-colors">
+              จำนวนแก้วที่ขายวันนี้
+            </span>
+            <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all flex items-center justify-center">
               <Coffee className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-800">
-              {Number(kpis.todayCupsSold || 0).toLocaleString()} <span className="text-sm font-semibold text-slate-500">แก้ว</span>
+            <div className="text-2xl sm:text-3xl font-black text-slate-800 group-hover:text-amber-700 transition-colors">
+              {Number(kpis.todayCupsSold || 0).toLocaleString()}{' '}
+              <span className="text-sm font-semibold text-slate-500">แก้ว</span>
             </div>
-            <div className="text-xs text-slate-500 mt-1">
-              รวมทุกเมนูเครื่องดื่ม
+            <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+              <span>รวมทุกเมนูเครื่องดื่ม</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all" />
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Card 3: Total Products & Ingredients */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md transition-all">
+        <Link
+          href="/admin/products"
+          className="group bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-blue-300 transition-all block cursor-pointer"
+          title="คลิกเพื่อจัดการสินค้าและวัตถุดิบ"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">สินค้า & วัตถุดิบ</span>
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-400 group-hover:text-blue-700 uppercase tracking-wider transition-colors">
+              สินค้า & วัตถุดิบ
+            </span>
+            <div className="w-9 h-9 rounded-2xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center">
               <Package className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl sm:text-3xl font-black text-slate-800">
+            <div className="text-2xl sm:text-3xl font-black text-slate-800 group-hover:text-blue-700 transition-colors">
               {kpis.totalProducts} <span className="text-sm font-semibold text-slate-500">สินค้า</span>
             </div>
-            <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-blue-600" />
-              <span>{kpis.totalIngredients} วัตถุดิบในระบบ</span>
+            <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+              <span className="flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5 text-blue-600" />
+                <span>{kpis.totalIngredients} วัตถุดิบในระบบ</span>
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Card 4: Low Stock Alert */}
-        <div className={`p-5 rounded-3xl border shadow-2xs transition-all ${
-          kpis.lowStockIngredients > 0 || kpis.outOfStockIngredients > 0
-            ? 'bg-amber-50/60 border-amber-200'
-            : 'bg-white border-slate-200/80'
-        }`}>
+        <Link
+          href="/admin/reports/stock"
+          className={`group p-5 rounded-3xl border shadow-2xs hover:shadow-md transition-all block cursor-pointer ${
+            kpis.lowStockIngredients > 0 || kpis.outOfStockIngredients > 0
+              ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
+              : 'bg-white border-slate-200/80 hover:border-emerald-300'
+          }`}
+          title="คลิกเพื่อดูรายงานสต็อกและสั่งซื้อเพิ่ม"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">แจ้งเตือนสต็อก</span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center">
+            <span className="text-xs font-bold text-slate-400 group-hover:text-amber-800 uppercase tracking-wider transition-colors">
+              แจ้งเตือนสต็อก
+            </span>
+            <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white transition-all flex items-center justify-center">
               <AlertTriangle className="w-5 h-5" />
             </div>
           </div>
@@ -180,11 +213,15 @@ export default function DashboardPage() {
               {kpis.lowStockIngredients + kpis.outOfStockIngredients}{' '}
               <span className="text-sm font-semibold text-slate-500">รายการ</span>
             </div>
-            <div className="text-xs text-amber-800 mt-1 flex items-center gap-1 font-medium">
-              <span>ใกล้หมด {kpis.lowStockIngredients}</span> • <span className="text-red-600">หมดแล้ว {kpis.outOfStockIngredients}</span>
+            <div className="text-xs text-amber-800 mt-1 flex items-center justify-between font-medium">
+              <span>
+                <span>ใกล้หมด {kpis.lowStockIngredients}</span> •{' '}
+                <span className="text-red-600">หมดแล้ว {kpis.outOfStockIngredients}</span>
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-amber-600 group-hover:translate-x-0.5 transition-all" />
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* 3. Charts & Analytics Section */}
@@ -203,8 +240,8 @@ export default function DashboardPage() {
                 </p>
               </div>
               <Link
-                href="/reports/sales"
-                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline"
+                href="/admin/reports/sales"
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
               >
                 <span>ดูรายงานเต็ม</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -323,8 +360,8 @@ export default function DashboardPage() {
 
           <div className="pt-4 border-t border-slate-100 mt-4">
             <Link
-              href="/products"
-              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center justify-center gap-1 hover:underline"
+              href="/admin/products"
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center justify-center gap-1 hover:underline cursor-pointer"
             >
               <span>จัดการสินค้าทั้งหมด ({kpis.totalProducts} รายการ)</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -348,8 +385,8 @@ export default function DashboardPage() {
               </p>
             </div>
             <Link
-              href="/reports/ingredients"
-              className="text-xs font-semibold text-emerald-600 hover:underline"
+              href="/admin/reports/ingredients"
+              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
             >
               ดูทั้งหมด
             </Link>
@@ -403,8 +440,8 @@ export default function DashboardPage() {
               </p>
             </div>
             <Link
-              href="/ingredients"
-              className="text-xs font-semibold text-emerald-600 hover:underline"
+              href="/admin/ingredients"
+              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
             >
               ดูคลังวัตถุดิบ
             </Link>
@@ -440,8 +477,8 @@ export default function DashboardPage() {
                   </div>
 
                   <Link
-                    href={`/stock-in?code=${item.code}`}
-                    className="px-3 py-1.5 rounded-xl font-bold text-xs bg-white border border-slate-200 shadow-2xs hover:bg-slate-50 text-slate-800 transition-colors"
+                    href={`/admin/stock-in?code=${item.code}`}
+                    className="px-3 py-1.5 rounded-xl font-bold text-xs bg-white border border-slate-200 shadow-2xs hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer"
                   >
                     + สั่งซื้อ/รับเข้า
                   </Link>
@@ -465,8 +502,8 @@ export default function DashboardPage() {
             </p>
           </div>
           <Link
-            href="/sales/history"
-            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline"
+            href="/admin/sales"
+            className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
           >
             <span>ดูประวัติการขายทั้งหมด</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -491,7 +528,12 @@ export default function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {recentSales.map((sale: any) => (
-                  <tr key={sale.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr
+                    key={sale.id}
+                    onClick={() => router.push('/admin/sales')}
+                    className="hover:bg-slate-50/80 transition-colors cursor-pointer"
+                    title="คลิกเพื่อดูรายละเอียดในหน้าตรวจสอบยอดขาย"
+                  >
                     <td className="py-3 px-3 font-mono font-bold text-emerald-700">{sale.saleNumber}</td>
                     <td className="py-3 px-3 text-slate-500">
                       {new Date(sale.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
