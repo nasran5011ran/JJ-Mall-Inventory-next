@@ -16,12 +16,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
 
-  // Route Guard: Strictly kick non-admins out
+  // Route Guard: Strictly kick non-admins out, redirect to login if unauthenticated
   useEffect(() => {
-    if (!loading && user && user.role !== 'ADMIN') {
-      router.replace('/staff/sales');
+    if (!loading) {
+      if (!user) {
+        window.location.href = '/login';
+      } else if (user.role !== 'ADMIN') {
+        window.location.href = '/staff/sales';
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading]);
 
   // Load admin notification count in background
   useEffect(() => {
@@ -41,7 +45,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     fetchAlerts();
   }, [isAdmin]);
 
-  if (loading && !user) {
+  if (loading || !user || user.role !== 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -51,8 +55,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
     );
   }
-
-  if (!user || user.role !== 'ADMIN') return null;
 
   return (
     <div className="min-h-screen bg-slate-50/70 flex">

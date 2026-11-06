@@ -17,6 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import ThemeToggle from '@/components/theme-toggle';
 
 export default function StaffNavbar() {
   const pathname = usePathname();
@@ -53,9 +54,12 @@ export default function StaffNavbar() {
           <span className="font-bold">ระบบขายหน้าร้าน JJ Mall POS</span>
           <span className="hidden sm:inline text-sky-200">• โหมดเจ้าหน้าที่ขาย (Staff Terminal)</span>
         </div>
-        <div className="flex items-center gap-2 font-mono font-bold text-sky-100 text-[11px]">
-          <Clock className="w-3.5 h-3.5" />
-          <span>{currentTime}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 font-mono font-bold text-sky-100 text-[11px]">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{currentTime}</span>
+          </div>
+          <ThemeToggle className="!p-1 !h-7 !w-7 bg-white/20 hover:bg-white/30 border-white/30 text-white" />
         </div>
       </div>
 

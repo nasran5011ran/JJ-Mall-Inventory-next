@@ -24,7 +24,7 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
     }
   }, [user, loading, router]);
 
-  if (loading || (user && user.role === 'ADMIN')) {
+  if (loading || !user || user.role === 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -34,8 +34,6 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
       </div>
     );
   }
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-slate-100/70 flex flex-col">

@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Lock, User, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setAuthUser } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -34,14 +36,14 @@ export default function LoginPage() {
       }
 
       setSuccess(`เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ${data.user.name}`);
-      setTimeout(() => {
-        if (data.user.role === 'STAFF') {
-          router.push('/staff/sales');
-        } else {
-          router.push('/admin/dashboard');
-        }
-        router.refresh();
-      }, 800);
+      setAuthUser(data.user);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('jj_mall_user', JSON.stringify(data.user));
+      }
+
+      // Smooth direct redirect into target workspace
+      const targetUrl = data.user.role === 'STAFF' ? '/staff/sales' : '/admin/dashboard';
+      window.location.href = targetUrl;
     } catch (err: any) {
       setError(err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {

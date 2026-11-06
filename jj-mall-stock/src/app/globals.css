@@ -1,9 +1,218 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --font-sans: var(--font-prompt), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
   font-family: var(--font-sans);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ========================================================
+   JJ MALL DARK THEME SPECIFICATION
+   ======================================================== */
+.dark {
+  color-scheme: dark;
+}
+
+/* Base Body Background */
+.dark body {
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+}
+
+/* Background Card Surfaces */
+.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-50\/80 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #334155 !important;
+}
+
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-50\/80:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+/* Borders & Dividers */
+.dark .border-slate-200,
+.dark .border-slate-100,
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155 !important;
+}
+
+/* Text Colors */
+.dark .text-slate-800,
+.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Form Controls & Inputs */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+.dark input:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #10b981 !important;
+  background-color: #0f172a !important;
+}
+
+/* Table Headers in Dark */
+.dark th.bg-slate-50,
+.dark tr.bg-slate-50\/80,
+.dark thead tr {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+}
+
+/* Soft Accent Containers */
+.dark .bg-emerald-50,
+.dark .bg-emerald-50\/50,
+.dark .bg-emerald-50\/80 {
+  background-color: rgba(6, 78, 59, 0.35) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+.dark .bg-amber-50,
+.dark .bg-amber-50\/50,
+.dark .bg-amber-50\/70,
+.dark .bg-amber-50\/80 {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: rgba(30, 58, 138, 0.35) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: rgba(88, 28, 135, 0.35) !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Header & Sidebar in Dark Mode */
+.dark header.bg-white,
+.dark aside.bg-white {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+}
+
+/* ========================================================
+   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE - 1 PAGE FIT)
+   ======================================================== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 6mm 8mm;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+  }
+
+  /* Hide everything else on the screen */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show ONLY the official stock / ingredient print sheet and its contents */
+  #official-stock-print-report,
+  #official-stock-print-report *,
+  #official-ingredient-print-report,
+  #official-ingredient-print-report * {
+    visibility: visible !important;
+  }
+
+  /* Absolute position to occupy page 1 completely */
+  #official-stock-print-report,
+  #official-ingredient-print-report {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #official-stock-print-report table,
+  #official-ingredient-print-report table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #official-stock-print-report th,
+  #official-stock-print-report td,
+  #official-ingredient-print-report th,
+  #official-ingredient-print-report td {
+    color: #000000 !important;
+    border-color: #333333 !important;
+    padding-top: 1.5px !important;
+    padding-bottom: 1.5px !important;
+    font-size: 9.5px !important;
+    line-height: 1.2 !important;
+  }
+
+  .print-signature-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 16px !important;
+    padding-top: 8px !important;
+  }
+
+  .no-print, header, aside, nav, footer {
+    display: none !important;
+  }
 }

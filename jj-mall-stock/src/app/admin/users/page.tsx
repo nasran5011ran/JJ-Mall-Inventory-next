@@ -544,6 +544,21 @@ export default function AdminUsersPage() {
                             <div className="text-[11px] font-mono text-slate-400 mt-0.5">
                               @{u.username}
                             </div>
+                            <div className="text-[11px] text-slate-500 font-mono mt-1 flex items-center gap-1.5">
+                              <KeyRound className="w-3 h-3 text-amber-600" />
+                              <span className="text-slate-400">รหัส:</span>
+                              <span className="font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                {visiblePasswords[u.id] ? (u.plainPassword || '1234') : '••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(u.id)}
+                                className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5 rounded hover:bg-slate-100 transition-colors"
+                                title={visiblePasswords[u.id] ? 'ซ่อนรหัสผ่าน' : 'กดเพื่อดูรหัสผ่าน'}
+                              >
+                                {visiblePasswords[u.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -918,26 +933,63 @@ export default function AdminUsersPage() {
             )}
 
             <form onSubmit={handleResetPassword} autoComplete="off" className="mt-5 space-y-4">
+              {/* 1. Current / Existing Password Display */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold text-amber-900 uppercase flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    <span>รหัสผ่านเดิม / ปัจจุบัน</span>
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900">
+                    รหัสที่ใช้งานอยู่ขณะนี้
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between mt-1.5 bg-white px-3 py-2 rounded-xl border border-amber-200/70">
+                  <span className="font-mono font-black text-sm text-slate-800 tracking-wider">
+                    {showOldPassword
+                      ? (passwordResetUser.plainPassword || '1234')
+                      : '••••••••'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    className="px-2 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 cursor-pointer flex items-center gap-1 text-[11px] font-bold transition-colors"
+                  >
+                    {showOldPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showOldPassword ? 'ซ่อน' : 'แสดงรหัสเดิม'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. New Password Input */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-700">
                     กำหนดรหัสผ่านใหม่ <span className="text-red-500">*</span>
                   </label>
-                  <div className="flex items-center gap-1.5 text-[10px]">
+                  <div className="flex items-center gap-1 text-[10px]">
                     <span className="text-slate-400">เลือกรหัสจำง่าย:</span>
                     <button
                       type="button"
                       onClick={() => setNewPassword('1234')}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-mono font-bold cursor-pointer transition-colors"
                     >
                       1234
                     </button>
                     <button
                       type="button"
                       onClick={() => setNewPassword('jj1234')}
-                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono font-bold cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-mono font-bold cursor-pointer transition-colors"
                     >
                       jj1234
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewPassword('0000')}
+                      className="px-2 py-0.5 rounded bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-900 font-mono font-bold cursor-pointer transition-colors"
+                    >
+                      0000
                     </button>
                   </div>
                 </div>
@@ -949,8 +1001,8 @@ export default function AdminUsersPage() {
                     autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="กรอกรหัสผ่านใหม่"
-                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 pr-10 font-mono"
+                    placeholder="พิมพ์รหัสผ่านใหม่ที่ต้องการเปลี่ยน..."
+                    className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 pr-10 font-mono"
                   />
                   <button
                     type="button"
@@ -961,7 +1013,7 @@ export default function AdminUsersPage() {
                   </button>
                 </div>
                 <p className="mt-1 text-[11px] text-slate-400">
-                  💡 สามารถตั้งรหัสผ่านสั้นๆ หรือตัวเลขที่จำง่ายได้ตามต้องการ
+                  💡 เมื่อบันทึกแล้ว รหัสผ่านใหม่จะถูกบันทึกและอัปเดตลงระบบทันที
                 </p>
               </div>
 
@@ -975,10 +1027,11 @@ export default function AdminUsersPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={resetSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-50"
+                  disabled={resetSubmitting || !newPassword.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md shadow-amber-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  {resetSubmitting ? 'กำลังเปลี่ยนรหัส...' : 'ยืนยันเปลี่ยนรหัสผ่าน'}
+                  <KeyRound className="w-4 h-4" />
+                  <span>{resetSubmitting ? 'กำลังบันทึกรหัสใหม่...' : 'ยืนยันเปลี่ยนรหัสผ่านใหม่'}</span>
                 </button>
               </div>
             </form>

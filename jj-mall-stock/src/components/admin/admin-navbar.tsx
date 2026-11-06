@@ -27,6 +27,7 @@ import {
   Store,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import ThemeToggle from '@/components/theme-toggle';
 
 interface AdminNavbarProps {
   onOpenSidebar: () => void;
@@ -197,6 +198,9 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
             <div className="text-[10px] text-slate-400">{currentDate}</div>
           </div>
         </div>
+
+        {/* Theme Toggle Button (Sun / Moon) Next to Clock */}
+        <ThemeToggle />
 
         {/* Low Stock Alerts */}
         <button

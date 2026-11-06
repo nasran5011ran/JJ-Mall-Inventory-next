@@ -14,6 +14,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isAdmin: boolean;
   loading: boolean;
+  setAuthUser: (user: AuthUser) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   isAdmin: false,
   loading: true,
+  setAuthUser: () => {},
   logout: async () => {},
   refreshUser: async () => {},
 });
@@ -30,6 +32,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const setAuthUser = (newUser: AuthUser) => {
+    setUser(newUser);
+    setLoading(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('jj_mall_user', JSON.stringify(newUser));
+    }
+  };
 
   const fetchUser = async (isInitial = false) => {
     try {
@@ -56,12 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUser(null);
           if (typeof window !== 'undefined') sessionStorage.removeItem('jj_mall_user');
-          router.push('/login');
         }
       } else {
         setUser(null);
         if (typeof window !== 'undefined') sessionStorage.removeItem('jj_mall_user');
-        router.push('/login');
       }
     } catch (error) {
       console.error('Auth verification error:', error);
@@ -92,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isAdmin,
         loading,
+        setAuthUser,
         logout,
         refreshUser: () => fetchUser(false),
       }}

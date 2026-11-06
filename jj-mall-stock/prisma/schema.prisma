@@ -172,6 +172,9 @@ model StockCount {
   countNumber String           @unique
   countDate   DateTime         @default(now())
   status      String           @default("COMPLETED")
+  location    String?          @default("WAREHOUSE")
+  storeId     Int?
+  storeName   String?          @default("คลังสินค้าส่วนกลาง JJ Mall")
   note        String?
   createdById Int
   createdBy   User             @relation(fields: [createdById], references: [id])
