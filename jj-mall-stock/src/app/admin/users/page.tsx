@@ -70,6 +70,9 @@ export default function AdminUsersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [passwordResetUser, setPasswordResetUser] = useState<UserData | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserData | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Add Form state
   const [addForm, setAddForm] = useState({
@@ -285,19 +288,15 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Toggle User Status directly
+  // Toggle User Status directly (Smooth UI without alert)
   const handleToggleStatus = async (u: UserData) => {
     if (u.id === currentUser?.id) {
-      alert('ไม่สามารถระงับการใช้งานบัญชีของตนเองได้');
+      showToast('⚠️ ไม่สามารถระงับการใช้งานบัญชีของตนเองได้');
       return;
     }
 
     const nextStatus = u.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
     const actionThai = nextStatus === 'ACTIVE' ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
-
-    if (!confirm(`คุณต้องการ "${actionThai}" บัญชีของ "${u.name}" (${u.username}) ใช่หรือไม่?`)) {
-      return;
-    }
 
     try {
       const res = await fetch(`/api/users/${u.id}`, {
@@ -311,7 +310,7 @@ export default function AdminUsersPage() {
         throw new Error(data.message || 'เปลี่ยนสถานะไม่สำเร็จ');
       }
 
-      showToast(`เปลี่ยนสถานะเป็น ${actionThai} เรียบร้อยแล้ว`);
+      showToast(`เปลี่ยนสถานะ "${u.name}" เป็น ${actionThai} เรียบร้อยแล้ว`);
       setHighlightId(u.id);
       setTimeout(() => setHighlightId(null), 3000);
 
@@ -319,23 +318,28 @@ export default function AdminUsersPage() {
         prev.map((item) => (item.id === u.id ? { ...item, status: nextStatus } : item))
       );
     } catch (err: any) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      showToast('❌ เกิดข้อผิดพลาด: ' + (err.message || 'ไม่สามารถเปลี่ยนสถานะได้'));
     }
   };
 
-  // Delete User
-  const handleDeleteUser = async (u: UserData) => {
+  // Open Delete Confirmation Modal (No browser alert)
+  const handleDeleteUser = (u: UserData) => {
     if (u.id === currentUser?.id) {
-      alert('ไม่สามารถลบบัญชีผู้ใช้ที่กำลังล็อกอินอยู่ได้');
+      showToast('⚠️ ไม่สามารถลบบัญชีผู้ใช้ที่กำลังล็อกอินอยู่ได้');
       return;
     }
+    setDeleteError(null);
+    setUserToDelete(u);
+  };
 
-    if (!confirm(`ยืนยันการลบผู้ใช้ "${u.name}" (${u.username})?`)) {
-      return;
-    }
+  // Confirm Delete User action from modal
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
 
     try {
-      const res = await fetch(`/api/users/${u.id}`, {
+      const res = await fetch(`/api/users/${userToDelete.id}`, {
         method: 'DELETE',
       });
 
@@ -344,19 +348,22 @@ export default function AdminUsersPage() {
         throw new Error(data.message || 'ลบผู้ใช้ไม่สำเร็จ');
       }
 
-      showToast(data.message || 'ลบผู้ใช้สำเร็จ');
+      showToast(data.message || `ลบบัญชีผู้ใช้ "${userToDelete.name}" เรียบร้อยแล้ว`);
 
       if (data.softDeleted) {
         // Updated to INACTIVE
         setUsers((prev) =>
-          prev.map((item) => (item.id === u.id ? { ...item, status: 'INACTIVE' } : item))
+          prev.map((item) => (item.id === userToDelete.id ? { ...item, status: 'INACTIVE' } : item))
         );
       } else {
         // Hard deleted
-        setUsers((prev) => prev.filter((item) => item.id !== u.id));
+        setUsers((prev) => prev.filter((item) => item.id !== userToDelete.id));
       }
+      setUserToDelete(null);
     } catch (err: any) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+      setDeleteError(err.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน');
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -500,7 +507,6 @@ export default function AdminUsersPage() {
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">ผู้ใช้งาน</th>
                   <th className="py-3.5 px-4">สิทธิ์ในระบบ (Role)</th>
-                  <th className="py-3.5 px-4 text-center">ประวัติทำรายการ</th>
                   <th className="py-3.5 px-4 text-center">สถานะบัญชี</th>
                   <th className="py-3.5 px-4">วันที่ลงทะเบียน</th>
                   <th className="py-3.5 px-4 text-center">จัดการ</th>
@@ -576,14 +582,6 @@ export default function AdminUsersPage() {
                             👤 เจ้าหน้าที่ขาย (Staff)
                           </span>
                         )}
-                      </td>
-
-                      {/* Activity History */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1 text-[11px] text-slate-600 font-mono bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/60">
-                          <History className="w-3 h-3 text-slate-400" />
-                          <span>บิลขาย: <strong>{u._count?.sales || 0}</strong></span>
-                        </div>
                       </td>
 
                       {/* Status */}
@@ -1035,6 +1033,70 @@ export default function AdminUsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Delete User Confirmation (Beautiful Tailwind UI without browser alert) */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-sm w-full border border-slate-200 shadow-2xl p-6 space-y-4 text-center animate-in zoom-in-95 duration-150">
+            {/* Warning Icon */}
+            <div className="w-14 h-14 rounded-3xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-sm ring-8 ring-red-50">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-bold text-slate-800">ยืนยันการลบบัญชีผู้ใช้</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                คุณแน่ใจหรือไม่ว่าต้องการลบบัญชีผู้ใช้นี้ออกจากระบบ?
+              </p>
+            </div>
+
+            {/* Target Account Summary Card */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">ชื่อผู้ใช้งาน:</span>
+                <span className="font-bold text-slate-800">{userToDelete.name}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">ชื่อล็อกอิน:</span>
+                <span className="font-mono font-bold text-slate-700">@{userToDelete.username}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400">สิทธิ์ในระบบ:</span>
+                <span className="font-bold text-slate-700">
+                  {userToDelete.role === 'ADMIN' ? '👑 ผู้ดูแลระบบ (Admin)' : '👤 เจ้าหน้าที่ขาย (Staff)'}
+                </span>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2 text-left">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div className="pt-2 flex items-center justify-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setUserToDelete(null)}
+                disabled={deleteSubmitting}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs cursor-pointer transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteUser}
+                disabled={deleteSubmitting}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs shadow-md shadow-red-600/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{deleteSubmitting ? 'กำลังลบ...' : 'ยืนยันลบบัญชี'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
