@@ -135,12 +135,12 @@ body {
 }
 
 /* ========================================================
-   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE)
+   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE - 1 PAGE FIT)
    ======================================================== */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 6mm 8mm;
+    margin: 5mm 6mm;
   }
 
   html, body {
@@ -148,6 +148,8 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Hide everything else on the screen */
@@ -165,7 +167,7 @@ body {
     visibility: visible !important;
   }
 
-  /* Absolute position to occupy print area completely */
+  /* Absolute position to occupy page 1 completely */
   #official-stock-print-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
@@ -180,9 +182,6 @@ body {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-  }
-
-  #official-stock-print-report {
     page-break-after: avoid !important;
     break-after: avoid !important;
     page-break-inside: avoid !important;
@@ -194,6 +193,8 @@ body {
   #official-sales-print-report table {
     width: 100% !important;
     border-collapse: collapse !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   #official-stock-print-report th,
@@ -218,8 +219,8 @@ body {
   .print-signature-section {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: 14px !important;
-    padding-top: 8px !important;
+    margin-top: 12px !important;
+    padding-top: 6px !important;
   }
 
   .no-print, header, aside, nav, footer {
