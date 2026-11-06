@@ -155,6 +155,20 @@ export default function AdminSalesReportPage() {
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const [printDailyModalOpen, setPrintDailyModalOpen] = useState(false);
 
+  // Read URL query params on load (e.g. ?period=THIS_WEEK or ?date=YYYY-MM-DD)
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const p = urlParams.get('period');
+      const d = urlParams.get('date');
+      if (d) {
+        setSelectedDate(d);
+      } else if (p) {
+        setPeriod(p);
+      }
+    }
+  }, []);
+
   // Label helpers for report printing
   const dateReportLabel = useMemo(() => {
     if (selectedDate) {

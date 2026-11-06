@@ -263,22 +263,28 @@ export default function DashboardPage() {
                 </p>
               </div>
               <Link
-                href="/admin/reports/sales"
+                href="/admin/reports/sales?period=THIS_WEEK"
                 className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
+                title="คลิกเพื่อดูรายงานยอดขายรอบ 7 วันล่าสุด"
               >
-                <span>ดูรายงานเต็ม</span>
+                <span>ดูรายงานเต็ม (7 วันล่าสุด)</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            {/* Bar Chart Visualization */}
+            {/* Bar Chart Visualization (Clickable bars to view day sales) */}
             <div className="h-64 pt-6 pb-2 flex items-end justify-between gap-3 sm:gap-6 border-b border-slate-100">
               {salesTrend.map((day: any, idx: number) => {
                 const heightPercent = Math.max(Math.round((day.total / maxSales) * 100), 6);
                 const isToday = idx === salesTrend.length - 1;
 
                 return (
-                  <div key={day.date} className="flex-1 flex flex-col items-center h-full justify-end group">
+                  <Link
+                    key={day.date}
+                    href={`/admin/reports/sales?date=${day.date}`}
+                    className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
+                    title={`คลิกเพื่อดูยอดขายวันที่ ${day.label}`}
+                  >
                     {/* Tooltip value */}
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded mb-1 whitespace-nowrap shadow-xs pointer-events-none">
                       ฿{day.total} ({day.cups} แก้ว)
@@ -304,7 +310,7 @@ export default function DashboardPage() {
                     >
                       {day.label}
                     </span>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
