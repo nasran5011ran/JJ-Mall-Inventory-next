@@ -50,3 +50,6 @@ npm run start  // เปิดเซิร์ฟเวอร์จากที�
 npm run dev //รัน server
 
 Remove-Item -Recurse -Force .next //
+
+
+
