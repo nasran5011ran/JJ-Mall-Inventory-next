@@ -553,7 +553,7 @@ export default function IngredientsPage() {
                             <div className="flex items-center justify-center gap-1.5">
                               {/* Stock-in quick link */}
                               <Link
-                                href={`/stock-in?code=${ing.code}`}
+                                href={`/admin/stock-in?code=${ing.code}`}
                                 className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1"
                                 title="รับเข้าสต็อก"
                               >

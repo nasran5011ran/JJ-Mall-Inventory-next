@@ -483,14 +483,14 @@ export default function AdminStockCountPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4">เลขที่ใบนับสต็อก</th>
-                  <th className="py-3.5 px-4">วันที่ & เวลาตรวจนับ</th>
-                  <th className="py-3.5 px-4">จุดตรวจนับ / ร้านค้า</th>
-                  <th className="py-3.5 px-4">ผู้ตรวจนับ</th>
-                  <th className="py-3.5 px-4 text-center">จำนวนวัตถุดิบ</th>
-                  <th className="py-3.5 px-4">สรุปผลต่าง (Variance)</th>
-                  <th className="py-3.5 px-4">หมายเหตุ</th>
-                  <th className="py-3.5 px-4 text-right">การจัดการ</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">จุดตรวจนับ / ร้านค้า</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">ผู้ตรวจนับ</th>
+                  <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนวัตถุดิบ</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
+                  <th className="py-2.5 px-3">หมายเหตุ</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">การจัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -507,7 +507,7 @@ export default function AdminStockCountPage() {
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
                       {/* Count Number */}
-                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
+                      <td className="py-2.5 px-3 font-mono font-bold text-emerald-700 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 group-hover:underline">
                           <FileText className="w-3.5 h-3.5 text-emerald-600" />
                           <span>{sc.countNumber}</span>
@@ -515,7 +515,7 @@ export default function AdminStockCountPage() {
                       </td>
 
                       {/* Date & Time */}
-                      <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
                         <div className="font-bold text-slate-700">
                           {new Date(sc.countDate || sc.createdAt).toLocaleDateString('th-TH')}
                         </div>
@@ -526,7 +526,7 @@ export default function AdminStockCountPage() {
                       </td>
 
                       {/* Store / Location Badge */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         {isStore ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
                             <Store className="w-3.5 h-3.5 text-amber-700" />
@@ -541,7 +541,7 @@ export default function AdminStockCountPage() {
                       </td>
 
                       {/* Created By */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="font-bold text-slate-800 flex items-center gap-1.5">
                           <User className="w-3.5 h-3.5 text-slate-400" />
                           <span>{sc.createdBy?.name || 'Admin'}</span>
@@ -552,12 +552,12 @@ export default function AdminStockCountPage() {
                       </td>
 
                       {/* Total Items */}
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
                         {sc.items.length} รายการ
                       </td>
 
                       {/* Variance Badges */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {matchCount > 0 && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -578,12 +578,12 @@ export default function AdminStockCountPage() {
                       </td>
 
                       {/* Note */}
-                      <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
                         {sc.note || '-'}
                       </td>
 
                       {/* Action */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
@@ -615,7 +615,7 @@ export default function AdminStockCountPage() {
       {/* Modal 1: Create New Physical Stock Count */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-6xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -970,7 +970,7 @@ export default function AdminStockCountPage() {
       {/* Modal 2: Stock Count Audit Detail */}
       {selectedCount && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">

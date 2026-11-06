@@ -459,15 +459,15 @@ export default function AdminStockTransactionsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4">วันที่ & เวลา</th>
-                  <th className="py-3.5 px-4">รหัสรายการ / เอกสารอ้างอิง</th>
-                  <th className="py-3.5 px-4">ประเภทรายการ</th>
-                  <th className="py-3.5 px-4">วัตถุดิบ</th>
-                  <th className="py-3.5 px-4 text-right">รับเข้า (+)</th>
-                  <th className="py-3.5 px-4 text-right">จ่ายออก (-)</th>
-                  <th className="py-3.5 px-4 text-right">คงเหลือหลังรายการ</th>
-                  <th className="py-3.5 px-4">ผู้ทำรายการ</th>
-                  <th className="py-3.5 px-4">หมายเหตุ</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลา</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">รหัสรายการ / เอกสารอ้างอิง</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap text-center">ประเภทรายการ</th>
+                  <th className="py-2.5 px-3">วัตถุดิบ</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">รับเข้า (+)</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">จ่ายออก (-)</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">คงเหลือหลังรายการ</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">ผู้ทำรายการ</th>
+                  <th className="py-2.5 px-3">หมายเหตุ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -485,7 +485,7 @@ export default function AdminStockTransactionsPage() {
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
                       {/* Date & Time */}
-                      <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
                         <div className="font-bold text-slate-700">
                           {new Date(tx.createdAt).toLocaleDateString('th-TH')}
                         </div>
@@ -496,7 +496,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Transaction # & Ref ID */}
-                      <td className="py-3.5 px-4 font-mono">
+                      <td className="py-2.5 px-3 font-mono whitespace-nowrap">
                         <div className="font-bold text-emerald-700 group-hover:underline truncate max-w-xs">
                           {tx.refId || tx.transactionNumber}
                         </div>
@@ -506,7 +506,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Type Badge */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap text-center">
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${badge.className}`}
                         >
@@ -516,7 +516,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Ingredient */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-2.5 px-3">
                         <div className="font-bold text-slate-800">{tx.ingredient?.name || '-'}</div>
                         <div className="text-[10px] text-slate-400 font-mono">
                           {tx.ingredient?.code}
@@ -524,7 +524,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Qty In */}
-                      <td className="py-3.5 px-4 text-right font-mono font-bold">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap">
                         {qtyIn > 0 ? (
                           <span className="text-emerald-700">
                             +{qtyIn.toLocaleString()} {tx.ingredient?.unit}
@@ -535,7 +535,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Qty Out */}
-                      <td className="py-3.5 px-4 text-right font-mono font-bold">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold whitespace-nowrap">
                         {qtyOut > 0 ? (
                           <span className="text-red-600">
                             -{qtyOut.toLocaleString()} {tx.ingredient?.unit}
@@ -546,12 +546,12 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Balance After */}
-                      <td className="py-3.5 px-4 text-right font-mono font-black text-slate-800 whitespace-nowrap">
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-800 whitespace-nowrap">
                         {balanceAfter.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">{tx.ingredient?.unit}</span>
                       </td>
 
                       {/* Created By */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-2.5 px-3 whitespace-nowrap">
                         <div className="font-bold text-slate-800 flex items-center gap-1">
                           <User className="w-3 h-3 text-slate-400" />
                           <span>{tx.createdBy?.name || 'System'}</span>
@@ -562,7 +562,7 @@ export default function AdminStockTransactionsPage() {
                       </td>
 
                       {/* Note */}
-                      <td className="py-3.5 px-4 max-w-xs text-slate-600">
+                      <td className="py-2.5 px-3 max-w-xs text-slate-600">
                         <div className="truncate text-slate-700" title={tx.note || ''}>
                           {tx.note || '-'}
                         </div>

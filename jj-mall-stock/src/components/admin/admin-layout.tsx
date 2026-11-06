@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import AdminSidebar from './admin-sidebar';
 import AdminNavbar from './admin-navbar';
@@ -12,9 +12,13 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAdmin, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+
+  // Check if current page is one of the wide tables requested by user
+  const isWidePage = pathname?.includes('/admin/stock-count') || pathname?.includes('/admin/stock-transactions');
 
   // Route Guard: Strictly kick non-admins out, redirect to login if unauthenticated
   useEffect(() => {
@@ -71,7 +75,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           notificationCount={notificationCount}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main
+          className={`flex-1 p-3 sm:p-5 lg:p-6 w-full mx-auto transition-all ${
+            isWidePage
+              ? 'max-w-none px-3 sm:px-5 lg:px-6'
+              : 'max-w-7xl'
+          }`}
+        >
           {children}
         </main>
       </div>
