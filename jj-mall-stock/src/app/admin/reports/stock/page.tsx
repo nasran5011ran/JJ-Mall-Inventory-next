@@ -121,7 +121,7 @@ export default function AdminStockReportPage() {
       `"${i.riskLabel}"`,
       i.costPerUnit,
       i.totalValue,
-      i.recommendedReorder,
+      `"${i.recommendedReorder > 0 ? 'ควรสั่งซื้อเพิ่ม' : 'สต็อกเพียงพอ'}"`,
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -481,15 +481,18 @@ export default function AdminStockReportPage() {
                       <td className="py-3.5 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         {item.recommendedReorder > 0 ? (
                           <Link
-                            href="/admin/stock-in"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] shadow-2xs transition-colors"
-                            title="คลิกเพื่อเปิดหน้าบันทึกรับเข้าคลัง"
+                            href={`/admin/stock-in?code=${item.code}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] shadow-2xs transition-colors"
+                            title="คลิกเพื่อเปิดหน้ารับเข้าสต็อก"
                           >
-                            <ShoppingBag className="w-3 h-3" />
-                            <span>สั่ง +{item.recommendedReorder.toLocaleString()} {item.unit}</span>
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>ควรสั่งซื้อเพิ่ม</span>
                           </Link>
                         ) : (
-                          <span className="text-emerald-700 text-[11px] font-bold">สต็อกเพียงพอ</span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>สต็อกเพียงพอ</span>
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -563,7 +566,7 @@ export default function AdminStockReportPage() {
                     <span>คำแนะนำการเติมสต็อก:</span>
                   </div>
                   <p className="text-[11px]">
-                    แนะนำให้เปิดใบสั่งซื้อเข้าคลังเพิ่มอย่างน้อย <span className="font-bold font-mono">+{selectedItem.recommendedReorder.toLocaleString()} {selectedItem.unit}</span> เพื่อให้อยู่ในระดับปลอดภัย
+                    สต็อกปัจจุบันต่ำกว่าเกณฑ์ขั้นต่ำ (Min Stock) แนะนำให้เปิดใบสั่งซื้อเข้าคลังเพื่อเติมสต็อกให้อยู่ในระดับปลอดภัย
                   </p>
                 </div>
               )}
