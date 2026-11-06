@@ -67,9 +67,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
       updateData.status = status;
     }
 
-    // If new password is provided, re-hash it (allows simple passwords)
+    // If new password is provided, re-hash it and save plainPassword
     if (newPassword && newPassword.trim()) {
       updateData.password = await bcrypt.hash(newPassword.trim(), 10);
+      updateData.plainPassword = newPassword.trim();
     }
 
     const updated = await prisma.user.update({
@@ -81,6 +82,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         name: true,
         role: true,
         status: true,
+        plainPassword: true,
         updatedAt: true,
       },
     });

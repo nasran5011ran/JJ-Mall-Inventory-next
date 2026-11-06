@@ -837,13 +837,19 @@ export default function AdminSalesPage() {
                         <tr>
                           <th className="py-2.5 px-3">รหัสวัตถุดิบ</th>
                           <th className="py-2.5 px-3">ชื่อวัตถุดิบ</th>
-                          <th className="py-2.5 px-3 text-right">จำนวนที่รับเข้า</th>
-                          <th className="py-2.5 px-3 text-right">สต็อกคงเหลือปัจจุบัน</th>
+                          <th className="py-2.5 px-3 text-right">รับเข้าร้าน</th>
+                          <th className="py-2.5 px-3 text-right">ตัดขายไปแล้ว</th>
+                          <th className="py-2.5 px-3 text-right">คงเหลือของร้านนี้</th>
+                          <th className="py-2.5 px-3 text-right">สต็อกรวมทั้งคลัง</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {inspectingStore.stockReceived.map((ing) => {
                           const currentStockInfo = allIngredients.find((i: any) => i.id === ing.id);
+                          const deductItem = inspectingStore.ingredientDeductions.find((d) => d.id === ing.id);
+                          const deducted = deductItem ? Number(deductItem.deductedQty) : 0;
+                          const storeBalance = Math.max(0, Number(ing.totalReceived) - deducted);
+
                           return (
                             <tr key={ing.id} className="hover:bg-slate-50">
                               <td className="py-2.5 px-3 font-mono text-slate-500 font-bold">{ing.code}</td>
@@ -851,7 +857,13 @@ export default function AdminSalesPage() {
                               <td className="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
                                 +{Number(ing.totalReceived).toLocaleString()} {ing.unit}
                               </td>
-                              <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
+                              <td className="py-2.5 px-3 text-right font-mono font-bold text-red-500">
+                                {deducted > 0 ? `-${deducted.toLocaleString()} ${ing.unit}` : '0 ' + ing.unit}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900 bg-slate-50/50">
+                                {storeBalance.toLocaleString()} {ing.unit}
+                              </td>
+                              <td className="py-2.5 px-3 text-right font-mono text-slate-400">
                                 {currentStockInfo ? `${Number(currentStockInfo.currentStock).toLocaleString()} ${ing.unit}` : '-'}
                               </td>
                             </tr>

@@ -33,6 +33,7 @@ interface UserData {
   role: 'ADMIN' | 'STAFF';
   avatar?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  plainPassword?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -92,10 +93,19 @@ export default function AdminUsersPage() {
   const [editError, setEditError] = useState<string | null>(null);
 
   // Reset Password Form state
-  const [newPassword, setNewPassword] = useState('1234');
+  const [newPassword, setNewPassword] = useState('');
   const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<number, boolean>>({});
   const [resetSubmitting, setResetSubmitting] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+
+  const togglePasswordVisibility = (userId: number) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [userId]: !prev[userId],
+    }));
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -225,15 +235,20 @@ export default function AdminUsersPage() {
   // Open Reset Password Modal
   const openResetPasswordModal = (u: UserData) => {
     setPasswordResetUser(u);
-    setNewPassword('1234');
+    setNewPassword(''); // Clear input so user types fresh password
     setResetError(null);
     setShowResetPassword(false);
+    setShowOldPassword(false);
   };
 
   // Handle Reset Password
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordResetUser) return;
+    if (!newPassword || !newPassword.trim()) {
+      setResetError('กรุณาระบุรหัสผ่านใหม่ที่ต้องการเปลี่ยน');
+      return;
+    }
     setResetError(null);
     setResetSubmitting(true);
 
@@ -241,7 +256,7 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/users/${passwordResetUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword }),
+        body: JSON.stringify({ newPassword: newPassword.trim() }),
       });
 
       const data = await res.json();
@@ -249,7 +264,17 @@ export default function AdminUsersPage() {
         throw new Error(data.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
       }
 
-      showToast(data.message || 'เปลี่ยนรหัสผ่านสำเร็จ');
+      // 1. Immediately update local state with new plain password
+      setUsers((prev) =>
+        prev.map((item) =>
+          item.id === passwordResetUser.id ? { ...item, plainPassword: newPassword.trim() } : item
+        )
+      );
+
+      // 2. Refresh SWR cache
+      await mutate();
+
+      showToast(`เปลี่ยนรหัสผ่านของ "${passwordResetUser.name}" เป็น "${newPassword.trim()}" เรียบร้อยแล้ว`);
       setHighlightId(passwordResetUser.id);
       setTimeout(() => setHighlightId(null), 3000);
       setPasswordResetUser(null);

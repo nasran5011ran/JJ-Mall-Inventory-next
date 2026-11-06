@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
         role: true,
         avatar: true,
         status: true,
+        plainPassword: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
         username: cleanUsername,
         name: name.trim(),
         password: hashedPassword,
+        plainPassword: password.trim(),
         role: role === 'ADMIN' ? Role.ADMIN : Role.STAFF,
         status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
       },
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest) {
         name: true,
         role: true,
         status: true,
+        plainPassword: true,
         createdAt: true,
       },
     });

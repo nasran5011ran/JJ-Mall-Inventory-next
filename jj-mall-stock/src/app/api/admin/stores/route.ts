@@ -103,10 +103,7 @@ export async function GET(req: NextRequest) {
         // B. Real stock transactions for this specific staff store from DB
         const staffStockTransactions = await prisma.stockTransaction.findMany({
           where: {
-            OR: [
-              { createdById: staff.id },
-              { refId: `STORE-${staff.id}` },
-            ],
+            createdById: staff.id,
           },
           include: {
             ingredient: true,
