@@ -442,7 +442,7 @@ export default function IngredientsPage() {
                     <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
                     <th className="py-3.5 px-4 text-right">มูลค่ารวม</th>
                     <th className="py-3.5 px-4 text-center">สถานะสต็อก</th>
-                    <th className="py-3.5 px-4 text-center">สูตรที่ใช้</th>
+                    <th className="py-3.5 px-4 text-center">ใช้ในเมนู</th>
                     <th className="py-3.5 px-4 text-center">จัดการ</th>
                   </tr>
                 </thead>
@@ -539,11 +539,11 @@ export default function IngredientsPage() {
                         <td className="py-3.5 px-4 text-center">
                           <button
                             onClick={() => viewIngredientDetails(ing.id)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
-                            title="ดูสูตรที่ใช้วัตถุดิบนี้"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/60 transition-colors cursor-pointer"
+                            title="ดูเมนูที่ใช้วัตถุดิบนี้"
                           >
-                            <ChefHat className="w-3 h-3 text-slate-500" />
-                            <span>{ing._count?.recipeItems || 0} สูตร</span>
+                            <ChefHat className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{ing._count?.recipeItems || 0} เมนู</span>
                           </button>
                         </td>
 
@@ -790,7 +790,7 @@ export default function IngredientsPage() {
                 <ChefHat className="w-5 h-5 text-emerald-600" />
                 <div>
                   <h3 className="text-base font-bold text-slate-800">
-                    สูตรสินค้าที่ใช้วัตถุดิบนี้
+                    เมนูสินค้าที่ใช้วัตถุดิบนี้
                   </h3>
                   <p className="text-xs text-slate-500">
                     วัตถุดิบ: <strong className="text-emerald-700">{selectedDetail.name}</strong> ({selectedDetail.code})
@@ -808,7 +808,7 @@ export default function IngredientsPage() {
             <div className="mt-4 space-y-2">
               {selectedDetail.recipeItems?.length === 0 ? (
                 <div className="py-8 text-center text-xs text-slate-400">
-                  ยังไม่มีสินค้าใดใช้สูตรวัตถุดิบนี้
+                  ยังไม่มีสินค้าใดใช้วัตถุดิบนี้ในเมนู
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">

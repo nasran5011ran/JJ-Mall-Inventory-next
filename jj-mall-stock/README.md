@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+
+*********************************
+
+# JJ-Mall-Inventory-next
+
+
+
+npm run build  // คอมไพล์โปรเจกต์ทั้งหมดไว้ล่วงหน้า ใช้เวลาสักพัก (ครั้งแรกอาจ 1-3 นาที) และถ้ามี error ในโค้ดจะขึ้นตรงนี้
+
+npm run start  // เปิดเซิร์ฟเวอร์จากที่ build ไว้ แล้วเข้าที่ http://localhost:3000 เหมือนเดิม
+
+npm run dev //รัน server
+
+Remove-Item -Recurse -Force .next //
