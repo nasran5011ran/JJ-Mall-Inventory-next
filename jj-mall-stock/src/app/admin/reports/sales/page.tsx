@@ -269,7 +269,7 @@ export default function AdminSalesReportPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
-            รายงานวิเคราะห์ยอดขายประจำวัน (Daily Sales & Financial Report) และการจัดอันดับสินค้าขายดีแยกตามสาขา
+            รายงานวิเคราะห์ยอดขายประจำวัน (Daily Sales & Financial Report) และการจัดอันดับสินค้าขายดี
           </p>
         </div>
 
@@ -539,79 +539,69 @@ export default function AdminSalesReportPage() {
           </div>
         </div>
 
-        {/* Payment Methods & Store Share */}
+        {/* Payment Methods */}
         <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
               <PieChart className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-slate-800">ช่องทางชำระเงิน & ยอดขายแยกตามสาขา</h3>
-              <p className="text-[10px] text-slate-400">สัดส่วนเงินสดเทียบกับพร้อมเพย์ และผลงานแต่ละจุดขาย</p>
+              <h3 className="text-xs font-bold text-slate-800">ช่องทางชำระเงิน (Payment Methods)</h3>
+              <p className="text-[10px] text-slate-400">สัดส่วนเงินสดเทียบกับสแกน QR พร้อมเพย์</p>
             </div>
           </div>
 
-          <div className="space-y-4 text-xs">
+          <div className="space-y-3.5 text-xs">
             {/* Payment Method Bars */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
-              <div className="flex items-center justify-between font-bold">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <Banknote className="w-4 h-4 text-emerald-600" /> เงินสด (Cash)
-                </span>
-                <span className="font-mono text-slate-800">
-                  ฿{paymentBreakdown.cash.revenue.toLocaleString()} ({paymentBreakdown.cash.percentage.toFixed(1)}%)
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                <div
-                  style={{ width: `${paymentBreakdown.cash.percentage}%` }}
-                  className="h-full bg-emerald-600 transition-all duration-500"
-                />
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div>
+                <div className="flex items-center justify-between font-bold pb-1">
+                  <span className="text-slate-700 flex items-center gap-1.5">
+                    <Banknote className="w-4 h-4 text-emerald-600" /> เงินสด (Cash)
+                  </span>
+                  <span className="font-mono text-slate-800">
+                    ฿{paymentBreakdown.cash.revenue.toLocaleString()} ({paymentBreakdown.cash.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    style={{ width: `${paymentBreakdown.cash.percentage}%` }}
+                    className="h-full bg-emerald-600 transition-all duration-500"
+                  />
+                </div>
+                <div className="text-[10.5px] text-slate-500 mt-1 flex justify-between">
+                  <span>จำนวนบิลเงินสด</span>
+                  <span className="font-mono font-semibold">{paymentBreakdown.cash.bills} บิล</span>
+                </div>
               </div>
 
-              <div className="flex items-center justify-between font-bold pt-1">
-                <span className="text-slate-700 flex items-center gap-1.5">
-                  <QrCode className="w-4 h-4 text-blue-600" /> สแกน QR / พร้อมเพย์
-                </span>
-                <span className="font-mono text-slate-800">
-                  ฿{paymentBreakdown.qr.revenue.toLocaleString()} ({paymentBreakdown.qr.percentage.toFixed(1)}%)
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
-                <div
-                  style={{ width: `${paymentBreakdown.qr.percentage}%` }}
-                  className="h-full bg-blue-600 transition-all duration-500"
-                />
+              <div className="pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between font-bold pb-1">
+                  <span className="text-slate-700 flex items-center gap-1.5">
+                    <QrCode className="w-4 h-4 text-blue-600" /> สแกน QR / พร้อมเพย์
+                  </span>
+                  <span className="font-mono text-slate-800">
+                    ฿{paymentBreakdown.qr.revenue.toLocaleString()} ({paymentBreakdown.qr.percentage.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    style={{ width: `${paymentBreakdown.qr.percentage}%` }}
+                    className="h-full bg-blue-600 transition-all duration-500"
+                  />
+                </div>
+                <div className="text-[10.5px] text-slate-500 mt-1 flex justify-between">
+                  <span>จำนวนบิลสแกน QR</span>
+                  <span className="font-mono font-semibold">{paymentBreakdown.qr.bills} บิล</span>
+                </div>
               </div>
             </div>
 
-            {/* Store Sales Share */}
-            <div className="space-y-2">
-              <div className="font-bold text-slate-700 text-[11px]">ยอดขายแยกตามร้านค้า:</div>
-              <div className="space-y-2">
-                {storeBreakdown.map((st) => (
-                  <div
-                    key={st.storeId}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Store className="w-4 h-4 text-amber-600" />
-                      <div>
-                        <div className="font-bold text-slate-800">{st.storeName}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">@{st.username}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold text-emerald-700">
-                        ฿{st.revenue.toLocaleString()}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        {st.bills} บิล • {st.cups} แก้ว
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between text-xs">
+              <span className="font-bold text-emerald-900">รวมยอดรับชำระทั้งหมด:</span>
+              <span className="font-mono font-black text-emerald-800 text-sm">
+                ฿{kpis.totalRevenue.toLocaleString()}
+              </span>
             </div>
           </div>
         </div>
@@ -1014,63 +1004,62 @@ export default function AdminSalesReportPage() {
                 </div>
               </div>
 
-              {/* Side-by-Side Breakdown Tables: Store Breakdown & Top 5 Menu Items */}
+              {/* Side-by-Side Breakdown Tables: Payment Summary & Top 5 Menu Items */}
               <div className="print-avoid-break grid grid-cols-2 gap-3 pt-0.5">
-                {/* Store Breakdown */}
+                {/* Payment Methods Breakdown */}
                 <div className="border border-slate-300 rounded overflow-hidden">
                   <div className="bg-slate-100 px-2 py-1 border-b border-slate-300 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-800">สรุปยอดขายแยกตามร้านค้า / จุดขาย</span>
-                    <span className="text-[9px] text-slate-500 font-mono">{storeBreakdown.length} สาขา</span>
+                    <span className="text-[10px] font-bold text-slate-800">สรุปช่องทางรับชำระเงิน (Payment Summary)</span>
+                    <span className="text-[9px] text-slate-500 font-mono">2 ช่องทาง</span>
                   </div>
                   <table className="w-full text-left text-[9px] border-collapse">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
                         <th className="py-1 px-1.5 w-6 text-center">#</th>
-                        <th className="py-1 px-1.5">จุดขาย / แคชเชียร์</th>
-                        <th className="py-1 px-1.5 text-center w-12">บิล</th>
-                        <th className="py-1 px-1.5 text-center w-12">แก้ว</th>
-                        <th className="py-1 px-1.5 text-right w-16">ยอดขาย (฿)</th>
-                        <th className="py-1 px-1.5 text-right w-12">สัดส่วน</th>
+                        <th className="py-1 px-1.5">ช่องทางชำระเงิน</th>
+                        <th className="py-1 px-1.5 text-center w-14">จำนวนบิล</th>
+                        <th className="py-1 px-1.5 text-right w-20">ยอดรวม (฿)</th>
+                        <th className="py-1 px-1.5 text-right w-14">สัดส่วน</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-mono">
-                      {storeBreakdown.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="py-2 text-center text-slate-400 font-sans">ไม่มีข้อมูลยอดขาย</td>
-                        </tr>
-                      ) : (
-                        storeBreakdown.map((st, idx) => {
-                          const pct = kpis.totalRevenue > 0 ? (st.revenue / kpis.totalRevenue) * 100 : 0;
-                          return (
-                            <tr key={st.storeId || idx}>
-                              <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">{idx + 1}</td>
-                              <td className="py-0.5 px-1.5 font-sans font-bold text-slate-800 truncate max-w-[130px]">
-                                {st.storeName}
-                              </td>
-                              <td className="py-0.5 px-1.5 text-center">{st.bills}</td>
-                              <td className="py-0.5 px-1.5 text-center">{st.cups}</td>
-                              <td className="py-0.5 px-1.5 text-right font-bold text-slate-900">
-                                {st.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                              </td>
-                              <td className="py-0.5 px-1.5 text-right text-slate-600">{pct.toFixed(1)}%</td>
-                            </tr>
-                          );
-                        })
-                      )}
+                      <tr>
+                        <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">1</td>
+                        <td className="py-0.5 px-1.5 font-sans font-bold text-slate-800">
+                          💵 เงินสด (Cash)
+                        </td>
+                        <td className="py-0.5 px-1.5 text-center">{paymentBreakdown.cash.bills} บิล</td>
+                        <td className="py-0.5 px-1.5 text-right font-bold text-slate-900">
+                          {paymentBreakdown.cash.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-right text-slate-600">
+                          {paymentBreakdown.cash.percentage.toFixed(1)}%
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">2</td>
+                        <td className="py-0.5 px-1.5 font-sans font-bold text-slate-800">
+                          📱 สแกน QR (PromptPay)
+                        </td>
+                        <td className="py-0.5 px-1.5 text-center">{paymentBreakdown.qr.bills} บิล</td>
+                        <td className="py-0.5 px-1.5 text-right font-bold text-blue-900">
+                          {paymentBreakdown.qr.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-right text-slate-600">
+                          {paymentBreakdown.qr.percentage.toFixed(1)}%
+                        </td>
+                      </tr>
                     </tbody>
-                    {storeBreakdown.length > 0 && (
-                      <tfoot>
-                        <tr className="bg-slate-50 border-t border-slate-300 font-bold text-slate-900">
-                          <td colSpan={2} className="py-0.5 px-1.5 text-right font-sans">รวมทั้งสิ้น:</td>
-                          <td className="py-0.5 px-1.5 text-center font-mono">{kpis.totalBills}</td>
-                          <td className="py-0.5 px-1.5 text-center font-mono">{kpis.totalCups}</td>
-                          <td className="py-0.5 px-1.5 text-right font-mono">
-                            {kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-0.5 px-1.5 text-right font-mono">100%</td>
-                        </tr>
-                      </tfoot>
-                    )}
+                    <tfoot>
+                      <tr className="bg-slate-50 border-t border-slate-300 font-bold text-slate-900">
+                        <td colSpan={2} className="py-0.5 px-1.5 text-right font-sans">รวมรับชำระทั้งสิ้น:</td>
+                        <td className="py-0.5 px-1.5 text-center font-mono">{kpis.totalBills} บิล</td>
+                        <td className="py-0.5 px-1.5 text-right font-mono font-black text-emerald-800">
+                          {kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-right font-mono">100%</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
 
