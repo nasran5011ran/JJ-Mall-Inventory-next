@@ -82,29 +82,29 @@ export async function GET(req: NextRequest) {
         doh = currentStock > minStock ? 60 : currentStock > 0 ? 14 : 0;
       }
 
-      // Status classification
+      // Status classification purely based on currentStock and minStock (Simple & Understandable)
       let healthStatus: 'OUT_OF_STOCK' | 'CRITICAL' | 'LOW' | 'OPTIMAL' | 'OVERSTOCK' = 'OPTIMAL';
-      let riskLabel = 'สต็อกปกติ (Optimal)';
+      let riskLabel = 'สต็อกเพียงพอ (Healthy)';
 
       if (currentStock <= 0) {
         healthStatus = 'OUT_OF_STOCK';
         riskLabel = 'สินค้าหมด (Out of Stock)';
         criticalCount++;
-      } else if (currentStock < minStock || doh <= 3) {
+      } else if (currentStock < minStock) {
         healthStatus = 'CRITICAL';
-        riskLabel = 'วิกฤต / ต้องสั่งด่วน (Critical)';
+        riskLabel = 'วิกฤต / ต่ำกว่าเกณฑ์ (Critical)';
         criticalCount++;
-      } else if (doh <= 7 || currentStock <= minStock * 1.2) {
+      } else if (currentStock <= minStock * 1.25) {
         healthStatus = 'LOW';
         riskLabel = 'ใกล้หมด / เฝ้าระวัง (Low Stock)';
         lowCount++;
-      } else if (doh > 45) {
+      } else if (currentStock > minStock * 4) {
         healthStatus = 'OVERSTOCK';
-        riskLabel = 'สต็อกเกิน / ทุนจม (Overstock)';
+        riskLabel = 'สต็อกเกินเกณฑ์ (Overstock)';
         overstockCount++;
       } else {
         healthStatus = 'OPTIMAL';
-        riskLabel = 'สต็อกสมบูรณ์ (Healthy)';
+        riskLabel = 'สต็อกเพียงพอ (Healthy)';
         optimalCount++;
       }
 

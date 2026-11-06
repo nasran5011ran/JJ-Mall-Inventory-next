@@ -63,7 +63,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: 'รายงาน & การเงิน',
       items: [
         { href: '/admin/reports/sales', label: 'รายงานยอดขายประจำวัน', icon: TrendingUp },
-        { href: '/admin/reports/stock', label: 'ตารางรายงานสต็อก (DoH)', icon: FileSpreadsheet },
+        { href: '/admin/reports/stock', label: 'รายงานสต็อกและมูลค่าสินค้า', icon: FileSpreadsheet },
         { href: '/admin/reports/ingredients', label: 'รายงานวัตถุดิบที่ใช้', icon: Wheat },
       ],
     },

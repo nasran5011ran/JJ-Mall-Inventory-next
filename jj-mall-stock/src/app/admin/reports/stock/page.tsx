@@ -105,9 +105,7 @@ export default function AdminStockReportPage() {
       'คงเหลือปัจจุบัน',
       'เกณฑ์ขั้นต่ำ (Min Stock)',
       'หน่วย',
-      'อัตราใช้เฉลี่ย/วัน',
-      'DoH (จำนวนวันที่พอใช้)',
-      'สถานะความเสี่ยง',
+      'สถานะสต็อก',
       'ต้นทุน/หน่วย (บาท)',
       'มูลค่ารวม (บาท)',
       'แนะนำสั่งเพิ่ม',
@@ -120,8 +118,6 @@ export default function AdminStockReportPage() {
       i.currentStock,
       i.minStock,
       `"${i.unit}"`,
-      i.dailyUsage,
-      i.doh,
       `"${i.riskLabel}"`,
       i.costPerUnit,
       i.totalValue,
@@ -133,38 +129,33 @@ export default function AdminStockReportPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `JJ_Mall_Stock_DoH_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `JJ_Mall_Stock_Report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Helper for DoH Badge
-  const getDoHBadge = (item: DoHItem) => {
+  // Helper for Stock Status Badge (Simple & Clear)
+  const getStockStatusBadge = (item: DoHItem) => {
     switch (item.healthStatus) {
       case 'OUT_OF_STOCK':
         return {
-          label: '0 วัน (หมดแล้ว)',
-          badgeClass: 'bg-red-50 text-red-700 border-red-300 font-black',
+          label: 'สินค้าหมด (0)',
+          badgeClass: 'bg-slate-100 text-slate-800 border-slate-300 font-black',
         };
       case 'CRITICAL':
         return {
-          label: `${item.doh} วัน (วิกฤต)`,
+          label: 'วิกฤต ต่ำกว่า Min',
           badgeClass: 'bg-red-50 text-red-700 border-red-300 font-black animate-pulse',
         };
       case 'LOW':
         return {
-          label: `${item.doh} วัน (ใกล้หมด)`,
+          label: 'ใกล้หมด (เฝ้าระวัง)',
           badgeClass: 'bg-amber-50 text-amber-800 border-amber-300 font-bold',
-        };
-      case 'OVERSTOCK':
-        return {
-          label: `${item.doh} วัน (สต็อกเกิน)`,
-          badgeClass: 'bg-blue-50 text-blue-800 border-blue-300 font-bold',
         };
       default:
         return {
-          label: `${item.doh} วัน (ปกติ)`,
+          label: 'สต็อกเพียงพอ',
           badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
         };
     }
@@ -176,7 +167,7 @@ export default function AdminStockReportPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
-            รายงานวิเคราะห์สต็อกและระยะเวลาคงคลัง (DoH – Days on Hand Report) ประเมินอัตราการใช้และมูลค่าทุนจม
+            รายงานสรุปสต็อกคงคลังและมูลค่าสินค้า เปรียบเทียบกับเกณฑ์ขั้นต่ำ (Min Stock) เพื่อวางแผนสั่งซื้อ
           </p>
         </div>
 
@@ -248,7 +239,7 @@ export default function AdminStockReportPage() {
           <div className="text-2xl font-black text-red-600 mt-1 font-mono">
             {kpis.criticalCount} <span className="text-xs font-semibold text-slate-500">ชนิด</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">DoH ≤ 3 วัน หรือต่ำกว่า Min Stock</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">สต็อกต่ำกว่าเกณฑ์ขั้นต่ำ (Min)</p>
         </div>
 
         {/* Card 3: Low Stock Warning */}
@@ -271,52 +262,30 @@ export default function AdminStockReportPage() {
           <div className="text-2xl font-black text-amber-700 mt-1 font-mono">
             {kpis.lowCount} <span className="text-xs font-semibold text-slate-500">ชนิด</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">DoH พอใช้ 4 - 7 วัน</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">ใกล้ถึงเกณฑ์ขั้นต่ำ (Min)</p>
         </div>
 
-        {/* Card 4: Overstock */}
+        {/* Card 4: Optimal / Safe Stock */}
         <div
-          onClick={() => setStatusFilter(statusFilter === 'OVERSTOCK' ? 'ALL' : 'OVERSTOCK')}
+          onClick={() => setStatusFilter(statusFilter === 'OPTIMAL' ? 'ALL' : 'OPTIMAL')}
           className={`p-4 rounded-3xl border transition-all cursor-pointer ${
-            statusFilter === 'OVERSTOCK'
-              ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30'
-              : 'bg-white border-slate-200 shadow-2xs hover:border-blue-300'
+            statusFilter === 'OPTIMAL'
+              ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30'
+              : 'bg-white border-slate-200 shadow-2xs hover:border-emerald-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider">
-              สต็อกเกิน / ทุนจม
+            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+              สต็อกเพียงพอ / ปกติ
             </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-blue-600 mt-1 font-mono">
-            {kpis.overstockCount} <span className="text-xs font-semibold text-slate-500">ชนิด</span>
+          <div className="text-2xl font-black text-emerald-700 mt-1 font-mono">
+            {kpis.optimalCount} <span className="text-xs font-semibold text-slate-500">ชนิด</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">DoH มากกว่า 45 วัน</p>
-        </div>
-      </div>
-
-      {/* Guide Banner: What is DoH? */}
-      <div className="p-4 rounded-3xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 font-bold">
-            <Info className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-bold text-slate-800">DoH (Days on Hand) คืออะไร? </span>
-            <span className="text-slate-600">
-              ตัวชี้วัดว่าสต็อกวัตถุดิบที่มีอยู่ปัจจุบันจะสามารถขายต่อได้อีกกี่วัน ก่อนที่ของจะหมดเกลี้ยงคลัง (คำนวณจาก: ยอดสต็อก ÷ อัตราใช้เฉลี่ยต่อวัน)
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 text-[11px] font-bold">
-          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-800">≤ 3 วัน: วิกฤต</span>
-          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">4-7 วัน: เตือน</span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">8-30 วัน: พอดี</span>
-          <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">&gt; 45 วัน: เกิน</span>
+          <p className="text-[11px] text-slate-400 mt-0.5">ปริมาณสต็อกอยู่ในระดับปลอดภัย</p>
         </div>
       </div>
 
@@ -437,10 +406,10 @@ export default function AdminStockReportPage() {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">รหัส / ชื่อวัตถุดิบ</th>
+                  <th className="py-3.5 px-4 text-center">หมวดหมู่</th>
                   <th className="py-3.5 px-4 text-right">คงเหลือปัจจุบัน</th>
                   <th className="py-3.5 px-4 text-right">เกณฑ์ขั้นต่ำ (Min)</th>
-                  <th className="py-3.5 px-4 text-right">อัตราใช้/วัน</th>
-                  <th className="py-3.5 px-4 text-center">DoH (พอใช้อีก)</th>
+                  <th className="py-3.5 px-4 text-center">สถานะสต็อก</th>
                   <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
                   <th className="py-3.5 px-4 text-right">มูลค่าสต็อกรวม</th>
                   <th className="py-3.5 px-4 text-center">คำแนะนำสั่งซื้อ</th>
@@ -448,7 +417,7 @@ export default function AdminStockReportPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredItems.map((item) => {
-                  const dohBadge = getDoHBadge(item);
+                  const statusBadge = getStockStatusBadge(item);
                   const isCritical = item.healthStatus === 'CRITICAL' || item.healthStatus === 'OUT_OF_STOCK';
 
                   return (
@@ -466,8 +435,15 @@ export default function AdminStockReportPage() {
                           <span>{item.name}</span>
                         </div>
                         <div className="text-[10px] text-slate-400 font-mono">
-                          {item.code} • {item.category}
+                          {item.code}
                         </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                          {item.category}
+                        </span>
                       </td>
 
                       {/* Current Stock */}
@@ -482,24 +458,12 @@ export default function AdminStockReportPage() {
                         {item.minStock.toLocaleString()} {item.unit}
                       </td>
 
-                      {/* Daily Usage */}
-                      <td className="py-3.5 px-4 text-right font-mono text-slate-700">
-                        {item.dailyUsage > 0 ? (
-                          <span>
-                            {item.dailyUsage.toLocaleString()} {item.unit}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">-</span>
-                        )}
-                      </td>
-
-                      {/* DoH Badge */}
+                      {/* Stock Status Badge */}
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border ${dohBadge.badgeClass}`}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border ${statusBadge.badgeClass}`}
                         >
-                          <Clock className="w-3 h-3" />
-                          <span>{dohBadge.label}</span>
+                          <span>{statusBadge.label}</span>
                         </span>
                       </td>
 
@@ -563,7 +527,7 @@ export default function AdminStockReportPage() {
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">สถานะสต็อก:</span>
-                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${getDoHBadge(selectedItem).badgeClass}`}>
+                  <span className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border ${getStockStatusBadge(selectedItem).badgeClass}`}>
                     {selectedItem.riskLabel}
                   </span>
                 </div>
@@ -577,18 +541,6 @@ export default function AdminStockReportPage() {
                   <span className="text-slate-400">เกณฑ์ขั้นต่ำ (Min Stock):</span>
                   <span className="font-mono text-slate-700">
                     {selectedItem.minStock.toLocaleString()} {selectedItem.unit}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">อัตราใช้เฉลี่ยต่อวัน:</span>
-                  <span className="font-mono text-slate-700">
-                    {selectedItem.dailyUsage} {selectedItem.unit} / วัน
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-400">DoH (สต็อกพอใช้อีก):</span>
-                  <span className="font-mono font-bold text-emerald-800">
-                    {selectedItem.doh} วัน
                   </span>
                 </div>
               </div>
