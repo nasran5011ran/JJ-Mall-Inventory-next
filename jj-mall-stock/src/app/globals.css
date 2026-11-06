@@ -135,7 +135,7 @@ body {
 }
 
 /* ========================================================
-   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE - 1 PAGE FIT)
+   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE)
    ======================================================== */
 @media print {
   @page {
@@ -148,8 +148,6 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    height: 100% !important;
-    overflow: hidden !important;
   }
 
   /* Hide everything else on the screen */
@@ -157,17 +155,20 @@ body {
     visibility: hidden !important;
   }
 
-  /* Show ONLY the official stock / ingredient print sheet and its contents */
+  /* Show ONLY the official stock / ingredient / sales print sheet and its contents */
   #official-stock-print-report,
   #official-stock-print-report *,
   #official-ingredient-print-report,
-  #official-ingredient-print-report * {
+  #official-ingredient-print-report *,
+  #official-sales-print-report,
+  #official-sales-print-report * {
     visibility: visible !important;
   }
 
-  /* Absolute position to occupy page 1 completely */
+  /* Absolute position to occupy print area completely */
   #official-stock-print-report,
-  #official-ingredient-print-report {
+  #official-ingredient-print-report,
+  #official-sales-print-report {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
@@ -179,6 +180,9 @@ body {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  #official-stock-print-report {
     page-break-after: avoid !important;
     break-after: avoid !important;
     page-break-inside: avoid !important;
@@ -186,17 +190,18 @@ body {
   }
 
   #official-stock-print-report table,
-  #official-ingredient-print-report table {
+  #official-ingredient-print-report table,
+  #official-sales-print-report table {
     width: 100% !important;
     border-collapse: collapse !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   #official-stock-print-report th,
   #official-stock-print-report td,
   #official-ingredient-print-report th,
-  #official-ingredient-print-report td {
+  #official-ingredient-print-report td,
+  #official-sales-print-report th,
+  #official-sales-print-report td {
     color: #000000 !important;
     border-color: #333333 !important;
     padding-top: 1.5px !important;
@@ -205,10 +210,15 @@ body {
     line-height: 1.2 !important;
   }
 
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .print-signature-section {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: 16px !important;
+    margin-top: 14px !important;
     padding-top: 8px !important;
   }
 

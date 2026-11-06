@@ -153,6 +153,51 @@ export default function AdminSalesReportPage() {
 
   // Detail Modal State
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
+  const [printDailyModalOpen, setPrintDailyModalOpen] = useState(false);
+
+  // Label helpers for report printing
+  const dateReportLabel = useMemo(() => {
+    if (selectedDate) {
+      const d = new Date(selectedDate);
+      return d.toLocaleDateString('th-TH', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    }
+    if (period === 'TODAY') {
+      return `วันนี้ (${new Date().toLocaleDateString('th-TH', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })})`;
+    }
+    if (period === 'YESTERDAY') {
+      const yest = new Date();
+      yest.setDate(yest.getDate() - 1);
+      return `เมื่อวาน (${yest.toLocaleDateString('th-TH', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })})`;
+    }
+    if (period === 'THIS_WEEK') {
+      return 'รอบ 7 วันล่าสุด (This Week)';
+    }
+    if (period === 'THIS_MONTH') {
+      return `เดือน${new Date().toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}`;
+    }
+    return 'ข้อมูลทั้งหมด (All Time)';
+  }, [selectedDate, period]);
+
+  const selectedStoreName = useMemo(() => {
+    if (storeId === 'ALL') return 'ทุกจุดขาย (หน้าร้านทั้งหมด)';
+    const found = staffStores.find((s) => String(s.id) === String(storeId));
+    return found ? `${found.name} (@${found.username})` : `จุดขาย ID: ${storeId}`;
+  }, [storeId, staffStores]);
 
   // Search Filter
   const filteredSales = useMemo(() => {
@@ -240,7 +285,7 @@ export default function AdminSalesReportPage() {
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={() => setPrintDailyModalOpen(true)}
             className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
           >
             <Printer className="w-4 h-4 text-emerald-600" />
@@ -827,6 +872,361 @@ export default function AdminSalesReportPage() {
               >
                 ปิด
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Daily Sales Report Print Preview Modal */}
+      {printDailyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex items-start justify-center p-3 sm:p-6 print:p-0 print:bg-white print:overflow-visible">
+          <div className="bg-white rounded-3xl max-w-6xl w-full border border-slate-200 shadow-2xl p-5 sm:p-7 space-y-4 my-auto print:my-0 print:p-0 print:border-none print:shadow-none print:max-w-none">
+            {/* Modal Top Floating Bar (Hidden when printing) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3.5 border-b border-slate-200 gap-3 no-print">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-800">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                    ตัวอย่างพิมพ์รายงานสรุปยอดขายประจำวัน
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      A4 แนวนอน (Landscape)
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    รายงานสรุปยอดขาย รายรับ ช่องทางชำระเงิน อันดับสินค้า และบิลประจำวัน พร้อมลายเซ็น 3 ฝ่าย
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>พิมพ์เอกสาร (Print)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintDailyModalOpen(false)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+                >
+                  ปิด
+                </button>
+              </div>
+            </div>
+
+            {/* Official Printable Sheet Container */}
+            <div id="official-sales-print-report" className="space-y-3.5 text-slate-900 bg-white">
+              {/* Report Header */}
+              <div className="border-b-2 border-slate-800 pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
+                      บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                    </h1>
+                    <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                      รายงานสรุปยอดขายและรายรับประจำวัน (Daily Sales & Financial Summary Report)
+                    </h2>
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block text-[10px] font-black font-mono px-2 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-800">
+                      DOC: DSR-{selectedDate ? selectedDate.replace(/-/g, '') : new Date().toISOString().slice(0, 10).replace(/-/g, '')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between text-[10.5px] border-t border-slate-300 pt-1.5">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="font-bold text-slate-900">ประจำวันที่: </span>
+                      <span className="font-bold text-emerald-800 font-mono">{dateReportLabel}</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900">จุดขาย / สาขา: </span>
+                      <span className="text-slate-800">{selectedStoreName}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-900">พิมพ์เอกสารเมื่อ: </span>
+                    <span className="font-mono text-slate-700">
+                      {new Date().toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} น.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial KPI Summary Grid */}
+              <div className="print-avoid-break grid grid-cols-6 gap-2 text-center">
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">ยอดขายรวมสุทธิ</div>
+                  <div className="text-sm font-black font-mono text-emerald-800 mt-0.5">
+                    ฿{kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">รับเงินสด (Cash)</div>
+                  <div className="text-sm font-black font-mono text-slate-800 mt-0.5">
+                    ฿{paymentBreakdown.cash.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[8.5px] text-slate-500 font-mono">
+                    {paymentBreakdown.cash.bills} บิล ({paymentBreakdown.cash.percentage.toFixed(0)}%)
+                  </div>
+                </div>
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">สแกน QR PromptPay</div>
+                  <div className="text-sm font-black font-mono text-blue-800 mt-0.5">
+                    ฿{paymentBreakdown.qr.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[8.5px] text-slate-500 font-mono">
+                    {paymentBreakdown.qr.bills} บิล ({paymentBreakdown.qr.percentage.toFixed(0)}%)
+                  </div>
+                </div>
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">จำนวนบิลขาย</div>
+                  <div className="text-sm font-black font-mono text-slate-800 mt-0.5">
+                    {kpis.totalBills.toLocaleString()}
+                  </div>
+                  <div className="text-[8.5px] text-slate-500">ใบเสร็จ</div>
+                </div>
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">ปริมาณเครื่องดื่มขาย</div>
+                  <div className="text-sm font-black font-mono text-slate-800 mt-0.5">
+                    {kpis.totalCups.toLocaleString()}
+                  </div>
+                  <div className="text-[8.5px] text-slate-500">แก้ว</div>
+                </div>
+                <div className="p-2 rounded border border-slate-300 bg-slate-50/80">
+                  <div className="text-[9.5px] font-bold text-slate-600">ยอดเฉลี่ย / บิล</div>
+                  <div className="text-sm font-black font-mono text-slate-800 mt-0.5">
+                    ฿{kpis.averageTicket.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-[8.5px] text-slate-500">บาท/บิล</div>
+                </div>
+              </div>
+
+              {/* Side-by-Side Breakdown Tables: Store Breakdown & Top 5 Menu Items */}
+              <div className="print-avoid-break grid grid-cols-2 gap-3 pt-0.5">
+                {/* Store Breakdown */}
+                <div className="border border-slate-300 rounded overflow-hidden">
+                  <div className="bg-slate-100 px-2 py-1 border-b border-slate-300 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-800">สรุปยอดขายแยกตามร้านค้า / จุดขาย</span>
+                    <span className="text-[9px] text-slate-500 font-mono">{storeBreakdown.length} สาขา</span>
+                  </div>
+                  <table className="w-full text-left text-[9px] border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="py-1 px-1.5 w-6 text-center">#</th>
+                        <th className="py-1 px-1.5">จุดขาย / แคชเชียร์</th>
+                        <th className="py-1 px-1.5 text-center w-12">บิล</th>
+                        <th className="py-1 px-1.5 text-center w-12">แก้ว</th>
+                        <th className="py-1 px-1.5 text-right w-16">ยอดขาย (฿)</th>
+                        <th className="py-1 px-1.5 text-right w-12">สัดส่วน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {storeBreakdown.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-2 text-center text-slate-400 font-sans">ไม่มีข้อมูลยอดขาย</td>
+                        </tr>
+                      ) : (
+                        storeBreakdown.map((st, idx) => {
+                          const pct = kpis.totalRevenue > 0 ? (st.revenue / kpis.totalRevenue) * 100 : 0;
+                          return (
+                            <tr key={st.storeId || idx}>
+                              <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">{idx + 1}</td>
+                              <td className="py-0.5 px-1.5 font-sans font-bold text-slate-800 truncate max-w-[130px]">
+                                {st.storeName}
+                              </td>
+                              <td className="py-0.5 px-1.5 text-center">{st.bills}</td>
+                              <td className="py-0.5 px-1.5 text-center">{st.cups}</td>
+                              <td className="py-0.5 px-1.5 text-right font-bold text-slate-900">
+                                {st.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-0.5 px-1.5 text-right text-slate-600">{pct.toFixed(1)}%</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                    {storeBreakdown.length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-50 border-t border-slate-300 font-bold text-slate-900">
+                          <td colSpan={2} className="py-0.5 px-1.5 text-right font-sans">รวมทั้งสิ้น:</td>
+                          <td className="py-0.5 px-1.5 text-center font-mono">{kpis.totalBills}</td>
+                          <td className="py-0.5 px-1.5 text-center font-mono">{kpis.totalCups}</td>
+                          <td className="py-0.5 px-1.5 text-right font-mono">
+                            {kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-right font-mono">100%</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+
+                {/* Top 5 Best Sellers */}
+                <div className="border border-slate-300 rounded overflow-hidden">
+                  <div className="bg-slate-100 px-2 py-1 border-b border-slate-300 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-800">5 อันดับสินค้าขายดีประจำวัน</span>
+                    <span className="text-[9px] text-slate-500 font-mono">Top Best Sellers</span>
+                  </div>
+                  <table className="w-full text-left text-[9px] border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                        <th className="py-1 px-1.5 w-6 text-center">#</th>
+                        <th className="py-1 px-1.5">รายการเครื่องดื่ม</th>
+                        <th className="py-1 px-1.5 text-center w-12">จำนวน</th>
+                        <th className="py-1 px-1.5 text-right w-16">ยอดรวม (฿)</th>
+                        <th className="py-1 px-1.5 text-right w-12">สัดส่วน</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {topProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-2 text-center text-slate-400 font-sans">ไม่มีข้อมูลสินค้า</td>
+                        </tr>
+                      ) : (
+                        topProducts.slice(0, 5).map((tp, idx) => (
+                          <tr key={tp.id || idx}>
+                            <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">{idx + 1}</td>
+                            <td className="py-0.5 px-1.5 font-sans font-bold text-slate-800 truncate max-w-[140px]">
+                              {tp.name}
+                            </td>
+                            <td className="py-0.5 px-1.5 text-center font-bold text-emerald-800">{tp.qty} {tp.unit || 'แก้ว'}</td>
+                            <td className="py-0.5 px-1.5 text-right font-bold text-slate-900">
+                              {tp.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-0.5 px-1.5 text-right text-slate-600">{tp.percentage.toFixed(1)}%</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {topProducts.length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-50 border-t border-slate-300 font-bold text-slate-900">
+                          <td colSpan={2} className="py-0.5 px-1.5 text-right font-sans">รวม Top 5:</td>
+                          <td className="py-0.5 px-1.5 text-center font-mono">
+                            {topProducts.slice(0, 5).reduce((acc, p) => acc + p.qty, 0)} แก้ว
+                          </td>
+                          <td className="py-0.5 px-1.5 text-right font-mono">
+                            {topProducts.slice(0, 5).reduce((acc, p) => acc + p.revenue, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-right font-mono">
+                            {topProducts.slice(0, 5).reduce((acc, p) => acc + p.percentage, 0).toFixed(1)}%
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+
+              {/* Daily Sales Transaction List Table */}
+              <div className="pt-0.5">
+                <div className="flex items-center justify-between pb-1">
+                  <span className="text-[10px] font-bold text-slate-800">
+                    รายละเอียดรายการขายและใบเสร็จ (Daily Sales Receipts Log)
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-mono">
+                    แสดงทั้งหมด {filteredSales.length} ใบเสร็จ
+                  </span>
+                </div>
+                <div className="border border-slate-300 rounded overflow-hidden">
+                  <table className="w-full text-left text-[9px] border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-300 text-slate-800 font-bold">
+                        <th className="py-1 px-1.5 w-7 text-center">ลำดับ</th>
+                        <th className="py-1 px-1.5 w-24">เลขที่ใบเสร็จ</th>
+                        <th className="py-1 px-1.5 w-14 text-center">เวลา</th>
+                        <th className="py-1 px-1.5 w-24">จุดขาย / แคชเชียร์</th>
+                        <th className="py-1 px-1.5 w-16 text-center">ชำระเงิน</th>
+                        <th className="py-1 px-1.5 w-10 text-center">จำนวน</th>
+                        <th className="py-1 px-1.5 text-left">รายการสินค้า</th>
+                        <th className="py-1 px-2 text-right w-20">ยอดรวม (฿)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono">
+                      {filteredSales.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-2.5 text-center text-slate-400 font-sans">
+                            ไม่พบรายการขายในช่วงเวลาที่เลือก
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredSales.map((sale, idx) => (
+                          <tr key={sale.id || idx} className="hover:bg-slate-50">
+                            <td className="py-0.5 px-1.5 text-center font-sans text-slate-500">{idx + 1}</td>
+                            <td className="py-0.5 px-1.5 font-bold text-slate-800 whitespace-nowrap">{sale.saleNumber}</td>
+                            <td className="py-0.5 px-1.5 text-center text-slate-600">
+                              {new Date(sale.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td className="py-0.5 px-1.5 font-sans text-slate-700 truncate max-w-[100px]">
+                              {sale.createdBy?.name || '-'}
+                            </td>
+                            <td className="py-0.5 px-1.5 text-center font-sans">
+                              {sale.paymentMethod === 'CASH' ? 'เงินสด' : 'สแกน QR'}
+                            </td>
+                            <td className="py-0.5 px-1.5 text-center font-bold">{sale.totalItems}</td>
+                            <td className="py-0.5 px-1.5 font-sans text-slate-600 truncate max-w-[220px]">
+                              {sale.items.map((i) => `${i.product?.name || 'สินค้า'} x${i.quantity}`).join(', ')}
+                            </td>
+                            <td className="py-0.5 px-2 text-right font-bold text-slate-900">
+                              {Number(sale.totalAmount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                    {filteredSales.length > 0 && (
+                      <tfoot>
+                        <tr className="bg-slate-50 border-t-2 border-slate-400 font-bold text-slate-900">
+                          <td colSpan={5} className="py-1 px-2 text-right font-sans">
+                            รวมยอดขายทั้งสิ้น ({filteredSales.length} บิล):
+                          </td>
+                          <td className="py-1 px-1.5 text-center font-mono">
+                            {filteredSales.reduce((acc, s) => acc + s.totalItems, 0)}
+                          </td>
+                          <td className="py-1 px-1.5 text-right font-sans text-slate-500">-</td>
+                          <td className="py-1 px-2 text-right font-mono font-black text-emerald-800">
+                            ฿{filteredSales.reduce((acc, s) => acc + Number(s.totalAmount), 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+                </div>
+              </div>
+
+              {/* Official 3 Signature Blocks */}
+              <div className="print-signature-section pt-3 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+                <div className="space-y-1">
+                  <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                  <div className="font-bold text-slate-800">ผู้จัดทำรายงาน (แคชเชียร์ / ผู้จัดการสาขา)</div>
+                  <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                  <div className="font-bold text-slate-800">ผู้ตรวจสอบรายรับ (ฝ่ายการเงิน / ตรวจสอบ)</div>
+                  <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                  <div className="font-bold text-slate-800">ผู้อนุมัติ (ผู้จัดการทั่วไป / เจ้าของกิจการ)</div>
+                  <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
