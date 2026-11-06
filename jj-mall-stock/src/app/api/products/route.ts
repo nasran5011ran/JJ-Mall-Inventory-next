@@ -77,6 +77,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเพิ่มสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { code, name, category, unit, price, cost, minStock, status } = body;
 

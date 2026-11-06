@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/dashboard-layout';
+import { useAuth } from '@/context/auth-context';
 import {
   Layers,
   Search,
@@ -39,6 +40,7 @@ interface IngredientItem {
 }
 
 export default function IngredientsPage() {
+  const { user: currentUser, isAdmin } = useAuth();
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -313,23 +315,40 @@ export default function IngredientsPage() {
               <span className="hidden sm:inline">รีเฟรช</span>
             </button>
 
-            <Link
-              href="/stock-in"
-              className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition-all"
-            >
-              <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
-              <span>รับเข้าสต็อก</span>
-            </Link>
+            {isAdmin && (
+              <>
+                <Link
+                  href="/stock-in"
+                  className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition-all"
+                >
+                  <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
+                  <span>รับเข้าสต็อก</span>
+                </Link>
 
-            <button
-              onClick={openAddModal}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ เพิ่มวัตถุดิบใหม่</span>
-            </button>
+                <button
+                  onClick={openAddModal}
+                  className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>+ เพิ่มวัตถุดิบใหม่</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
+
+        {/* Staff Read-only Banner */}
+        {!isAdmin && currentUser && (
+          <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+              <span>โหมดพนักงานขาย (Staff): คุณมีสิทธิ์ตรวจสอบสต็อกคงเหลือเท่านั้น ไม่สามารถเพิ่ม แก้ไข หรือลบวัตถุดิบได้</span>
+            </div>
+            <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+              Read-Only
+            </span>
+          </div>
+        )}
 
         {/* 5 Summary Stat Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
@@ -341,7 +360,7 @@ export default function IngredientsPage() {
           </div>
 
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-            <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">สต็อกปลอดภัย</div>
+            <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">สต็อกเพียงพอ</div>
             <div className="text-2xl font-black text-emerald-700 mt-1">
               {safeCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
             </div>
@@ -406,9 +425,9 @@ export default function IngredientsPage() {
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 font-medium focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
               <option value="ALL">ทุกสถานะสต็อก</option>
-              <option value="SAFE">สต็อกปลอดภัย</option>
-              <option value="LOW">ใกล้หมด (เหลือน้อยกว่าขั้นต่ำ)</option>
-              <option value="OUT">หมดสต็อก (0)</option>
+              <option value="SAFE">🟢 สต็อกเพียงพอ</option>
+              <option value="LOW">🟠 ใกล้หมด (เหลือน้อยกว่าขั้นต่ำ)</option>
+              <option value="OUT">🔴 หมดสต็อก (0)</option>
             </select>
           </div>
         </div>
@@ -440,7 +459,7 @@ export default function IngredientsPage() {
                     <th className="py-3.5 px-4">ชื่อวัตถุดิบ</th>
                     <th className="py-3.5 px-4">หมวดหมู่</th>
                     <th className="py-3.5 px-4 text-right">คงเหลือในคลัง</th>
-                    <th className="py-3.5 px-4 text-right">จุดสั่งซื้อ (Min)</th>
+                    <th className="py-3.5 px-4 text-right">สต็อกขั้นต่ำ (Min)</th>
                     <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
                     <th className="py-3.5 px-4 text-right">มูลค่ารวม</th>
                     <th className="py-3.5 px-4 text-center">สถานะสต็อก</th>
@@ -532,7 +551,7 @@ export default function IngredientsPage() {
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              ปลอดภัย
+                              สต็อกเพียงพอ
                             </span>
                           )}
                         </td>
@@ -551,32 +570,38 @@ export default function IngredientsPage() {
 
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {/* Stock-in quick link */}
-                            <Link
-                              href={`/stock-in?code=${ing.code}`}
-                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1"
-                              title="รับเข้าสต็อก"
-                            >
-                              <ArrowDownToLine className="w-3 h-3" />
-                              <span>รับเข้า</span>
-                            </Link>
+                          {isAdmin ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Stock-in quick link */}
+                              <Link
+                                href={`/stock-in?code=${ing.code}`}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1"
+                                title="รับเข้าสต็อก"
+                              >
+                                <ArrowDownToLine className="w-3 h-3" />
+                                <span>รับเข้า</span>
+                              </Link>
 
-                            <button
-                              onClick={() => openEditModal(ing)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                              title="แก้ไขวัตถุดิบ"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(ing.id, ing.name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                              title="ลบหรือระงับวัตถุดิบ"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                              <button
+                                onClick={() => openEditModal(ing)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                title="แก้ไขวัตถุดิบ"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(ing.id, ing.name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="ลบหรือระงับวัตถุดิบ"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-semibold bg-slate-100 px-2.5 py-1 rounded-full">
+                              ดูเท่านั้น
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

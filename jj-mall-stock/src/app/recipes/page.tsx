@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/dashboard-layout';
+import { useAuth } from '@/context/auth-context';
 import {
   ChefHat,
   Search,
@@ -71,6 +72,7 @@ interface RecipeData {
 }
 
 export default function RecipesPage() {
+  const { user: currentUser, isAdmin } = useAuth();
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
   const [productsWithoutRecipe, setProductsWithoutRecipe] = useState<any[]>([]);
   const [allIngredients, setAllIngredients] = useState<any[]>([]);
@@ -319,13 +321,15 @@ export default function RecipesPage() {
               <span className="hidden sm:inline">รีเฟรช</span>
             </button>
 
-            <button
-              onClick={() => openAddModal()}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ กำหนดสูตรสินค้าใหม่</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => openAddModal()}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ กำหนดสูตรสินค้าใหม่</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -528,22 +532,28 @@ export default function RecipesPage() {
                       <span>จำลองคำนวณตัดสต็อก</span>
                     </button>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEditModal(recipe)}
-                        className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                        title="แก้ไขสูตร BOM"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(recipe.id, recipe.product.name)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                        title="ลบสูตรนี้"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditModal(recipe)}
+                          className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                          title="แก้ไขสูตร BOM"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(recipe.id, recipe.product.name)}
+                          className="p-2 rounded-xl text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                          title="ลบสูตรนี้"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 font-semibold bg-slate-100 px-2.5 py-1 rounded-full">
+                        ดูสูตรเท่านั้น
+                      </span>
+                    )}
                   </div>
                 </div>
               );

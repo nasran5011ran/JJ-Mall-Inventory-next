@@ -10,6 +10,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเพิ่มวัตถุดิบได้' },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
@@ -68,6 +75,13 @@ export async function POST(req: NextRequest) {
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเพิ่มวัตถุดิบได้' },
+        { status: 403 }
+      );
     }
 
     const body = await req.json();

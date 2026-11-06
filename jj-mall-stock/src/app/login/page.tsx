@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Lock, User, Eye, EyeOff, ShieldCheck, UserCheck, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,7 +35,11 @@ export default function LoginPage() {
 
       setSuccess(`เข้าสู่ระบบสำเร็จ! ยินดีต้อนรับคุณ ${data.user.name}`);
       setTimeout(() => {
-        router.push('/dashboard');
+        if (data.user.role === 'STAFF') {
+          router.push('/staff/sales');
+        } else {
+          router.push('/admin/dashboard');
+        }
         router.refresh();
       }, 800);
     } catch (err: any) {
@@ -43,12 +47,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setError(null);
   };
 
   return (
@@ -98,7 +96,7 @@ export default function LoginPage() {
           )}
 
           {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 ชื่อผู้ใช้งาน (Username)
@@ -109,6 +107,9 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="text"
+                  name="auth_username"
+                  id="auth_username"
+                  autoComplete="off"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -128,6 +129,10 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="auth_password"
+                  id="auth_password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -137,7 +142,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                   aria-label="Toggle password visibility"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -166,42 +171,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Fill Buttons */}
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            <p className="text-xs text-center text-slate-500 font-medium mb-3">
-              คลิกเพื่อทดสอบเข้าสู่ระบบตามสิทธิ์ผู้ใช้งาน:
-            </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin', 'admin123')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-amber-200 bg-amber-50/60 hover:bg-amber-100/80 transition-colors text-left group cursor-pointer"
-              >
-                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-amber-900 group-hover:text-amber-950">ผู้ดูแลระบบ</div>
-                  <div className="text-[11px] text-amber-700/80 truncate">admin (สิทธิ์เต็ม)</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickFill('staff', 'staff123')}
-                className="flex items-center gap-2 p-2.5 rounded-xl border border-sky-200 bg-sky-50/60 hover:bg-sky-100/80 transition-colors text-left group cursor-pointer"
-              >
-                <div className="w-7 h-7 rounded-lg bg-sky-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-bold text-sky-900 group-hover:text-sky-950">พนักงานขาย</div>
-                  <div className="text-[11px] text-sky-700/80 truncate">staff (ขาย/ตรวจนับ)</div>
-                </div>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Footer info */}

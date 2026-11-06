@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/dashboard-layout';
+import { useAuth } from '@/context/auth-context';
 import {
   Package,
   Search,
@@ -49,6 +50,7 @@ interface ProductItem {
 }
 
 export default function ProductsPage() {
+  const { user: currentUser, isAdmin } = useAuth();
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -260,22 +262,12 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60 mb-1.5">
-              <Package className="w-3.5 h-3.5" />
-              ระบบจัดการสินค้า (Product Catalog)
-            </div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-              จัดการสินค้าและเมนูขาย
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              เพิ่มและแก้ไขข้อมูลสินค้า แสดงผลในตารางทันที พร้อมคำนวณต้นทุนจากสูตรการผลิต (BOM)
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5">
+        {/* Action Header */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-slate-500 hidden sm:block">
+            รายการสินค้าทั้งหมด คำนวณต้นทุน และตรวจสอบความพร้อมของสูตร BOM
+          </p>
+          <div className="flex items-center gap-2.5 ml-auto">
             <button
               onClick={() => loadProducts(true)}
               disabled={refreshing}
@@ -285,15 +277,30 @@ export default function ProductsPage() {
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">รีเฟรช</span>
             </button>
-            <button
-              onClick={openAddModal}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ เพิ่มสินค้าใหม่</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={openAddModal}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ เพิ่มสินค้าใหม่</span>
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Staff Mode Read-only Banner */}
+        {!isAdmin && currentUser && (
+          <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-semibold flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+              <span>โหมดพนักงานขาย (Staff): คุณมีสิทธิ์ตรวจสอบราคาสินค้าเท่านั้น ไม่สามารถเพิ่ม แก้ไข หรือลบสินค้าได้</span>
+            </div>
+            <span className="text-[11px] font-bold uppercase px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+              Read-Only
+            </span>
+          </div>
+        )}
 
         {/* 4 Summary Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -416,7 +423,7 @@ export default function ProductsPage() {
 
                     // Display user's edited cost if present, otherwise fallback to BOM cost
                     const displayCost =
-                      p.cost !== null && p.cost !== undefined && p.cost !== ''
+                      p.cost !== null && p.cost !== undefined
                         ? Number(p.cost)
                         : bomCost !== null
                         ? bomCost
@@ -529,22 +536,28 @@ export default function ProductsPage() {
 
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => openEditModal(p)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                              title="แก้ไขสินค้าทันที"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(p.id, p.name)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                              title="ลบหรือระงับสินค้า"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {isAdmin ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => openEditModal(p)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                title="แก้ไขสินค้าทันที"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(p.id, p.name)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="ลบหรือระงับสินค้า"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-semibold bg-slate-100 px-2.5 py-1 rounded-full">
+                              ดูเท่านั้น
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

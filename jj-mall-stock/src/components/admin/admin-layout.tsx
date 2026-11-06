@@ -1,0 +1,78 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
+import AdminSidebar from './admin-sidebar';
+import AdminNavbar from './admin-navbar';
+
+interface AdminLayoutProps {
+  children: React.ReactNode;
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  const router = useRouter();
+  const { user, isAdmin, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
+
+  // Route Guard: Strictly kick non-admins out
+  useEffect(() => {
+    if (!loading && user && user.role !== 'ADMIN') {
+      router.replace('/staff/sales');
+    }
+  }, [user, loading, router]);
+
+  // Load admin notification count in background
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('/api/dashboard');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.success && data.data?.kpis) {
+            const count = (data.data.kpis.lowStockIngredients || 0) + (data.data.kpis.outOfStockIngredients || 0);
+            setNotificationCount(count);
+          }
+        }
+      } catch (e) {}
+    };
+    fetchAlerts();
+  }, [isAdmin]);
+
+  if (loading && !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium">กำลังเตรียมระบบ Admin JJ Mall...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'ADMIN') return null;
+
+  return (
+    <div className="min-h-screen bg-slate-50/70 flex">
+      {/* Admin Dedicated Sidebar */}
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 transition-all">
+        <AdminNavbar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          notificationCount={notificationCount}
+        />
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

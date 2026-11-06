@@ -13,6 +13,13 @@ export async function GET(
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const productId = parseInt(id, 10);
 
@@ -50,6 +57,13 @@ export async function PUT(
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (session.role !== 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;

@@ -1,57 +1,45 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Sidebar from './sidebar';
 import Header from './header';
+import { useAuth } from '@/context/auth-context';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const router = useRouter();
+  const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState<{ id: number; name: string; username: string; role: 'ADMIN' | 'STAFF' } | null>(null);
-  const [loading, setLoading] = useState(true);
   const [notificationCount, setNotificationCount] = useState(0);
 
+  // Background check for notifications (non-blocking)
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((res) => {
-        if (!res.ok) throw new Error('Unauthenticated');
-        return res.json();
-      })
-      .then((data) => {
-        if (data.success && data.user) {
-          setUser(data.user);
-        } else {
-          router.push('/login');
+    if (!user) return;
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('/api/dashboard');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.success && data.data?.kpis) {
+            const count = (data.data.kpis.lowStockIngredients || 0) + (data.data.kpis.outOfStockIngredients || 0);
+            setNotificationCount(count);
+          }
         }
-      })
-      .catch(() => {
-        router.push('/login');
-      })
-      .finally(() => setLoading(false));
+      } catch (e) {}
+    };
 
-    // Fetch alerts count from dashboard api
-    fetch('/api/dashboard')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.success && data.data?.kpis) {
-          const totalAlerts = (data.data.kpis.lowStockIngredients || 0) + (data.data.kpis.outOfStockIngredients || 0);
-          setNotificationCount(totalAlerts);
-        }
-      })
-      .catch(() => {});
-  }, [router]);
+    fetchAlerts();
+  }, [user]);
 
-  if (loading) {
+  // Only show spinner on very first app load if not authenticated yet
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-500 font-medium">กำลังโหลดข้อมูลระบบ JJ Mall...</p>
+          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium">กำลังเตรียมระบบ JJ Mall...</p>
         </div>
       </div>
     );

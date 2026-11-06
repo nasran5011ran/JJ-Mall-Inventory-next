@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 import {
   DollarSign,
   Coffee,
@@ -24,9 +26,18 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user && user.role === 'STAFF') {
+      router.replace('/sales');
+      return;
+    }
+  }, [user, router]);
 
   const fetchDashboardData = async () => {
     try {

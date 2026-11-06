@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Prompt } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/context/auth-context";
+import { SWRProvider } from "@/lib/swr-provider";
 
 const promptFont = Prompt({
   weight: ["300", "400", "500", "600", "700"],
@@ -21,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="th" className={`${promptFont.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
-        {children}
+        <AuthProvider>
+          <SWRProvider>{children}</SWRProvider>
+        </AuthProvider>
       </body>
     </html>
   );
