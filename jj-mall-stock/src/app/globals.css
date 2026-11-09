@@ -160,6 +160,8 @@ body {
   /* Show ONLY the official stock / ingredient / sales print sheet and its contents */
   #official-stock-print-report,
   #official-stock-print-report *,
+  #official-stock-inventory-report,
+  #official-stock-inventory-report *,
   #official-ingredient-print-report,
   #official-ingredient-print-report *,
   #official-sales-print-report,
@@ -169,6 +171,7 @@ body {
 
   /* Absolute position to occupy page 1 completely */
   #official-stock-print-report,
+  #official-stock-inventory-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
     position: absolute !important;
@@ -189,6 +192,7 @@ body {
   }
 
   #official-stock-print-report table,
+  #official-stock-inventory-report table,
   #official-ingredient-print-report table,
   #official-sales-print-report table {
     width: 100% !important;
@@ -199,6 +203,8 @@ body {
 
   #official-stock-print-report th,
   #official-stock-print-report td,
+  #official-stock-inventory-report th,
+  #official-stock-inventory-report td,
   #official-ingredient-print-report th,
   #official-ingredient-print-report td,
   #official-sales-print-report th,

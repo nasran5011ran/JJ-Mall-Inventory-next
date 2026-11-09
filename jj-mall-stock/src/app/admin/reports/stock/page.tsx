@@ -47,6 +47,7 @@ export default function AdminStockReportPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   // SWR URL with filters
   const apiUrl = useMemo(() => {
@@ -183,7 +184,7 @@ export default function AdminStockReportPage() {
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={() => setPrintModalOpen(true)}
             className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
           >
             <Printer className="w-4 h-4 text-emerald-600" />
@@ -592,6 +593,228 @@ export default function AdminStockReportPage() {
               >
                 ปิดหน้าต่าง
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Stock Inventory Report Print Preview Modal */}
+      {printModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+          {/* Top Control Bar (Hidden on print) */}
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-emerald-700" />
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                  ตัวอย่างพิมพ์รายงานสรุปสต็อกสินค้าคงคลังและมูลค่า (A4 แนวนอน)
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  ตรวจสอบความถูกต้องก่อนสั่งพิมพ์ หรือบันทึกเป็น PDF
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                <span>พิมพ์เอกสาร</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Document Sheet (A4 Landscape Style) */}
+          <div
+            id="official-stock-inventory-report"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+          >
+            {/* Document Header */}
+            <div className="relative pb-2 mb-2 border-b-2 border-slate-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
+                    บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                  </h1>
+                  <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                    รายงานสรุปสต็อกสินค้าคงคลังและมูลค่า (Stock Inventory & Valuation Report)
+                  </h2>
+                </div>
+                <div className="text-right text-[10px] text-slate-600 font-mono leading-tight">
+                  <div className="font-bold text-slate-800">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
+                  <div>เลขที่เอกสาร: STK-REP-{new Date().toISOString().slice(0, 10).replace(/-/g, '')}</div>
+                  <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
+                </div>
+              </div>
+
+              {/* Sub-Header: Filter Info */}
+              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-600 font-medium">
+                <div>
+                  <span className="font-bold text-slate-800">หมวดหมู่: </span>
+                  <span>{categoryFilter === 'ALL' ? 'ทุกหมวดหมู่' : categoryFilter}</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-bold text-slate-800">สถานะสต็อก: </span>
+                  <span>
+                    {statusFilter === 'ALL'
+                      ? 'ทั้งหมด'
+                      : statusFilter === 'CRITICAL'
+                      ? 'วิกฤต/ต้องสั่งด่วน'
+                      : statusFilter === 'LOW'
+                      ? 'ใกล้หมด'
+                      : 'สต็อกปกติ'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800">จำนวนรายการที่แสดง: </span>
+                  <span className="font-bold font-mono">{filteredItems.length}</span> รายการ
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Primary KPI Summary Cards Strip */}
+            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2.5">
+              <div className="p-2 rounded border border-slate-300 bg-slate-50">
+                <div className="text-[9.5px] font-bold text-slate-600">มูลค่าสต็อกรวมในคลัง</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-emerald-800 mt-0.5">
+                  ฿{Number(kpis.totalStockValue).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-slate-300 bg-slate-50">
+                <div className="text-[9.5px] font-bold text-slate-600">จำนวนวัตถุดิบทั้งหมด</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-slate-800 mt-0.5">
+                  {kpis.totalIngredients} <span className="text-[9.5px] font-normal">ชนิด</span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-red-300 bg-red-50/50">
+                <div className="text-[9.5px] font-bold text-red-700">วิกฤต / ต้องสั่งด่วน (ต่ำกว่า Min)</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-red-700 mt-0.5">
+                  {kpis.criticalCount} <span className="text-[9.5px] font-normal">ชนิด</span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-amber-300 bg-amber-50/50">
+                <div className="text-[9.5px] font-bold text-amber-800">ใกล้หมด (เฝ้าระวัง)</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-amber-800 mt-0.5">
+                  {kpis.lowCount} <span className="text-[9.5px] font-normal">ชนิด</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Stock Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[10px] leading-tight">
+                <thead>
+                  <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
+                    <th className="py-1 px-1 border-r border-slate-300 w-8">ลำดับ</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 w-24">รหัสวัตถุดิบ</th>
+                    <th className="py-1 px-2 border-r border-slate-300 text-left">ชื่อวัตถุดิบ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-20">หมวดหมู่</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-12">หน่วย</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-20">คงเหลือปัจจุบัน</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-18">เกณฑ์ขั้นต่ำ (Min)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ต้นทุน/หน่วย</th>
+                    <th className="py-1 px-2 border-r border-slate-300 text-right w-24">มูลค่ารวม (บาท)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-center w-24">สถานะสต็อก</th>
+                    <th className="py-1 px-1.5 text-center w-24">ข้อเสนอแนะ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-mono text-[9.5px]">
+                  {filteredItems.map((item, idx) => {
+                    const statusBadge = getStockStatusBadge(item);
+                    const isCritical = item.healthStatus === 'CRITICAL' || item.healthStatus === 'OUT_OF_STOCK';
+
+                    return (
+                      <tr key={item.id} className={isCritical ? 'bg-red-50/40' : ''}>
+                        <td className="py-1 px-1 text-center border-r border-slate-200 font-sans">
+                          {idx + 1}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 font-bold">
+                          {item.code}
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
+                          {item.name}
+                        </td>
+                        <td className="py-1 px-1 border-r border-slate-200 text-center font-sans">
+                          {item.category}
+                        </td>
+                        <td className="py-1 px-1 border-r border-slate-200 text-center font-sans">
+                          {item.unit}
+                        </td>
+                        <td className={`py-1 px-1.5 border-r border-slate-200 text-right font-bold ${item.currentStock <= item.minStock ? 'text-red-700' : 'text-slate-900'}`}>
+                          {item.currentStock.toLocaleString()}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right text-slate-600">
+                          {item.minStock.toLocaleString()}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right">
+                          {item.costPerUnit.toFixed(2)}
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 text-right font-bold text-slate-900">
+                          {item.totalValue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-center font-sans font-bold">
+                          <span className={item.healthStatus === 'CRITICAL' || item.healthStatus === 'OUT_OF_STOCK' ? 'text-red-700' : item.healthStatus === 'LOW' ? 'text-amber-700' : 'text-emerald-700'}>
+                            {statusBadge.label}
+                          </span>
+                        </td>
+                        <td className="py-1 px-1.5 text-center font-sans text-[9px]">
+                          {item.recommendedReorder > 0 ? (
+                            <span className="text-red-700 font-bold">ควรสั่งซื้อเพิ่ม</span>
+                          ) : (
+                            <span className="text-emerald-700">ปกติ</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-800 bg-slate-100 font-bold text-[10px]">
+                    <td colSpan={8} className="py-1.5 px-3 text-right font-sans border-r border-slate-300">
+                      รวมมูลค่าสต็อกคงคลังทั้งสิ้น ({filteredItems.length} รายการ):
+                    </td>
+                    <td className="py-1.5 px-2 text-right font-mono text-emerald-800 border-r border-slate-300 font-black">
+                      ฿{filteredItems.reduce((acc, i) => acc + i.totalValue, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td colSpan={2} className="py-1.5 px-2 text-center text-slate-500 font-sans text-[9px]">
+                      สถานะ: {kpis.criticalCount > 0 ? `วิกฤต ${kpis.criticalCount} รายการ` : 'ระดับสต็อกปลอดภัย'}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Signature Section */}
+            <div className="print-signature-section pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้จัดทำรายงาน (เจ้าหน้าที่สต็อก / แคชเชียร์)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้ตรวจสอบสต็อก (ผู้จัดการสาขา)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
             </div>
           </div>
         </div>
