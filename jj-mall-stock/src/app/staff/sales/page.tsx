@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import useSWR from 'swr';
+import QRCode from 'qrcode';
 import { useAuth } from '@/context/auth-context';
 import {
   ShoppingCart,
@@ -118,9 +119,10 @@ export default function SalesPage() {
   const [cashReceived, setCashReceived] = useState<string>('');
 
   // PromptPay configuration for store
-  const [promptPayId, setPromptPayId] = useState<string>('');
+  const [promptPayId, setPromptPayId] = useState<string>('0812345678');
   const [isEditingPromptPay, setIsEditingPromptPay] = useState(false);
-  const [promptPayInput, setPromptPayInput] = useState<string>('');
+  const [promptPayInput, setPromptPayInput] = useState<string>('0812345678');
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
 
   useEffect(() => {
     // Load saved PromptPay ID from localStorage
@@ -208,6 +210,23 @@ export default function SalesPage() {
     (sum, item) => sum + Number(item.product.price) * item.quantity,
     0
   );
+
+  // Generate QR Code directly in-memory via QRCode library
+  useEffect(() => {
+    const target = promptPayId || '0812345678';
+    const payload = generatePromptPayPayload(target, totalAmount);
+    QRCode.toDataURL(payload, {
+      width: 250,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#ffffff',
+      },
+      errorCorrectionLevel: 'M',
+    })
+      .then((url) => setQrDataUrl(url))
+      .catch((err) => console.error('QR Generate Error:', err));
+  }, [promptPayId, totalAmount, paymentMethod]);
 
   // Step 1: Open Confirmation Modal (ชั้นที่ 1)
   const handleOpenConfirm = () => {
@@ -728,72 +747,65 @@ export default function SalesPage() {
                     </div>
                   </div>
 
-                  {/* QR Code Container */}
-                  {promptPayId && !isEditingPromptPay ? (
-                    <div className="space-y-3">
-                      <div className="bg-white p-3 rounded-2xl border border-slate-200/80 inline-block shadow-xs">
+                  {/* QR Code Container (แสดง QR Code ทันที) */}
+                  <div className="space-y-3">
+                    <div className="bg-white p-3 rounded-2xl border border-slate-200/80 inline-block shadow-xs">
+                      {qrDataUrl ? (
                         <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                            generatePromptPayPayload(promptPayId, totalAmount)
-                          )}`}
+                          src={qrDataUrl}
                           alt="PromptPay QR Code"
-                          className="w-44 h-44 object-contain mx-auto"
+                          className="w-48 h-48 object-contain mx-auto"
                         />
-                      </div>
+                      ) : (
+                        <div className="w-48 h-48 flex items-center justify-center text-xs text-slate-400">
+                          กำลังสร้าง QR Code...
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-200">
-                        <div className="text-[11px] text-sky-800 font-semibold">ยอดเงินที่ต้องสแกนจ่าย:</div>
-                        <div className="text-2xl font-black text-sky-900 font-mono">฿{totalAmount.toFixed(2)}</div>
-                        <div className="text-[10px] text-slate-500 mt-1">
-                          เบอร์พร้อมเพย์: <strong className="font-mono text-slate-700">{promptPayId}</strong>{' '}
+                    <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-200">
+                      <div className="text-[11px] text-sky-800 font-semibold">ยอดเงินที่ต้องสแกนจ่าย:</div>
+                      <div className="text-2xl font-black text-sky-900 font-mono">฿{totalAmount.toFixed(2)}</div>
+                      <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-center gap-1.5">
+                        <span>เบอร์พร้อมเพย์: <strong className="font-mono text-slate-700">{promptPayId}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPromptPayInput(promptPayId);
+                            setIsEditingPromptPay(!isEditingPromptPay);
+                          }}
+                          className="text-sky-600 underline font-semibold cursor-pointer"
+                        >
+                          {isEditingPromptPay ? '(ซ่อน)' : '(แก้ไขเบอร์)'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Edit PromptPay Number Drawer */}
+                    {isEditingPromptPay && (
+                      <div className="p-3 bg-white rounded-xl border border-sky-300 space-y-2 text-left animate-in fade-in duration-150">
+                        <div className="text-[11px] font-bold text-slate-700">
+                          เปลี่ยนเบอร์โทรศัพท์ หรือเลขประจำตัวพร้อมเพย์ของร้าน:
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="เช่น 0812345678"
+                            value={promptPayInput}
+                            onChange={(e) => setPromptPayInput(e.target.value)}
+                            className="flex-1 px-3 py-1.5 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                          />
                           <button
                             type="button"
-                            onClick={() => {
-                              setPromptPayInput(promptPayId);
-                              setIsEditingPromptPay(true);
-                            }}
-                            className="text-sky-600 underline font-semibold ml-1 cursor-pointer"
+                            onClick={handleSavePromptPay}
+                            className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs cursor-pointer shadow-xs"
                           >
-                            (เปลี่ยนเบอร์)
+                            บันทึก
                           </button>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-white rounded-2xl border border-dashed border-sky-300 space-y-2.5 text-left">
-                      <div className="text-xs font-bold text-slate-800">
-                        ตั้งค่าเบอร์พร้อมเพย์ของร้านสำหรับรับเงิน
-                      </div>
-                      <p className="text-[11px] text-slate-500">
-                        ระบุเบอร์โทรศัพท์ (10 หลัก) หรือเลขประจำตัวประชาชน/นิติบุคคล (13 หลัก) ของร้าน
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="เช่น 0812345678 หรือ 081-xxx-xxxx"
-                          value={promptPayInput}
-                          onChange={(e) => setPromptPayInput(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleSavePromptPay}
-                          className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs cursor-pointer shadow-xs"
-                        >
-                          บันทึก
-                        </button>
-                        {promptPayId && (
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingPromptPay(false)}
-                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs cursor-pointer"
-                          >
-                            ยกเลิก
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   <p className="text-[10px] text-slate-400">
                     💡 ลูกค้าเปิดแอปธนาคารใดก็ได้ สแกน QR ด้านบน ยอดเงินจะขึ้นพอดี ฿{totalAmount.toFixed(2)} ทันที
