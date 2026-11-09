@@ -808,9 +808,9 @@ export default function SalesPage() {
         <div id="official-pos-receipt" className="hidden print:block text-black bg-white">
           {/* Header */}
           <div className="text-center pb-2 border-b border-dashed border-black">
-            <h1 className="text-xs font-black tracking-wider uppercase">JJ MALL BEVERAGE</h1>
-            <p className="text-[10px] font-bold">ศูนย์การค้าเจเจมอลล์ จตุจักร</p>
-            <p className="text-[9px] text-neutral-600">จุดบริการเครื่องดื่ม & เบเกอรี่</p>
+            <h1 className="text-sm font-black tracking-wider">ใบเสร็จรับเงิน</h1>
+            <p className="text-xs font-bold text-black">{completedSale.createdBy?.name || user?.name || 'ร้านค้าหน้าร้าน'}</p>
+            <p className="text-[10px] text-neutral-600">ศูนย์การค้าเจเจมอลล์ จตุจักร</p>
           </div>
 
           {/* Receipt Meta */}
@@ -877,17 +877,17 @@ export default function SalesPage() {
               <span className="font-mono font-bold">{completedSale.totalItems} แก้ว/ชิ้น</span>
             </div>
             <div className="flex justify-between text-xs font-black pt-1 border-t border-black">
-              <span>ยอดสุทธิ (Total):</span>
+              <span>ยอดรวมสุทธิ:</span>
               <span className="font-mono text-sm">฿{Number(completedSale.totalAmount).toFixed(2)}</span>
             </div>
             {completedSale.receivedAmount != null && (
               <>
                 <div className="flex justify-between pt-1">
-                  <span>รับเงินสด (Cash):</span>
+                  <span>รับเงินสด:</span>
                   <span className="font-mono">฿{Number(completedSale.receivedAmount).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold">
-                  <span>เงินทอน (Change):</span>
+                  <span>เงินทอน:</span>
                   <span className="font-mono">฿{Number(completedSale.changeAmount || 0).toFixed(2)}</span>
                 </div>
               </>
@@ -897,8 +897,7 @@ export default function SalesPage() {
           {/* Footer Note */}
           <div className="pt-3 text-center text-[9px] space-y-0.5">
             <p className="font-bold">** ขอบคุณที่ใช้บริการ **</p>
-            <p>Thank you - Please come again</p>
-            <p className="text-[8px] text-neutral-500 pt-1">
+            <p className="text-[8px] text-neutral-500 pt-0.5">
               กรุณาตรวจสอบสินค้าและเงินทอนก่อนออกจากเคาน์เตอร์
             </p>
           </div>
