@@ -166,6 +166,10 @@ body {
   #official-stock-adjustment-voucher *,
   #official-stock-adjustments-report,
   #official-stock-adjustments-report *,
+  #official-stock-transaction-slip,
+  #official-stock-transaction-slip *,
+  #official-stock-transactions-report,
+  #official-stock-transactions-report *,
   #official-ingredient-print-report,
   #official-ingredient-print-report *,
   #official-sales-print-report,
@@ -178,6 +182,8 @@ body {
   #official-stock-inventory-report,
   #official-stock-adjustment-voucher,
   #official-stock-adjustments-report,
+  #official-stock-transaction-slip,
+  #official-stock-transactions-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
     position: absolute !important;
@@ -201,6 +207,8 @@ body {
   #official-stock-inventory-report table,
   #official-stock-adjustment-voucher table,
   #official-stock-adjustments-report table,
+  #official-stock-transaction-slip table,
+  #official-stock-transactions-report table,
   #official-ingredient-print-report table,
   #official-sales-print-report table {
     width: 100% !important;
@@ -217,6 +225,10 @@ body {
   #official-stock-adjustment-voucher td,
   #official-stock-adjustments-report th,
   #official-stock-adjustments-report td,
+  #official-stock-transaction-slip th,
+  #official-stock-transaction-slip td,
+  #official-stock-transactions-report th,
+  #official-stock-transactions-report td,
   #official-ingredient-print-report th,
   #official-ingredient-print-report td,
   #official-sales-print-report th,

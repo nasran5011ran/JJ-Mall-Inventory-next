@@ -94,6 +94,10 @@ export default function AdminStockTransactionsPage() {
   // Detail Modal State
   const [selectedTx, setSelectedTx] = useState<StockTransactionRecord | null>(null);
 
+  // Print Modals
+  const [printListModalOpen, setPrintListModalOpen] = useState(false);
+  const [printSlipOpen, setPrintSlipOpen] = useState(false);
+
   // Search Filter
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -243,6 +247,15 @@ export default function AdminStockTransactionsPage() {
           >
             <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">รีเฟรช</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPrintListModalOpen(true)}
+            className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
+          >
+            <Printer className="w-4 h-4 text-emerald-600" />
+            <span>พิมพ์สมุดคุมสต็อก</span>
           </button>
 
           <button
@@ -706,8 +719,8 @@ export default function AdminStockTransactionsPage() {
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
               <button
                 type="button"
-                onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setPrintSlipOpen(true)}
+                className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Printer className="w-4 h-4" />
                 <span>พิมพ์ใบ Slip</span>
@@ -720,6 +733,365 @@ export default function AdminStockTransactionsPage() {
               >
                 ปิดหน้าต่าง
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Stock Transaction Slip Print Preview Modal */}
+      {printSlipOpen && selectedTx && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+          {/* Top Control Bar (Hidden on print) */}
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-emerald-700" />
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                  ตัวอย่างพิมพ์ใบสำคัญรายการสต็อก (A4 แนวนอน)
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  เลขที่รายการ: {selectedTx.transactionNumber} • ตรวจสอบความถูกต้องก่อนสั่งพิมพ์หรือบันทึกเป็น PDF
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                <span>พิมพ์เอกสาร</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintSlipOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Voucher Sheet (A4 Landscape Style) */}
+          <div
+            id="official-stock-transaction-slip"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+          >
+            {/* Document Header */}
+            <div className="relative pb-2 mb-2 border-b-2 border-slate-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
+                    บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                  </h1>
+                  <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                    ใบสำคัญรายการความเคลื่อนไหวสต็อกสินค้า (Stock Movement Slip)
+                  </h2>
+                </div>
+                <div className="text-right text-[10px] text-slate-600 font-mono leading-tight">
+                  <div className="font-bold text-slate-800">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
+                  <div>เลขที่รายการ: {selectedTx.transactionNumber}</div>
+                  <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
+                </div>
+              </div>
+
+              {/* Sub-Header: Meta Grid */}
+              <div className="mt-3 p-2.5 rounded border border-slate-300 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                <div>
+                  <span className="font-bold text-slate-700">วันที่ & เวลา: </span>
+                  <span className="font-mono">{new Date(selectedTx.createdAt).toLocaleDateString('th-TH')} {new Date(selectedTx.createdAt).toLocaleTimeString('th-TH')} น.</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-700">ประเภทรายการ: </span>
+                  <span className="font-bold text-emerald-800">{getTypeBadge(selectedTx.type).label}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-700">เลขที่อ้างอิง: </span>
+                  <span className="font-mono">{selectedTx.refId || '-'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-700">ผู้ทำรายการ: </span>
+                  <span>{selectedTx.createdBy?.name || 'User'} (@{selectedTx.createdBy?.username})</span>
+                </div>
+                <div className="sm:col-span-4 border-t border-slate-200 pt-1.5 mt-0.5">
+                  <span className="font-bold text-slate-700">หมายเหตุ: </span>
+                  <span>{selectedTx.note || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Movement Details Table */}
+            <div className="overflow-x-auto my-3">
+              <table className="w-full text-left border-collapse text-[10px] leading-tight">
+                <thead>
+                  <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
+                    <th className="py-2 px-3 border-r border-slate-300 w-28">รหัสวัตถุดิบ</th>
+                    <th className="py-2 px-3 border-r border-slate-300 text-left">ชื่อวัตถุดิบ</th>
+                    <th className="py-2 px-2 border-r border-slate-300 w-24">หมวดหมู่</th>
+                    <th className="py-2 px-2 border-r border-slate-300 text-right w-24">ต้นทุน/หน่วย</th>
+                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">รับเข้า (+)</th>
+                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">จ่ายออก (-)</th>
+                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">คงเหลือหลังทำรายการ</th>
+                    <th className="py-2 px-2 text-center w-20">หน่วย</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-mono text-[10px]">
+                  <tr>
+                    <td className="py-2.5 px-3 border-r border-slate-200 font-bold text-center">
+                      {selectedTx.ingredient?.code}
+                    </td>
+                    <td className="py-2.5 px-3 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
+                      {selectedTx.ingredient?.name}
+                    </td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 text-center font-sans">
+                      {selectedTx.ingredient?.category || '-'}
+                    </td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 text-right">
+                      ฿{Number(selectedTx.ingredient?.costPerUnit || 0).toFixed(2)}
+                    </td>
+                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-bold text-emerald-700">
+                      {Number(selectedTx.quantityIn) > 0 ? `+${Number(selectedTx.quantityIn).toLocaleString()}` : '0'}
+                    </td>
+                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-bold text-red-700">
+                      {Number(selectedTx.quantityOut) > 0 ? `-${Number(selectedTx.quantityOut).toLocaleString()}` : '0'}
+                    </td>
+                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-black text-slate-900">
+                      {Number(selectedTx.balanceAfter).toLocaleString()}
+                    </td>
+                    <td className="py-2.5 px-2 text-center font-sans text-slate-600">
+                      {selectedTx.ingredient?.unit}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Signature Section */}
+            <div className="print-signature-section pt-8 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้ทำรายการ (Staff / ผู้ส่งมอบ)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้ตรวจสอบ (ผู้จัดการสาขา / ผู้รับมอบ)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Stock Transactions Ledger Print Preview Modal */}
+      {printListModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+          {/* Top Control Bar (Hidden on print) */}
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-emerald-700" />
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+                  ตัวอย่างพิมพ์สมุดบัญชีคุมสต็อก (A4 แนวนอน)
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  ตรวจสอบความถูกต้องก่อนสั่งพิมพ์ หรือบันทึกเป็น PDF
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                <span>พิมพ์เอกสาร</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintListModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Report Sheet (A4 Landscape Style) */}
+          <div
+            id="official-stock-transactions-report"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+          >
+            {/* Document Header */}
+            <div className="relative pb-2 mb-2 border-b-2 border-slate-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
+                    บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                  </h1>
+                  <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                    สมุดบัญชีคุมสต็อกและความเคลื่อนไหวสินค้า (Stock Movement Ledger & Audit Trail)
+                  </h2>
+                </div>
+                <div className="text-right text-[10px] text-slate-600 font-mono leading-tight">
+                  <div className="font-bold text-slate-800">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
+                  <div>เลขที่เอกสาร: TX-LEDGER-{new Date().toISOString().slice(0, 10).replace(/-/g, '')}</div>
+                  <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
+                </div>
+              </div>
+
+              {/* Sub-Header: Filter Info */}
+              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-600 font-medium">
+                <div>
+                  <span className="font-bold text-slate-800">ประเภทรายการ: </span>
+                  <span>{typeFilter === 'ALL' ? 'ทุกประเภทรายการ' : typeFilter}</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-bold text-slate-800">ช่วงเวลา: </span>
+                  <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
+                </div>
+                <div>
+                  <span className="font-bold text-slate-800">จำนวนรายการที่แสดง: </span>
+                  <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Primary KPI Summary Cards Strip */}
+            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2.5">
+              <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
+                <div className="text-[9.5px] font-bold text-emerald-800">รับเข้าคลัง (ซื้อเข้า)</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-emerald-700 mt-0.5">
+                  {metrics.purchaseCount} <span className="text-[9.5px] font-normal">ครั้ง</span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-amber-300 bg-amber-50/50">
+                <div className="text-[9.5px] font-bold text-amber-800">ตัดขายหน้าร้าน (POS)</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-amber-700 mt-0.5">
+                  {metrics.saleDeductCount} <span className="text-[9.5px] font-normal">ครั้ง</span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-blue-300 bg-blue-50/50">
+                <div className="text-[9.5px] font-bold text-blue-800">ปรับปรุงสต็อก</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-blue-700 mt-0.5">
+                  {metrics.adjustCount} <span className="text-[9.5px] font-normal">รายการ</span>
+                </div>
+              </div>
+
+              <div className="p-2 rounded border border-purple-300 bg-purple-50/50">
+                <div className="text-[9.5px] font-bold text-purple-800">ตรวจนับสินค้าจริง</div>
+                <div className="text-xs sm:text-sm font-black font-mono text-purple-700 mt-0.5">
+                  {metrics.physicalCount} <span className="text-[9.5px] font-normal">รายการ</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Transactions Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[9.5px] leading-tight">
+                <thead>
+                  <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
+                    <th className="py-1 px-1 border-r border-slate-300 w-7">ลำดับ</th>
+                    <th className="py-1 px-2 border-r border-slate-300 w-24">วันที่ & เวลา</th>
+                    <th className="py-1 px-2 border-r border-slate-300 w-28">เลขที่รายการ</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 w-20">ประเภท</th>
+                    <th className="py-1 px-2 border-r border-slate-300 text-left">วัตถุดิบ</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">รับเข้า (+)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">จ่ายออก (-)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-20">คงเหลือ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-center w-12">หน่วย</th>
+                    <th className="py-1 px-2 border-r border-slate-300 text-left w-24">เลขที่อ้างอิง</th>
+                    <th className="py-1 px-2 text-left w-20">ผู้ทำรายการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-mono text-[9px]">
+                  {filteredTransactions.map((tx, idx) => {
+                    const badge = getTypeBadge(tx.type);
+                    return (
+                      <tr key={tx.id}>
+                        <td className="py-1 px-1 text-center border-r border-slate-200 font-sans">
+                          {idx + 1}
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 font-sans text-center">
+                          <div>{new Date(tx.createdAt).toLocaleDateString('th-TH')}</div>
+                          <div className="text-[8px] text-slate-400 font-mono">{new Date(tx.createdAt).toLocaleTimeString('th-TH')}</div>
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 font-bold font-mono">
+                          {tx.transactionNumber}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-center font-sans font-bold">
+                          {badge.label}
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
+                          <div>{tx.ingredient?.name}</div>
+                          <div className="text-[8px] text-slate-400 font-mono">{tx.ingredient?.code}</div>
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-bold text-emerald-700">
+                          {Number(tx.quantityIn) > 0 ? `+${Number(tx.quantityIn)}` : '-'}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-bold text-red-700">
+                          {Number(tx.quantityOut) > 0 ? `-${Number(tx.quantityOut)}` : '-'}
+                        </td>
+                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-black text-slate-900">
+                          {Number(tx.balanceAfter).toLocaleString()}
+                        </td>
+                        <td className="py-1 px-1 border-r border-slate-200 text-center font-sans text-slate-600">
+                          {tx.ingredient?.unit}
+                        </td>
+                        <td className="py-1 px-2 border-r border-slate-200 font-mono text-slate-600 truncate max-w-[100px]">
+                          {tx.refId || '-'}
+                        </td>
+                        <td className="py-1 px-2 font-sans text-slate-700 truncate max-w-[90px]">
+                          {tx.createdBy?.name || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-800 bg-slate-100 font-bold text-[9.5px]">
+                    <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-slate-300">
+                      รวมรายการความเคลื่อนไหวทั้งหมดในรายงานนี้:
+                    </td>
+                    <td colSpan={6} className="py-1.5 px-3 text-left font-sans text-slate-800">
+                      <span className="font-mono font-bold">{filteredTransactions.length}</span> รายการ
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Signature Section */}
+            <div className="print-signature-section pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้จัดทำรายงาน (เจ้าหน้าที่สต็อก / แคชเชียร์)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้ตรวจสอบ (ผู้จัดการสาขา)</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-slate-800">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              </div>
             </div>
           </div>
         </div>
