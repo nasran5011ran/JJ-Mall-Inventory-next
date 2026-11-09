@@ -97,6 +97,7 @@ export default function AdminStockTransactionsPage() {
   // Print Modals
   const [printListModalOpen, setPrintListModalOpen] = useState(false);
   const [printSlipOpen, setPrintSlipOpen] = useState(false);
+  const [printLimit, setPrintLimit] = useState<'30' | '50' | 'ALL'>('30');
 
   // Search Filter
   const filteredTransactions = useMemo(() => {
@@ -113,6 +114,13 @@ export default function AdminStockTransactionsPage() {
       return true;
     });
   }, [transactions, search]);
+
+  // Transactions for Print Report (respecting 1-page 30-limit or custom)
+  const printTransactions = useMemo(() => {
+    if (printLimit === '30') return filteredTransactions.slice(0, 30);
+    if (printLimit === '50') return filteredTransactions.slice(0, 50);
+    return filteredTransactions;
+  }, [filteredTransactions, printLimit]);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -910,6 +918,37 @@ export default function AdminStockTransactionsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-700">
+                <span className="text-[11px] text-slate-500 pl-1.5">พิมพ์:</span>
+                <button
+                  type="button"
+                  onClick={() => setPrintLimit('30')}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                    printLimit === '30' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  30 รายการ (พอดี 1 แผ่น)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintLimit('50')}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                    printLimit === '50' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  50 รายการ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPrintLimit('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                    printLimit === 'ALL' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  ทั้งหมด ({filteredTransactions.length})
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -961,8 +1000,8 @@ export default function AdminStockTransactionsPage() {
                   <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800">จำนวนรายการที่แสดง: </span>
-                  <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
+                  <span className="font-bold text-slate-800">จำนวนที่พิมพ์: </span>
+                  <span className="font-bold font-mono">{printTransactions.length}</span> จากทั้งหมด <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
                 </div>
               </div>
             </div>
@@ -988,7 +1027,7 @@ export default function AdminStockTransactionsPage() {
                 <span>ตัดขาย POS: <strong className="text-amber-700">{metrics.saleDeductCount}</strong></span>
                 <span>ปรับปรุง: <strong className="text-blue-700">{metrics.adjustCount}</strong></span>
                 <span>ตรวจนับ: <strong className="text-purple-700">{metrics.physicalCount}</strong></span>
-                <span className="border-l border-slate-300 pl-2">รวม: <strong>{filteredTransactions.length}</strong> รายการ</span>
+                <span className="border-l border-slate-300 pl-2">รวม: <strong>{printTransactions.length}</strong>/{filteredTransactions.length} รายการ</span>
               </div>
             </div>
 
@@ -997,21 +1036,21 @@ export default function AdminStockTransactionsPage() {
               <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
                 <thead>
                   <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
-                    <th className="py-1 px-1 border-r border-slate-300 w-[28px]">ลำดับ</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 w-[78px]">วันที่ & เวลา</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 w-[115px]">เลขที่รายการ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 w-[85px]">ประเภท</th>
-                    <th className="py-1 px-2 border-r border-slate-300 text-left">ชื่อวัตถุดิบ (รหัส)</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[58px]">รับเข้า (+)</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[58px]">จ่ายออก (-)</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[65px]">คงเหลือ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-center w-[36px]">หน่วย</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-left w-[85px]">เลขอ้างอิง</th>
-                    <th className="py-1 px-1.5 text-left w-[75px]">ผู้ทำรายการ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-[30px]">ลำดับ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-[82px]">วันที่ & เวลา</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 w-[110px]">เลขที่รายการ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-[80px]">ประเภท</th>
+                    <th className="py-1 px-2 border-r border-slate-300 w-[125px] text-left">วัตถุดิบ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[65px]">รับเข้า (+)</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[65px]">จ่ายออก (-)</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[80px]">คงเหลือ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-center w-[38px]">หน่วย</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-left w-[95px]">เลขอ้างอิง</th>
+                    <th className="py-1 px-1.5 text-left w-[95px]">ผู้ทำรายการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono text-[8.5px]">
-                  {filteredTransactions.map((tx, idx) => {
+                  {printTransactions.map((tx, idx) => {
                     const badge = getTypeBadge(tx.type);
                     const d = new Date(tx.createdAt);
                     const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
@@ -1021,7 +1060,7 @@ export default function AdminStockTransactionsPage() {
                         <td className="py-0.5 px-1 text-center border-r border-slate-200 font-sans">
                           {idx + 1}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-sans text-center whitespace-nowrap">
+                        <td className="py-0.5 px-1 border-r border-slate-200 font-sans text-center whitespace-nowrap">
                           {dateStr} <span className="text-[7.5px] text-slate-500">{timeStr}</span>
                         </td>
                         <td className="py-0.5 px-1.5 border-r border-slate-200 font-bold font-mono truncate">
@@ -1030,26 +1069,30 @@ export default function AdminStockTransactionsPage() {
                         <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans font-bold text-[8px] truncate">
                           {badge.label}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-slate-200 font-sans font-bold text-slate-800 text-left truncate">
-                          <span>{tx.ingredient?.name}</span>{' '}
-                          <span className="text-[7.5px] text-slate-500 font-mono font-normal">({tx.ingredient?.code})</span>
+                        <td className="py-0.5 px-2 border-r border-slate-200 font-sans text-left overflow-hidden">
+                          <div className="font-bold text-slate-800 text-[8.5px] truncate" title={tx.ingredient?.name}>
+                            {tx.ingredient?.name}
+                          </div>
+                          <div className="text-[7.5px] text-slate-500 font-mono">
+                            {tx.ingredient?.code}
+                          </div>
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-bold text-emerald-700">
+                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-bold text-emerald-700">
                           {Number(tx.quantityIn) > 0 ? `+${Number(tx.quantityIn)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-bold text-red-700">
+                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-bold text-red-700">
                           {Number(tx.quantityOut) > 0 ? `-${Number(tx.quantityOut)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-black text-slate-900">
+                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-black text-slate-900 whitespace-nowrap">
                           {Number(tx.balanceAfter).toLocaleString()}
                         </td>
                         <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-600">
                           {tx.ingredient?.unit}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-mono text-slate-600 truncate">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-mono text-slate-700 text-[8px] truncate" title={tx.refId || ''}>
                           {tx.refId || '-'}
                         </td>
-                        <td className="py-0.5 px-1.5 font-sans text-slate-700 truncate">
+                        <td className="py-0.5 px-1.5 font-sans text-slate-700 text-[8.5px] truncate" title={tx.createdBy?.name || ''}>
                           {tx.createdBy?.name || '-'}
                         </td>
                       </tr>
@@ -1059,10 +1102,10 @@ export default function AdminStockTransactionsPage() {
                 <tfoot>
                   <tr className="border-t-2 border-slate-800 bg-slate-100 font-bold text-[9.5px]">
                     <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-slate-300">
-                      รวมรายการความเคลื่อนไหวทั้งหมดในรายงานนี้:
+                      รวมรายการความเคลื่อนไหวที่พิมพ์:
                     </td>
                     <td colSpan={6} className="py-1.5 px-3 text-left font-sans text-slate-800">
-                      <span className="font-mono font-bold">{filteredTransactions.length}</span> รายการ
+                      <span className="font-mono font-bold">{printTransactions.length}</span> รายการ {printLimit !== 'ALL' && `(จากทั้งหมด ${filteredTransactions.length} รายการ)`}
                     </td>
                   </tr>
                 </tfoot>
