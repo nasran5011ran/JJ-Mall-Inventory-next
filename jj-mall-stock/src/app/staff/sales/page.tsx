@@ -145,31 +145,6 @@ export default function SalesPage() {
     0
   );
 
-  // BOM Ingredient Requirements in cart preview
-  const bomRequirements = useMemo(() => {
-    const map = new Map<number, { name: string; requiredQty: number; unit: string; currentStock: number }>();
-    cart.forEach((cartItem) => {
-      if (cartItem.product.recipe?.items) {
-        cartItem.product.recipe.items.forEach((rItem) => {
-          const ing = rItem.ingredient;
-          const needed = Number(rItem.quantity) * cartItem.quantity;
-          const existing = map.get(ing.id) || {
-            name: ing.name,
-            requiredQty: 0,
-            unit: rItem.unit,
-            currentStock: Number(ing.currentStock),
-          };
-          existing.requiredQty += needed;
-          map.set(ing.id, existing);
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [cart]);
-
-  // Check if any ingredient is short
-  const hasShortage = bomRequirements.some((ing) => ing.currentStock < ing.requiredQty);
-
   // Handle Checkout Submit
   const handleConfirmSale = async () => {
     if (cart.length === 0) return;
@@ -201,10 +176,7 @@ export default function SalesPage() {
         throw new Error(json.message || 'บันทึกการขายไม่สำเร็จ');
       }
 
-      setCompletedSale({
-        ...json.sale,
-        deductions: json.deductions,
-      });
+      setCompletedSale(json.sale);
       clearCart();
     } catch (err: any) {
       setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการขาย');
@@ -421,37 +393,6 @@ export default function SalesPage() {
             )}
           </div>
 
-          {/* BOM Ingredients Deduction Real-time Check */}
-          {cart.length > 0 && bomRequirements.length > 0 && (
-            <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 text-[11px]">
-              <div className="font-bold text-slate-600 mb-1 flex items-center justify-between">
-                <span>วัตถุดิบที่จะถูกตัดอัตโนมัติ:</span>
-                {hasShortage ? (
-                  <span className="text-red-600 font-bold">สต็อกไม่พอ!</span>
-                ) : (
-                  <span className="text-emerald-600 font-bold">สต็อกพร้อมตัด</span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
-                {bomRequirements.map((ing, i) => {
-                  const isOk = ing.currentStock >= ing.requiredQty;
-                  return (
-                    <span
-                      key={i}
-                      className={`px-2 py-0.5 rounded-md font-mono text-[10px] border ${
-                        isOk
-                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                          : 'bg-red-50 text-red-800 border-red-200 font-bold'
-                      }`}
-                    >
-                      {ing.name}: {ing.requiredQty} {ing.unit}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Checkout Panel */}
           <div className="p-4 border-t border-slate-200 bg-white space-y-3">
             {/* Payment Method Selector */}
@@ -511,7 +452,7 @@ export default function SalesPage() {
             {/* Confirm Sale Button */}
             <button
               onClick={handleConfirmSale}
-              disabled={cart.length === 0 || processing || hasShortage}
+              disabled={cart.length === 0 || processing}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/25 disabled:opacity-50 transition-all cursor-pointer"
             >
               {processing ? (
@@ -520,12 +461,12 @@ export default function SalesPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  <span>กำลังตัดสต็อกและบันทึกการขาย...</span>
+                  <span>กำลังบันทึกการขาย...</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>ยืนยันการขาย (ตัดสต็อกทันที)</span>
+                  <span>ยืนยันการขาย / รับชำระเงิน</span>
                 </>
               )}
             </button>
@@ -592,27 +533,6 @@ export default function SalesPage() {
                   ฿{Number(completedSale.totalAmount).toFixed(2)}
                 </span>
               </div>
-
-              {/* Auto Deducted Raw Materials Banner */}
-              {completedSale.deductions?.length > 0 && (
-                <div className="mt-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>ตัดสต็อกวัตถุดิบอัตโนมัติตามสูตร (BOM):</span>
-                  </div>
-                  <div className="space-y-1 text-[11px] text-slate-600">
-                    {completedSale.deductions.map((d: any, idx: number) => (
-                      <div key={idx} className="flex justify-between">
-                        <span>• {d.name}</span>
-                        <span className="font-mono">
-                          <strong className="text-red-600">-{d.quantityOut} {d.unit}</strong>{' '}
-                          (เหลือ {d.remainingStock} {d.unit})
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Actions */}

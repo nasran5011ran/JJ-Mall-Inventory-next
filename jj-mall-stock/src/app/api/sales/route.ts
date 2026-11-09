@@ -75,43 +75,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Fetch products & BOM recipes
+    // 1. Fetch products
     const productIds = items.map((i: any) => Number(i.productId));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      include: {
-        recipe: {
-          include: {
-            items: {
-              include: {
-                ingredient: true,
-              },
-            },
-          },
-        },
-      },
     });
 
     // Map for fast lookup
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // 2. Calculate Total Sale Amount and Required Ingredients
+    // 2. Calculate Total Sale Amount and Items
     let totalAmount = 0;
     let totalItems = 0;
     const saleItemsData: Array<{ productId: number; quantity: number; unitPrice: number; subtotal: number }> = [];
-
-    // Map ingredientId -> required total quantity
-    const requiredIngredientsMap = new Map<
-      number,
-      {
-        ingredientId: number;
-        code: string;
-        name: string;
-        unit: string;
-        currentStock: number;
-        requiredQty: number;
-      }
-    >();
 
     for (const item of items) {
       const prod = productMap.get(Number(item.productId));
@@ -144,120 +120,43 @@ export async function POST(req: NextRequest) {
         unitPrice,
         subtotal,
       });
-
-      // Calculate BOM ingredients needed
-      if (prod.recipe && prod.recipe.items) {
-        for (const recipeItem of prod.recipe.items) {
-          const ing = recipeItem.ingredient;
-          const needed = Number(recipeItem.quantity) * qty;
-
-          const existing = requiredIngredientsMap.get(ing.id) || {
-            ingredientId: ing.id,
-            code: ing.code,
-            name: ing.name,
-            unit: recipeItem.unit || ing.unit,
-            currentStock: Number(ing.currentStock),
-            requiredQty: 0,
-          };
-
-          existing.requiredQty += needed;
-          requiredIngredientsMap.set(ing.id, existing);
-        }
-      }
     }
 
-    // 3. Pre-flight Stock Validation: Check if every ingredient is sufficient
-    for (const [_, reqIng] of requiredIngredientsMap.entries()) {
-      if (reqIng.currentStock < reqIng.requiredQty) {
-        const shortage = reqIng.requiredQty - reqIng.currentStock;
-        return NextResponse.json(
-          {
-            success: false,
-            message: `⚠️ สต็อกไม่เพียงพอสำหรับการขาย! วัตถุดิบ "${reqIng.name}" (${reqIng.code}) ต้องใช้ทั้งหมด ${reqIng.requiredQty.toLocaleString()} ${reqIng.unit} แต่คงเหลือในคลังเพียง ${reqIng.currentStock.toLocaleString()} ${reqIng.unit} (ขาดอีก ${shortage.toLocaleString()} ${reqIng.unit})`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    // 4. Generate Sale Number (e.g. SALE-20261105-0001)
+    // 3. Generate Sale Number (e.g. SALE-20261105-0001)
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const saleNumber = `SALE-${dateStr}-${randomSuffix}`;
 
-    // 5. Execute Atomic Transaction: Create Sale + Deduct Ingredients + Log Movement
-    const result = await prisma.$transaction(async (tx) => {
-      // A. Create Sale
-      const createdSale = await tx.sale.create({
-        data: {
-          saleNumber,
-          totalAmount,
-          totalItems,
-          paymentMethod: paymentMethod || 'CASH',
-          note: note || null,
-          createdById: session.id,
-          items: {
-            create: saleItemsData,
+    // 4. Create Sale Record
+    const createdSale = await prisma.sale.create({
+      data: {
+        saleNumber,
+        totalAmount,
+        totalItems,
+        paymentMethod: paymentMethod || 'CASH',
+        note: note || null,
+        createdById: session.id,
+        items: {
+          create: saleItemsData,
+        },
+      },
+      include: {
+        items: {
+          include: {
+            product: true,
           },
         },
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-          createdBy: {
-            select: { name: true, role: true },
-          },
+        createdBy: {
+          select: { id: true, name: true, username: true, role: true },
         },
-      });
-
-      // B. Deduct ingredients & create stock transactions
-      const deductions: any[] = [];
-
-      for (const [_, reqIng] of requiredIngredientsMap.entries()) {
-        const updatedIng = await tx.ingredient.update({
-          where: { id: reqIng.ingredientId },
-          data: {
-            currentStock: {
-              decrement: reqIng.requiredQty,
-            },
-          },
-        });
-
-        // Record stock transaction
-        await tx.stockTransaction.create({
-          data: {
-            transactionNumber: `TX-SALE-${saleNumber}-${reqIng.code}`,
-            ingredientId: reqIng.ingredientId,
-            type: 'SALE_DEDUCT',
-            quantityIn: 0,
-            quantityOut: reqIng.requiredQty,
-            balanceAfter: updatedIng.currentStock,
-            refType: 'SALE',
-            refId: saleNumber,
-            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber}`,
-            createdById: session.id,
-          },
-        });
-
-        deductions.push({
-          name: reqIng.name,
-          quantityOut: reqIng.requiredQty,
-          unit: reqIng.unit,
-          remainingStock: updatedIng.currentStock,
-        });
-      }
-
-      return { createdSale, deductions };
+      },
     });
 
     return NextResponse.json({
       success: true,
-      message: 'บันทึกการขายและตัดสต็อกวัตถุดิบอัตโนมัติสำเร็จ!',
-      sale: result.createdSale,
-      deductions: result.deductions,
+      message: 'บันทึกการขายสำเร็จ!',
+      sale: createdSale,
     });
   } catch (error: any) {
     console.error('POS Sale Processing Error:', error);
