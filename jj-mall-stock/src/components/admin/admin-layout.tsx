@@ -36,17 +36,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     if (!isAdmin) return;
     const fetchAlerts = async () => {
       try {
-        const res = await fetch('/api/dashboard');
+        const res = await fetch('/api/notifications');
         if (res.ok) {
           const data = await res.json();
           if (data?.success && data.data?.kpis) {
-            const count = (data.data.kpis.lowStockIngredients || 0) + (data.data.kpis.outOfStockIngredients || 0);
+            const count = data.data.kpis.totalActionable || 0;
             setNotificationCount(count);
           }
         }
       } catch (e) {}
     };
     fetchAlerts();
+    const interval = setInterval(fetchAlerts, 30000);
+    return () => clearInterval(interval);
   }, [isAdmin]);
 
   if (loading || !user || user.role !== 'ADMIN') {

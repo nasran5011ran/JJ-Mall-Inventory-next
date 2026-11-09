@@ -202,11 +202,11 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
         {/* Theme Toggle Button (Sun / Moon) Next to Clock */}
         <ThemeToggle />
 
-        {/* Low Stock Alerts */}
+        {/* System Notifications */}
         <button
-          onClick={() => router.push('/admin/dashboard#alerts')}
+          onClick={() => router.push('/admin/notifications')}
           className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative cursor-pointer"
-          title="การแจ้งเตือนสต็อกใกล้หมด"
+          title="ศูนย์แจ้งเตือนระบบ"
         >
           <Bell className="w-5 h-5" />
           {notificationCount > 0 && (

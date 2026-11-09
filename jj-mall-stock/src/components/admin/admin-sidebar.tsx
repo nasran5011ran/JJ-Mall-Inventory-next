@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Bell,
   Package,
   Layers,
   ChefHat,
@@ -39,6 +40,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: 'ผู้บริหาร & สรุปผล',
       items: [
         { href: '/admin/dashboard', label: 'Dashboard ผู้บริหาร', icon: LayoutDashboard },
+        { href: '/admin/notifications', label: 'ศูนย์แจ้งเตือนระบบ', icon: Bell },
       ],
     },
     {
