@@ -53,6 +53,8 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsTab, setNotificationsTab] = useState<'ALL' | 'STOCK' | 'APPROVAL'>('ALL');
   const [readIds, setReadIds] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('เมื่อสักครู่');
   const notificationsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +67,28 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
 
   const notificationsList = notifData?.data?.notifications || [];
   const kpis = notifData?.data?.kpis;
+
+  // Google-like smooth refresh function
+  const handleRefreshNotifications = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    const startTime = Date.now();
+    try {
+      await mutateNotif();
+    } catch (e) {
+    } finally {
+      // Keep smooth spin for at least 650ms like Google apps
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 650 - elapsed);
+      setTimeout(() => {
+        setIsRefreshing(false);
+        const now = new Date();
+        setLastUpdatedTime(
+          now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+        );
+      }, remaining);
+    }
+  };
 
   // Local storage read state
   useEffect(() => {
@@ -309,7 +333,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
           >
             <Bell className="w-5 h-5" />
             {displayCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-xs">
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs border-2 border-white ring-1 ring-red-500/20">
                 {displayCount > 99 ? '99+' : displayCount}
               </span>
             )}
@@ -319,7 +343,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
           {showNotifications && (
             <div className="absolute right-0 sm:-right-8 mt-2 w-[340px] sm:w-[430px] max-w-[95vw] bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
               {/* Header */}
-              <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex items-center justify-between relative">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                     <Bell className="w-4 h-4" />
@@ -329,7 +353,11 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                       การแจ้งเตือนระบบ
                     </h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      {unreadCount > 0 ? `มี ${unreadCount} รายการที่ต้องตรวจสอบ` : 'ไม่มีรายการค้าง'}
+                      {isRefreshing
+                        ? 'กำลังอัปเดตข้อมูล...'
+                        : unreadCount > 0
+                        ? `มี ${unreadCount} รายการใหม่ • อัปเดต ${lastUpdatedTime}`
+                        : `ไม่มีรายการค้าง • อัปเดต ${lastUpdatedTime}`}
                     </p>
                   </div>
                 </div>
@@ -337,22 +365,35 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => mutateNotif()}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-                    title="รีเฟรชข้อมูล"
+                    onClick={handleRefreshNotifications}
+                    disabled={isRefreshing}
+                    className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50"
+                    title="รีเฟรชข้อมูล (เหมือน Google)"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isNotifValidating ? 'animate-spin text-emerald-400' : ''}`} />
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 transition-transform duration-500 ${
+                        isRefreshing ? 'animate-spin text-emerald-400' : ''
+                      }`}
+                    />
+                    <span className="text-[11px]">รีเฟรช</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowNotifications(false)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                     title="ปิด"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
+              {/* Google-style Linear Progress Bar */}
+              {isRefreshing && (
+                <div className="h-0.5 w-full bg-slate-800 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-300 to-emerald-500 animate-pulse" />
+                </div>
+              )}
 
               {/* Tabs */}
               <div className="flex items-center gap-1 p-2 bg-slate-50 border-b border-slate-100 text-[11px] font-bold">
