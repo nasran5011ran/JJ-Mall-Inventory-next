@@ -97,7 +97,6 @@ export default function AdminStockTransactionsPage() {
   // Print Modals
   const [printListModalOpen, setPrintListModalOpen] = useState(false);
   const [printSlipOpen, setPrintSlipOpen] = useState(false);
-  const [printLimit, setPrintLimit] = useState<'25' | '50' | 'ALL'>('25');
 
   // Search Filter
   const filteredTransactions = useMemo(() => {
@@ -115,12 +114,8 @@ export default function AdminStockTransactionsPage() {
     });
   }, [transactions, search]);
 
-  // Transactions for Print Report (respecting 1-page 25-limit or custom)
-  const printTransactions = useMemo(() => {
-    if (printLimit === '25') return filteredTransactions.slice(0, 25);
-    if (printLimit === '50') return filteredTransactions.slice(0, 50);
-    return filteredTransactions;
-  }, [filteredTransactions, printLimit]);
+  // All filtered transactions for Print Report (naturally flows to page 2, 3... if not fitting)
+  const printTransactions = filteredTransactions;
 
   // Export CSV
   const handleExportCSV = () => {
@@ -238,7 +233,9 @@ export default function AdminStockTransactionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Normal Screen View (Hidden during print so it occupies 0px and avoids blank pages) */}
+      <div className="print:hidden space-y-6">
+        {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
@@ -623,10 +620,11 @@ export default function AdminStockTransactionsPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Detail Modal (Stock Movement Card Slip) */}
-      {selectedTx && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+      {selectedTx && !printSlipOpen && (
+        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -748,7 +746,7 @@ export default function AdminStockTransactionsPage() {
 
       {/* Official Stock Transaction Slip Print Preview Modal */}
       {printSlipOpen && selectedTx && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
           <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
@@ -902,7 +900,7 @@ export default function AdminStockTransactionsPage() {
 
       {/* Official Stock Transactions Ledger Print Preview Modal */}
       {printListModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
           <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
@@ -917,36 +915,9 @@ export default function AdminStockTransactionsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-slate-700">
-                <span className="text-[11px] text-slate-500 pl-1.5">พิมพ์:</span>
-                <button
-                  type="button"
-                  onClick={() => setPrintLimit('25')}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                    printLimit === '25' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  25 รายการ (พอดี 1 แผ่น)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintLimit('50')}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                    printLimit === '50' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  50 รายการ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrintLimit('ALL')}
-                  className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                    printLimit === 'ALL' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  ทั้งหมด ({filteredTransactions.length})
-                </button>
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-slate-600 font-medium bg-slate-100 px-3 py-1.5 rounded-xl">
+                รวมทั้งหมด <span className="font-bold font-mono text-slate-900">{filteredTransactions.length}</span> รายการ
               </div>
 
               <button
@@ -1000,8 +971,8 @@ export default function AdminStockTransactionsPage() {
                   <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800">จำนวนที่พิมพ์: </span>
-                  <span className="font-bold font-mono">{printTransactions.length}</span> จากทั้งหมด <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
+                  <span className="font-bold text-slate-800">จำนวนทั้งหมด: </span>
+                  <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
                 </div>
               </div>
             </div>
@@ -1027,7 +998,7 @@ export default function AdminStockTransactionsPage() {
                 <span>ตัดขาย POS: <strong className="text-amber-700">{metrics.saleDeductCount}</strong></span>
                 <span>ปรับปรุง: <strong className="text-blue-700">{metrics.adjustCount}</strong></span>
                 <span>ตรวจนับ: <strong className="text-purple-700">{metrics.physicalCount}</strong></span>
-                <span className="border-l border-slate-300 pl-2">รวม: <strong>{printTransactions.length}</strong>/{filteredTransactions.length} รายการ</span>
+                <span className="border-l border-slate-300 pl-2">รวมทั้งหมด: <strong>{filteredTransactions.length}</strong> รายการ</span>
               </div>
             </div>
 
@@ -1102,10 +1073,10 @@ export default function AdminStockTransactionsPage() {
                 <tfoot>
                   <tr className="border-t-2 border-slate-800 bg-slate-100 font-bold text-[9.5px]">
                     <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-slate-300">
-                      รวมรายการความเคลื่อนไหวที่พิมพ์:
+                      รวมรายการความเคลื่อนไหวทั้งหมด:
                     </td>
                     <td colSpan={6} className="py-1.5 px-3 text-left font-sans text-slate-800">
-                      <span className="font-mono font-bold">{printTransactions.length}</span> รายการ {printLimit !== 'ALL' && `(จากทั้งหมด ${filteredTransactions.length} รายการ)`}
+                      <span className="font-mono font-bold">{filteredTransactions.length}</span> รายการ
                     </td>
                   </tr>
                 </tfoot>

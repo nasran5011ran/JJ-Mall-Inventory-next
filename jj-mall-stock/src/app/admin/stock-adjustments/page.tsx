@@ -339,7 +339,9 @@ export default function AdminStockAdjustmentsPage() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Normal Screen UI (Hidden during print) */}
+      <div className="print:hidden space-y-6">
+        {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
@@ -715,10 +717,11 @@ export default function AdminStockAdjustmentsPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Modal 1: Create New Stock Adjustment */}
       {createModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -1136,7 +1139,7 @@ export default function AdminStockAdjustmentsPage() {
 
       {/* Official Stock Adjustment Voucher Print Preview Modal */}
       {printVoucherOpen && selectedAdjustment && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
           <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
@@ -1314,7 +1317,7 @@ export default function AdminStockAdjustmentsPage() {
 
       {/* Official Stock Adjustments Summary Report Print Preview Modal */}
       {printListModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
           <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">

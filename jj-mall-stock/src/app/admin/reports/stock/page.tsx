@@ -164,7 +164,9 @@ export default function AdminStockReportPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Normal Screen View (Hidden on print) */}
+      <div className="print:hidden space-y-6">
+        {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
@@ -504,10 +506,11 @@ export default function AdminStockReportPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Modal: Item Stock Profile Detail */}
       {selectedItem && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -600,7 +603,7 @@ export default function AdminStockReportPage() {
 
       {/* Official Stock Inventory Report Print Preview Modal */}
       {printModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
           <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">

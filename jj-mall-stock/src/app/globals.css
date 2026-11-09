@@ -135,12 +135,12 @@ body {
 }
 
 /* ========================================================
-   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE - 1 PAGE FIT)
+   OFFICIAL PRINT REPORT STYLES (A4 LANDSCAPE - MULTI-PAGE & SINGLE-PAGE)
    ======================================================== */
 @media print {
   @page {
     size: A4 landscape;
-    margin: 5mm 6mm;
+    margin: 6mm 8mm;
   }
 
   html, body {
@@ -148,16 +148,57 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
-    height: 100% !important;
-    overflow: hidden !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
-  /* Hide everything else on the screen */
+  /* Completely remove non-printable layout elements from document flow */
+  .no-print,
+  .print\:hidden,
+  header,
+  aside,
+  nav,
+  footer {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Reset layout wrapper on print */
+  .min-h-screen {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .lg\:pl-72 {
+    padding-left: 0 !important;
+  }
+
+  /* Reset modal containers so they flow naturally without page clipping */
+  .fixed.inset-0 {
+    position: static !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    width: 100% !important;
+  }
+
+  /* Hide everything else on screen by default */
   body * {
     visibility: hidden !important;
   }
 
-  /* Show ONLY the official stock / ingredient / sales print sheet and its contents */
+  /* Show ONLY official print sheets and their contents */
   #official-stock-print-report,
   #official-stock-print-report *,
   #official-stock-inventory-report,
@@ -177,7 +218,7 @@ body {
     visibility: visible !important;
   }
 
-  /* Absolute position to occupy page 1 completely */
+  /* Containers occupy full width and flow naturally across pages */
   #official-stock-print-report,
   #official-stock-inventory-report,
   #official-stock-adjustment-voucher,
@@ -186,9 +227,9 @@ body {
   #official-stock-transactions-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
@@ -197,10 +238,26 @@ body {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Single slips avoid page breaks */
+  #official-stock-adjustment-voucher,
+  #official-stock-transaction-slip {
     page-break-after: avoid !important;
     break-after: avoid !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+  }
+
+  /* Multi-page reports can break across pages naturally (Page 1, 2, 3...) */
+  #official-stock-transactions-report,
+  #official-stock-adjustments-report,
+  #official-stock-inventory-report,
+  #official-ingredient-print-report,
+  #official-sales-print-report {
+    page-break-after: auto !important;
+    break-after: auto !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 
   #official-stock-print-report table,
@@ -214,6 +271,29 @@ body {
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  /* Repeat table header on top of every page */
+  #official-stock-print-report thead,
+  #official-stock-inventory-report thead,
+  #official-stock-adjustments-report thead,
+  #official-stock-transactions-report thead,
+  #official-ingredient-print-report thead,
+  #official-sales-print-report thead {
+    display: table-header-group !important;
+  }
+
+  /* Prevent row from being cut horizontally across pages */
+  #official-stock-print-report tr,
+  #official-stock-inventory-report tr,
+  #official-stock-adjustment-voucher tr,
+  #official-stock-adjustments-report tr,
+  #official-stock-transaction-slip tr,
+  #official-stock-transactions-report tr,
+  #official-ingredient-print-report tr,
+  #official-sales-print-report tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -250,11 +330,7 @@ body {
   .print-signature-section {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-top: 8px !important;
-    padding-top: 4px !important;
-  }
-
-  .no-print, header, aside, nav, footer {
-    display: none !important;
+    margin-top: 10px !important;
+    padding-top: 6px !important;
   }
 }
