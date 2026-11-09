@@ -469,7 +469,7 @@ export default function SalesPage() {
             {/* Total Display */}
             <div className="flex items-center justify-between text-xs pt-1">
               <span className="font-bold text-slate-500">จำนวนรวม:</span>
-              <span className="font-bold text-slate-800">{totalItems} แก้ว/ชิ้น</span>
+              <span className="font-bold text-slate-800">{totalItems} แก้ว</span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="font-black text-slate-700">ยอดรวมทั้งสิ้น:</span>
@@ -874,7 +874,7 @@ export default function SalesPage() {
           <div className="py-2 border-b border-dashed border-black text-[10px] space-y-1">
             <div className="flex justify-between">
               <span>รวมสินค้าทั้งหมด:</span>
-              <span className="font-mono font-bold">{completedSale.totalItems} แก้ว/ชิ้น</span>
+              <span className="font-mono font-bold">{completedSale.totalItems} แก้ว</span>
             </div>
             <div className="flex justify-between text-xs font-black pt-1 border-t border-black">
               <span>ยอดรวมสุทธิ:</span>
