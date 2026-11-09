@@ -97,7 +97,7 @@ export default function AdminStockTransactionsPage() {
   // Print Modals
   const [printListModalOpen, setPrintListModalOpen] = useState(false);
   const [printSlipOpen, setPrintSlipOpen] = useState(false);
-  const [printLimit, setPrintLimit] = useState<'30' | '50' | 'ALL'>('30');
+  const [printLimit, setPrintLimit] = useState<'25' | '50' | 'ALL'>('25');
 
   // Search Filter
   const filteredTransactions = useMemo(() => {
@@ -115,9 +115,9 @@ export default function AdminStockTransactionsPage() {
     });
   }, [transactions, search]);
 
-  // Transactions for Print Report (respecting 1-page 30-limit or custom)
+  // Transactions for Print Report (respecting 1-page 25-limit or custom)
   const printTransactions = useMemo(() => {
-    if (printLimit === '30') return filteredTransactions.slice(0, 30);
+    if (printLimit === '25') return filteredTransactions.slice(0, 25);
     if (printLimit === '50') return filteredTransactions.slice(0, 50);
     return filteredTransactions;
   }, [filteredTransactions, printLimit]);
@@ -922,12 +922,12 @@ export default function AdminStockTransactionsPage() {
                 <span className="text-[11px] text-slate-500 pl-1.5">พิมพ์:</span>
                 <button
                   type="button"
-                  onClick={() => setPrintLimit('30')}
+                  onClick={() => setPrintLimit('25')}
                   className={`px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                    printLimit === '30' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
+                    printLimit === '25' ? 'bg-white shadow-2xs text-emerald-800' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  30 รายการ (พอดี 1 แผ่น)
+                  25 รายการ (พอดี 1 แผ่น)
                 </button>
                 <button
                   type="button"
@@ -970,7 +970,7 @@ export default function AdminStockTransactionsPage() {
           {/* Printable Report Sheet (A4 Landscape Style) */}
           <div
             id="official-stock-transactions-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0"
           >
             {/* Document Header */}
             <div className="relative pb-2 mb-2 border-b-2 border-slate-800">
@@ -1036,17 +1036,17 @@ export default function AdminStockTransactionsPage() {
               <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
                 <thead>
                   <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
-                    <th className="py-1 px-1 border-r border-slate-300 w-[30px]">ลำดับ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 w-[82px]">วันที่ & เวลา</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 w-[110px]">เลขที่รายการ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 w-[80px]">ประเภท</th>
-                    <th className="py-1 px-2 border-r border-slate-300 w-[125px] text-left">วัตถุดิบ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[65px]">รับเข้า (+)</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[65px]">จ่ายออก (-)</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-right w-[80px]">คงเหลือ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-center w-[38px]">หน่วย</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-left w-[95px]">เลขอ้างอิง</th>
-                    <th className="py-1 px-1.5 text-left w-[95px]">ผู้ทำรายการ</th>
+                    <th style={{ width: '4%' }} className="py-1 px-1 border-r border-slate-300 text-center">ลำดับ</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-center">วันที่ & เวลา</th>
+                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-slate-300 text-center">เลขที่รายการ</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-center">ประเภท</th>
+                    <th style={{ width: '13%' }} className="py-1 px-2 border-r border-slate-300 text-left">วัตถุดิบ</th>
+                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-slate-300 text-right">รับเข้า (+)</th>
+                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-slate-300 text-right">จ่ายออก (-)</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-right">คงเหลือ</th>
+                    <th style={{ width: '4.5%' }} className="py-1 px-1 border-r border-slate-300 text-center">หน่วย</th>
+                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-slate-300 text-left">เลขอ้างอิง</th>
+                    <th style={{ width: '12.5%' }} className="py-1 px-1.5 text-left">ผู้ทำรายการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono text-[8.5px]">
