@@ -209,6 +209,8 @@ body {
   #official-stock-adjustments-report *,
   #official-stock-transaction-slip,
   #official-stock-transaction-slip *,
+  #official-stock-out-slip,
+  #official-stock-out-slip *,
   #official-stock-transactions-report,
   #official-stock-transactions-report *,
   #official-ingredient-print-report,
@@ -224,6 +226,7 @@ body {
   #official-stock-adjustment-voucher,
   #official-stock-adjustments-report,
   #official-stock-transaction-slip,
+  #official-stock-out-slip,
   #official-stock-transactions-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
@@ -245,7 +248,8 @@ body {
 
   /* Single slips avoid page breaks */
   #official-stock-adjustment-voucher,
-  #official-stock-transaction-slip {
+  #official-stock-transaction-slip,
+  #official-stock-out-slip {
     page-break-after: avoid !important;
     break-after: avoid !important;
   }
@@ -268,6 +272,7 @@ body {
   #official-stock-adjustment-voucher table,
   #official-stock-adjustments-report table,
   #official-stock-transaction-slip table,
+  #official-stock-out-slip table,
   #official-stock-transactions-report table,
   #official-ingredient-print-report table,
   #official-sales-print-report table {
@@ -296,6 +301,7 @@ body {
   #official-stock-adjustment-voucher tr,
   #official-stock-adjustments-report tr,
   #official-stock-transaction-slip tr,
+  #official-stock-out-slip tr,
   #official-stock-transactions-report tr,
   #official-ingredient-print-report tr,
   #official-sales-print-report tr {
@@ -313,6 +319,8 @@ body {
   #official-stock-adjustments-report td,
   #official-stock-transaction-slip th,
   #official-stock-transaction-slip td,
+  #official-stock-out-slip th,
+  #official-stock-out-slip td,
   #official-stock-transactions-report th,
   #official-stock-transactions-report td,
   #official-ingredient-print-report th,

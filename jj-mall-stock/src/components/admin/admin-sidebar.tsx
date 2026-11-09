@@ -12,6 +12,7 @@ import {
   ChefHat,
   ShoppingCart,
   ArrowDownToLine,
+  ArrowUpFromLine,
   ClipboardCheck,
   FileEdit,
   History,
@@ -55,6 +56,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       items: [
         { href: '/admin/sales', label: 'ตรวจสอบยอดขายแต่ละร้าน', icon: Store },
         { href: '/admin/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
+        { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
         { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
         { href: '/admin/stock-adjustments', label: 'อนุมัติใบปรับปรุงสต็อก', icon: FileEdit },
         { href: '/admin/stock-transactions', label: 'ประวัติเคลื่อนไหวสต็อก', icon: History },
