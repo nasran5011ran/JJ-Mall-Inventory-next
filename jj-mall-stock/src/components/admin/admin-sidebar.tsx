@@ -40,7 +40,6 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: 'ผู้บริหาร & สรุปผล',
       items: [
         { href: '/admin/dashboard', label: 'Dashboard ผู้บริหาร', icon: LayoutDashboard },
-        { href: '/admin/notifications', label: 'ศูนย์แจ้งเตือนระบบ', icon: Bell },
       ],
     },
     {

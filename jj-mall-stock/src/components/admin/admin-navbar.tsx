@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import {
   Menu,
   Bell,
@@ -25,6 +26,14 @@ import {
   History,
   Settings,
   Store,
+  AlertOctagon,
+  AlertTriangle,
+  FileClock,
+  CheckCircle2,
+  X,
+  ArrowRight,
+  CheckCheck,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import ThemeToggle from '@/components/theme-toggle';
@@ -41,6 +50,91 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsTab, setNotificationsTab] = useState<'ALL' | 'STOCK' | 'APPROVAL'>('ALL');
+  const [readIds, setReadIds] = useState<string[]>([]);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch real-time notifications
+  const { data: notifData, isValidating: isNotifValidating, mutate: mutateNotif } = useSWR(
+    '/api/notifications',
+    (url: string) => fetch(url).then((res) => res.json()),
+    { refreshInterval: 25000, revalidateOnFocus: true }
+  );
+
+  const notificationsList = notifData?.data?.notifications || [];
+  const kpis = notifData?.data?.kpis;
+
+  // Local storage read state
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('jj_read_notification_ids');
+      if (stored) setReadIds(JSON.parse(stored));
+    } catch (e) {}
+  }, []);
+
+  const unreadCount = notificationsList.filter((n: any) => !readIds.includes(n.id)).length;
+  const displayCount = unreadCount > 0 ? unreadCount : notificationCount;
+
+  const handleMarkAsRead = (id: string) => {
+    if (!readIds.includes(id)) {
+      const updated = [...readIds, id];
+      setReadIds(updated);
+      try {
+        localStorage.setItem('jj_read_notification_ids', JSON.stringify(updated));
+      } catch (e) {}
+    }
+  };
+
+  const handleMarkAllAsRead = () => {
+    const allIds = notificationsList.map((n: any) => n.id);
+    setReadIds(allIds);
+    try {
+      localStorage.setItem('jj_read_notification_ids', JSON.stringify(allIds));
+    } catch (e) {}
+  };
+
+  // Close menus on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close when pathname changes
+  useEffect(() => {
+    setShowNotifications(false);
+    setShowUserMenu(false);
+  }, [pathname]);
+
+  const filteredNotifications = notificationsList.filter((n: any) => {
+    if (notificationsTab === 'STOCK') return n.category === 'STOCK';
+    if (notificationsTab === 'APPROVAL') return n.category === 'APPROVAL';
+    return true;
+  });
+
+  const formatTime = (ts: string) => {
+    try {
+      const d = new Date(ts);
+      const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diffSec < 60) return 'เมื่อสักครู่';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin} น.ที่แล้ว`;
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return `${diffHr} ชม.ที่แล้ว`;
+      return `${d.getDate()}/${d.getMonth() + 1}`;
+    } catch {
+      return '';
+    }
+  };
 
   useEffect(() => {
     const updateTime = () => {
@@ -202,22 +296,224 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
         {/* Theme Toggle Button (Sun / Moon) Next to Clock */}
         <ThemeToggle />
 
-        {/* System Notifications */}
-        <button
-          onClick={() => router.push('/admin/notifications')}
-          className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative cursor-pointer"
-          title="ศูนย์แจ้งเตือนระบบ"
-        >
-          <Bell className="w-5 h-5" />
-          {notificationCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse">
-              {notificationCount}
-            </span>
+        {/* System Notifications Popover */}
+        <div className="relative" ref={notificationsRef}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setShowUserMenu(false);
+            }}
+            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors relative cursor-pointer"
+            title="การแจ้งเตือนระบบ"
+          >
+            <Bell className="w-5 h-5" />
+            {displayCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-xs">
+                {displayCount > 99 ? '99+' : displayCount}
+              </span>
+            )}
+          </button>
+
+          {/* Notifications Dropdown Panel */}
+          {showNotifications && (
+            <div className="absolute right-0 sm:-right-8 mt-2 w-[340px] sm:w-[430px] max-w-[95vw] bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              {/* Header */}
+              <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Bell className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-white leading-none">
+                      การแจ้งเตือนระบบ
+                    </h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {unreadCount > 0 ? `มี ${unreadCount} รายการที่ต้องตรวจสอบ` : 'ไม่มีรายการค้าง'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => mutateNotif()}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="รีเฟรชข้อมูล"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isNotifValidating ? 'animate-spin text-emerald-400' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifications(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="ปิด"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex items-center gap-1 p-2 bg-slate-50 border-b border-slate-100 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setNotificationsTab('ALL')}
+                  className={`px-3 py-1 rounded-xl transition-colors cursor-pointer ${
+                    notificationsTab === 'ALL'
+                      ? 'bg-white shadow-2xs text-slate-900'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  ทั้งหมด ({notificationsList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationsTab('STOCK')}
+                  className={`px-3 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 ${
+                    notificationsTab === 'STOCK'
+                      ? 'bg-red-500 text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                  <span>สต็อกวิกฤต ({(kpis?.outOfStockCount || 0) + (kpis?.lowStockCount || 0)})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationsTab('APPROVAL')}
+                  className={`px-3 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 ${
+                    notificationsTab === 'APPROVAL'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                  <span>รออนุมัติ ({kpis?.pendingAdjustmentsCount || 0})</span>
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 text-xs">
+                {filteredNotifications.length === 0 ? (
+                  <div className="py-10 px-4 text-center space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-700">ไม่มีการแจ้งเตือนค้างอยู่</p>
+                    <p className="text-[11px] text-slate-400">ระบบคลังและสต็อกทั้งหมดอยู่ในเกณฑ์ปกติ</p>
+                  </div>
+                ) : (
+                  filteredNotifications.map((item: any) => {
+                    const isRead = readIds.includes(item.id);
+                    const isCritical = item.severity === 'CRITICAL';
+                    const isApproval = item.category === 'APPROVAL';
+                    const isWarning = item.severity === 'WARNING';
+
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleMarkAsRead(item.id)}
+                        className={`p-3 sm:p-3.5 hover:bg-slate-50/80 transition-colors flex items-start gap-3 cursor-pointer ${
+                          !isRead ? 'bg-amber-50/20' : ''
+                        }`}
+                      >
+                        <div
+                          className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center mt-0.5 border ${
+                            isCritical
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : isApproval
+                              ? 'bg-blue-50 text-blue-600 border-blue-200'
+                              : isWarning
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}
+                        >
+                          {isCritical ? (
+                            <AlertOctagon className="w-4 h-4" />
+                          ) : isApproval ? (
+                            <FileClock className="w-4 h-4" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span
+                              className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded ${
+                                isCritical
+                                  ? 'bg-red-100 text-red-700'
+                                  : isApproval
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {isCritical ? 'หมดสต็อก' : isApproval ? 'รออนุมัติ' : 'ใกล้หมด'}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {formatTime(item.timestamp)}
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-bold text-slate-800 truncate">
+                            {item.title}
+                          </div>
+
+                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                            {item.description}
+                          </p>
+
+                          {/* Quick Action Button */}
+                          <div className="pt-1 flex items-center justify-between">
+                            <Link
+                              href={item.actionUrl}
+                              onClick={() => {
+                                handleMarkAsRead(item.id);
+                                setShowNotifications(false);
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline"
+                            >
+                              <span>{item.actionLabel}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </Link>
+
+                            {!isRead && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <button
+                  type="button"
+                  onClick={handleMarkAllAsRead}
+                  className="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1 cursor-pointer pl-1"
+                >
+                  <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>อ่านแล้วทั้งหมด</span>
+                </button>
+
+                <Link
+                  href="/admin/reports/stock"
+                  onClick={() => setShowNotifications(false)}
+                  className="text-emerald-700 hover:text-emerald-800 font-bold hover:underline pr-1"
+                >
+                  ดูรายงานสต็อกรวม &rarr;
+                </Link>
+              </div>
+            </div>
           )}
-        </button>
+        </div>
 
         {/* Admin User Profile */}
-        <div className="relative">
+        <div className="relative" ref={userMenuRef}>
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 hover:bg-amber-100/70 transition-colors cursor-pointer text-left"
