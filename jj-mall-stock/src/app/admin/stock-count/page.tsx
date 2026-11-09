@@ -120,6 +120,8 @@ export default function AdminStockCountPage() {
   const [syncStock, setSyncStock] = useState(true);
   const [countInputs, setCountInputs] = useState<Record<number, string>>({});
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [modalSearch, setModalSearch] = useState<string>('');
+  const [detailSearch, setDetailSearch] = useState<string>('');
 
   // Detail Modal
   const [selectedCount, setSelectedCount] = useState<StockCountRecord | null>(null);
@@ -159,6 +161,7 @@ export default function AdminStockCountPage() {
     setCountNote('ตรวจนับสินค้าจริงประจำรอบ');
     setSyncStock(true);
     setSelectedCategory('ALL');
+    setModalSearch('');
     setFormError(null);
     setModalOpen(true);
   };
@@ -185,9 +188,16 @@ export default function AdminStockCountPage() {
   const filteredModalIngredients = useMemo(() => {
     return ingredients.filter((ing) => {
       if (selectedCategory !== 'ALL' && ing.category !== selectedCategory) return false;
+      if (modalSearch.trim()) {
+        const query = modalSearch.toLowerCase().trim();
+        const matchName = ing.name.toLowerCase().includes(query);
+        const matchCode = ing.code.toLowerCase().includes(query);
+        const matchCat = ing.category?.toLowerCase().includes(query) ?? false;
+        if (!matchName && !matchCode && !matchCat) return false;
+      }
       return true;
     });
-  }, [ingredients, selectedCategory]);
+  }, [ingredients, selectedCategory, modalSearch]);
 
   // Modal Live Summary
   const modalSummary = useMemo(() => {
@@ -228,6 +238,17 @@ export default function AdminStockCountPage() {
       netVarianceValue,
     };
   }, [ingredients, countInputs]);
+
+  // Filtered Items in Detail Modal
+  const filteredDetailItems = useMemo(() => {
+    if (!selectedCount?.items) return [];
+    if (!detailSearch.trim()) return selectedCount.items;
+    const q = detailSearch.toLowerCase().trim();
+    return selectedCount.items.filter((it) =>
+      it.ingredient?.name.toLowerCase().includes(q) ||
+      it.ingredient?.code.toLowerCase().includes(q)
+    );
+  }, [selectedCount, detailSearch]);
 
   // Submit New Count Audit
   const handleSubmitCount = async (e: React.FormEvent) => {
@@ -487,7 +508,7 @@ export default function AdminStockCountPage() {
                   <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">จุดตรวจนับ / ร้านค้า</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">ผู้ตรวจนับ</th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนวัตถุดิบ</th>
+                  <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนรายการสินค้า</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
                   <th className="py-2.5 px-3">หมายเหตุ</th>
                   <th className="py-2.5 px-3 text-right whitespace-nowrap">การจัดการ</th>
@@ -528,9 +549,9 @@ export default function AdminStockCountPage() {
                       {/* Store / Location Badge */}
                       <td className="py-2.5 px-3 whitespace-nowrap">
                         {isStore ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
                             <Store className="w-3.5 h-3.5 text-amber-700" />
-                            <span>จุดขาย: {sc.storeName?.split(' ')[0] || 'ร้านค้า'}</span>
+                            <span>จุดขาย: {sc.storeName || 'หน้าร้าน'}</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -614,10 +635,10 @@ export default function AdminStockCountPage() {
 
       {/* Modal 1: Create New Physical Stock Count */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-6xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-6xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                   <ClipboardCheck className="w-5 h-5" />
@@ -627,7 +648,7 @@ export default function AdminStockCountPage() {
                     บันทึกผลการตรวจนับสต็อกจริง (Physical Stock Count)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    เลือกร้านค้า/คลังที่ทำการนับ และกรอกจำนวนที่นับได้จริงของแต่ละวัตถุดิบ
+                    เลือกร้านค้า/คลังที่ทำการนับ และกรอกจำนวนที่นับได้จริงของแต่ละรายการ
                   </p>
                 </div>
               </div>
@@ -640,20 +661,20 @@ export default function AdminStockCountPage() {
             </div>
 
             {formError && (
-              <div className="mt-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
+              <div className="mt-2 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
             {/* Store / Location Radio Selector */}
-            <div className="mt-4 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 space-y-2.5">
+            <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 space-y-1.5">
               <label className="block text-xs font-bold text-slate-700">
                 เลือกจุดตรวจนับสต็อก (Location / Store) <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label
-                  className={`p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
+                  className={`p-2 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
                     targetLocation === 'WAREHOUSE'
                       ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -666,8 +687,8 @@ export default function AdminStockCountPage() {
                     onChange={() => setTargetLocation('WAREHOUSE')}
                     className="sr-only"
                   />
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Warehouse className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Warehouse className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <div className="font-bold text-xs">คลังสินค้าส่วนกลาง JJ Mall</div>
@@ -676,7 +697,7 @@ export default function AdminStockCountPage() {
                 </label>
 
                 <label
-                  className={`p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
+                  className={`p-2 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
                     targetLocation === 'STORE'
                       ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -689,8 +710,8 @@ export default function AdminStockCountPage() {
                     onChange={() => setTargetLocation('STORE')}
                     className="sr-only"
                   />
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Store className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Store className="w-3.5 h-3.5" />
                   </div>
                   <div>
                     <div className="font-bold text-xs">จุดขายหน้าร้าน (Store / Kiosk)</div>
@@ -701,15 +722,17 @@ export default function AdminStockCountPage() {
 
               {/* If Store Selected, pick specific staff shop */}
               {targetLocation === 'STORE' && (
-                <div className="pt-2 animate-in fade-in duration-150">
-                  <label className="block text-xs font-bold text-amber-900 mb-1">
-                    เลือกร้านค้าที่ทำการตรวจนับสต็อก <span className="text-red-500">*</span>
+                <div className="pt-1 animate-in fade-in duration-150">
+                  <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                    <Store className="w-3.5 h-3.5 text-amber-700" />
+                    <span>เลือกร้านค้า / จุดขายที่ทำการตรวจนับ:</span>
+                    <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={targetStoreId}
                     onChange={(e) => setTargetStoreId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-amber-400 bg-amber-50/50 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   >
                     {staffStores.map((st) => (
                       <option key={st.id} value={st.id}>
@@ -721,10 +744,10 @@ export default function AdminStockCountPage() {
               )}
             </div>
 
-            {/* Quick Filter & Actions Bar */}
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+            {/* Quick Filter, Search & Actions Bar */}
+            <div className="mt-2.5 flex flex-col md:flex-row md:items-center justify-between gap-2 shrink-0">
               {/* Category Filter Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
                 <button
                   type="button"
                   onClick={() => setSelectedCategory('ALL')}
@@ -752,139 +775,169 @@ export default function AdminStockCountPage() {
                 ))}
               </div>
 
-              {/* Quick Helper Buttons */}
+              {/* Search input & Quick Helper Buttons */}
               <div className="flex items-center gap-2 shrink-0">
+                <div className="relative w-full sm:w-56">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="ค้นหาชื่อสินค้า / วัตถุดิบ..."
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={handleFillAllCurrent}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
+                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shrink-0"
                   title="ใส่ค่ายอดคงเหลือในระบบลงทุกช่อง"
                 >
-                  ใส่ค่ายอดปัจจุบันทั้งหมด
+                  ใส่ยอดระบบทั้งหมด
                 </button>
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer"
+                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer shrink-0"
                 >
-                  ล้างค่าทั้งหมด
+                  ล้างค่า
                 </button>
               </div>
             </div>
 
-            {/* Count Input Table (Scrollable) */}
-            <div className="mt-3 flex-1 overflow-y-auto border border-slate-200 rounded-2xl scrollbar-thin">
+            {/* Count Input Table (Flex-1 with min-h-0 so it fits inside the card without overflowing) */}
+            <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto border-2 border-slate-200 rounded-2xl scrollbar-thin shadow-2xs bg-white">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider z-10">
+                <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
-                    <th className="py-3 px-3.5">รหัส / ชื่อวัตถุดิบ</th>
-                    <th className="py-3 px-3 text-right">สต็อกในระบบ</th>
-                    <th className="py-3 px-3 text-center w-36">ยอดนับได้จริง *</th>
-                    <th className="py-3 px-3 text-right">ผลต่าง (Variance)</th>
-                    <th className="py-3 px-3 text-center">สถานะ</th>
+                    <th className="py-3 px-4">รายการสินค้า / วัตถุดิบ</th>
+                    <th className="py-3 px-4 text-right">สต็อกในระบบ</th>
+                    <th className="py-3 px-4 text-center w-40">ยอดนับได้จริง *</th>
+                    <th className="py-3 px-4 text-right">ผลต่าง (Variance)</th>
+                    <th className="py-3 px-4 text-center">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredModalIngredients.map((ing) => {
-                    const systemQty = Number(ing.currentStock);
-                    const inputValue = countInputs[ing.id] ?? '';
-                    const actualQty = parseFloat(inputValue);
-                    const hasInput = inputValue.trim() !== '' && !isNaN(actualQty);
-                    const diff = hasInput ? actualQty - systemQty : 0;
+                  {filteredModalIngredients.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-400">
+                        ไม่พบรายการสินค้าหรือวัตถุดิบที่ตรงกับการค้นหา
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredModalIngredients.map((ing) => {
+                      const systemQty = Number(ing.currentStock);
+                      const inputValue = countInputs[ing.id] ?? '';
+                      const actualQty = parseFloat(inputValue);
+                      const hasInput = inputValue.trim() !== '' && !isNaN(actualQty);
+                      const diff = hasInput ? actualQty - systemQty : 0;
 
-                    let statusBadge = (
-                      <span className="text-slate-300 text-[11px]">-</span>
-                    );
-                    if (hasInput) {
-                      if (diff === 0) {
-                        statusBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <Check className="w-3 h-3" /> สต็อกตรง
-                          </span>
-                        );
-                      } else if (diff < 0) {
-                        statusBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                            <TrendingDown className="w-3 h-3" /> ขาด {Math.abs(diff)}
-                          </span>
-                        );
-                      } else {
-                        statusBadge = (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            <TrendingUp className="w-3 h-3" /> เกิน +{diff}
-                          </span>
-                        );
+                      let statusBadge = (
+                        <span className="text-slate-300 text-xs">-</span>
+                      );
+                      if (hasInput) {
+                        if (diff === 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Check className="w-3.5 h-3.5" /> สต็อกตรง
+                            </span>
+                          );
+                        } else if (diff < 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                              <TrendingDown className="w-3.5 h-3.5" /> ขาด {Math.abs(diff)}
+                            </span>
+                          );
+                        } else {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              <TrendingUp className="w-3.5 h-3.5" /> เกิน +{diff}
+                            </span>
+                          );
+                        }
                       }
-                    }
 
-                    return (
-                      <tr key={ing.id} className="hover:bg-slate-50/70 transition-colors">
-                        {/* Name */}
-                        <td className="py-2.5 px-3.5">
-                          <div className="font-bold text-slate-800">{ing.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            {ing.code} {ing.category ? `• ${ing.category}` : ''}
-                          </div>
-                        </td>
+                      return (
+                        <tr key={ing.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
+                          {/* Name & Details */}
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                              <span>{ing.name}</span>
+                              {ing.category && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  {ing.category}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 font-mono mt-0.5">
+                              รหัส: {ing.code}
+                            </div>
+                          </td>
 
-                        {/* System Stock */}
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
-                          {systemQty.toLocaleString()} <span className="text-[10px] font-normal text-slate-400">{ing.unit}</span>
-                        </td>
+                          {/* System Stock */}
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-mono font-black text-sm sm:text-base text-slate-800">
+                              {systemQty.toLocaleString()}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500 ml-1.5">{ing.unit}</span>
+                          </td>
 
-                        {/* Actual Input */}
-                        <td className="py-2.5 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              value={inputValue}
-                              onChange={(e) =>
-                                setCountInputs((prev) => ({
-                                  ...prev,
-                                  [ing.id]: e.target.value,
-                                }))
-                              }
-                              placeholder={String(systemQty)}
-                              className="w-24 px-2.5 py-1 text-xs text-right font-mono font-bold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white"
-                            />
-                            <span className="text-[10px] text-slate-400 w-8 text-left truncate">{ing.unit}</span>
-                          </div>
-                        </td>
+                          {/* Actual Input */}
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={inputValue}
+                                onChange={(e) =>
+                                  setCountInputs((prev) => ({
+                                    ...prev,
+                                    [ing.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder={String(systemQty)}
+                                className="w-28 sm:w-32 px-3 py-1.5 text-sm sm:text-base text-right font-mono font-black rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white shadow-2xs"
+                              />
+                              <span className="text-xs font-bold text-slate-600 w-10 text-left truncate">{ing.unit}</span>
+                            </div>
+                          </td>
 
-                        {/* Diff */}
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
-                          {hasInput ? (
-                            diff === 0 ? (
-                              <span className="text-emerald-600">0</span>
-                            ) : diff < 0 ? (
-                              <span className="text-red-600">
-                                {diff.toLocaleString()} {ing.unit}
-                              </span>
+                          {/* Diff */}
+                          <td className="py-3 px-4 text-right font-mono font-bold text-sm">
+                            {hasInput ? (
+                              diff === 0 ? (
+                                <span className="text-emerald-600 font-black">0</span>
+                              ) : diff < 0 ? (
+                                <span className="text-red-600 font-black">
+                                  {diff.toLocaleString()} {ing.unit}
+                                </span>
+                              ) : (
+                                <span className="text-blue-600 font-black">
+                                  +{diff.toLocaleString()} {ing.unit}
+                                </span>
+                              )
                             ) : (
-                              <span className="text-blue-600">
-                                +{diff.toLocaleString()} {ing.unit}
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-slate-300">-</span>
-                          )}
-                        </td>
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
 
-                        {/* Status */}
-                        <td className="py-2.5 px-3 text-center">{statusBadge}</td>
-                      </tr>
-                    );
-                  })}
+                          {/* Status Badge */}
+                          <td className="py-3 px-4 text-center">
+                            {statusBadge}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Summary & Form Settings */}
-            <form onSubmit={handleSubmitCount} className="mt-4 space-y-3 shrink-0">
+            <form onSubmit={handleSubmitCount} className="mt-2 pt-2 border-t border-slate-100 space-y-2 shrink-0 bg-white">
               {/* Live Metric Ribbon */}
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div>
                   <span className="text-slate-400">ระบุแล้ว:</span>
                   <div className="font-mono font-bold text-slate-800">
@@ -912,21 +965,18 @@ export default function AdminStockCountPage() {
               </div>
 
               {/* Note & Sync Switch */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    หมายเหตุการตรวจนับ
-                  </label>
                   <input
                     type="text"
                     value={countNote}
                     onChange={(e) => setCountNote(e.target.value)}
-                    placeholder="เช่น ตรวจนับสต็อกกะเช้า, ตรวจนับประจำเดือน..."
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="หมายเหตุการตรวจนับ (ถ้ามี)..."
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-slate-50/50"
                   />
                 </div>
 
-                <div className="pt-2 sm:pt-4">
+                <div>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -935,28 +985,25 @@ export default function AdminStockCountPage() {
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
                     <span className="text-xs font-bold text-slate-800">
-                      🔄 อัปเดตยอดคงเหลือในระบบให้ตรงกับยอดนับจริงทันที (Auto-sync)
+                      🔄 อัปเดตยอดคงเหลือในระบบทันที (Auto-sync)
                     </span>
                   </label>
-                  <p className="text-[10px] text-slate-400 ml-6">
-                    หากติ๊กถูก ระบบจะปรับยอดสต็อกและบันทึกประวัติความเคลื่อนไหว (Physical Count) ให้อัตโนมัติ
-                  </p>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || modalSummary.totalItemsCounted === 0}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   <ClipboardCheck className="w-4 h-4" />
                   <span>{submitting ? 'กำลังบันทึก...' : '💾 ยืนยันบันทึกผลการตรวจนับ'}</span>
@@ -969,16 +1016,16 @@ export default function AdminStockCountPage() {
 
       {/* Modal 2: Stock Count Audit Detail */}
       {selectedCount && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800">
                     ใบบันทึกผลตรวจนับสินค้าจริง #{selectedCount.countNumber}
                   </h3>
                   <p className="text-xs text-slate-500 font-mono">
@@ -995,10 +1042,10 @@ export default function AdminStockCountPage() {
             </div>
 
             {/* Meta Info */}
-            <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs shrink-0">
+            <div className="mt-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs shrink-0">
               <div>
                 <span className="text-slate-400">จุดตรวจนับ / ร้านค้า:</span>
-                <div className="font-bold text-emerald-800">
+                <div className="font-extrabold text-sm text-emerald-800 mt-0.5">
                   {selectedCount.location === 'STORE' || selectedCount.storeId
                     ? `🏪 ${selectedCount.storeName || 'จุดขายหน้าร้าน'}`
                     : '🏢 คลังสินค้าส่วนกลาง JJ Mall'}
@@ -1006,74 +1053,117 @@ export default function AdminStockCountPage() {
               </div>
               <div>
                 <span className="text-slate-400">ผู้ทำการตรวจนับ:</span>
-                <div className="font-bold text-slate-800">
+                <div className="font-bold text-slate-800 mt-0.5">
                   {selectedCount.createdBy?.name} (@{selectedCount.createdBy?.username})
                 </div>
               </div>
               <div>
                 <span className="text-slate-400">หมายเหตุ:</span>
-                <div className="font-medium text-slate-700 truncate">{selectedCount.note || '-'}</div>
+                <div className="font-medium text-slate-700 mt-0.5 truncate">{selectedCount.note || '-'}</div>
               </div>
             </div>
 
-            {/* Itemized Detail Table */}
-            <div className="mt-4 flex-1 overflow-y-auto border border-slate-200 rounded-2xl scrollbar-thin">
+            {/* Search Box in Detail Modal */}
+            <div className="mt-3 flex items-center justify-between gap-3 shrink-0">
+              <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span>รายการสินค้าและวัตถุดิบที่ตรวจนับ:</span>
+                <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 font-mono text-[11px]">
+                  {selectedCount.items.length} รายการ
+                </span>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาชื่อรายการ..."
+                  value={detailSearch}
+                  onChange={(e) => setDetailSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Itemized Detail Table (Flex-1 with min-h-0 so it fits inside the card without overflowing) */}
+            <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto border-2 border-slate-200 rounded-2xl scrollbar-thin shadow-2xs bg-white">
               <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
-                    <th className="py-2.5 px-3">รหัส / ชื่อวัตถุดิบ</th>
-                    <th className="py-2.5 px-3 text-right">ยอดในระบบ</th>
-                    <th className="py-2.5 px-3 text-right">ยอดนับจริง</th>
-                    <th className="py-2.5 px-3 text-right">ผลต่าง</th>
-                    <th className="py-2.5 px-3 text-center">สถานะ</th>
+                    <th className="py-3 px-4">รหัส / รายการสินค้า-วัตถุดิบ</th>
+                    <th className="py-3 px-4 text-right">ยอดในระบบ</th>
+                    <th className="py-3 px-4 text-right">ยอดนับจริง</th>
+                    <th className="py-3 px-4 text-right">ผลต่าง (Variance)</th>
+                    <th className="py-3 px-4 text-center">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {selectedCount.items.map((item) => {
-                    const diff = Number(item.diffQuantity);
-                    return (
-                      <tr key={item.id} className="hover:bg-slate-50/70">
-                        <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{item.ingredient?.code}</div>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-600">
-                          {Number(item.systemQuantity).toLocaleString()} {item.ingredient?.unit}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
-                          {Number(item.actualQuantity).toLocaleString()} {item.ingredient?.unit}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
-                          {diff === 0 ? (
-                            <span className="text-emerald-600">0</span>
-                          ) : diff < 0 ? (
-                            <span className="text-red-600">
-                              {diff.toLocaleString()} {item.ingredient?.unit}
+                  {filteredDetailItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-400">
+                        ไม่พบรายการที่ตรงกับการค้นหา
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredDetailItems.map((item) => {
+                      const diff = Number(item.diffQuantity);
+                      return (
+                        <tr key={item.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
+                          <td className="py-3 px-4">
+                            <div className="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                              <span>{item.ingredient?.name}</span>
+                              {item.ingredient?.category && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                  {item.ingredient.category}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 font-mono mt-0.5">
+                              รหัส: {item.ingredient?.code}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-mono font-bold text-sm text-slate-700">
+                              {Number(item.systemQuantity).toLocaleString()}
                             </span>
-                          ) : (
-                            <span className="text-blue-600">
-                              +{diff.toLocaleString()} {item.ingredient?.unit}
+                            <span className="text-xs text-slate-500 ml-1.5">{item.ingredient?.unit}</span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <span className="font-mono font-black text-sm sm:text-base text-slate-900">
+                              {Number(item.actualQuantity).toLocaleString()}
                             </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          {item.status === 'MATCH' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <Check className="w-3 h-3" /> ตรงกัน
-                            </span>
-                          ) : item.status === 'SHORTAGE' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                              <TrendingDown className="w-3 h-3" /> ขาดหาย
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                              <TrendingUp className="w-3 h-3" /> ยอดเกิน
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            <span className="text-xs font-bold text-slate-600 ml-1.5">{item.ingredient?.unit}</span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono font-bold text-sm sm:text-base">
+                            {diff === 0 ? (
+                              <span className="text-emerald-600 font-black">0</span>
+                            ) : diff < 0 ? (
+                              <span className="text-red-600 font-black">
+                                {diff.toLocaleString()} {item.ingredient?.unit}
+                              </span>
+                            ) : (
+                              <span className="text-blue-600 font-black">
+                                +{diff.toLocaleString()} {item.ingredient?.unit}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {item.status === 'MATCH' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Check className="w-3.5 h-3.5" /> สต็อกตรง
+                              </span>
+                            ) : item.status === 'SHORTAGE' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">
+                                <TrendingDown className="w-3.5 h-3.5" /> ขาดหาย
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <TrendingUp className="w-3.5 h-3.5" /> ยอดเกิน
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>

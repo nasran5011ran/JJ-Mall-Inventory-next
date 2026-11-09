@@ -237,6 +237,8 @@ export default function AdminStockInPage() {
       // Destination filter
       if (destinationFilter === 'WAREHOUSE') {
         if (tx.refType === 'STORE_ALLOCATE') return false;
+      } else if (destinationFilter === 'ALL_STORES') {
+        if (tx.refType !== 'STORE_ALLOCATE') return false;
       } else if (destinationFilter !== 'ALL') {
         const staffId = Number(destinationFilter);
         if (tx.createdBy?.id !== staffId && !tx.refId?.includes(String(staffId))) return false;
@@ -410,9 +412,10 @@ export default function AdminStockInPage() {
           >
             <option value="ALL">📦 ทุกปลายทางรับเข้า</option>
             <option value="WAREHOUSE">🏢 คลังสินค้าส่วนกลาง JJ Mall</option>
+            <option value="ALL_STORES">🏪 จุดขายหน้าร้าน (ทุกร้าน)</option>
             {staffStores.map((st) => (
               <option key={st.id} value={st.id}>
-                🏪 {st.name} (@{st.username})
+                &nbsp;&nbsp;↳ 🏪 {st.name} (@{st.username})
               </option>
             ))}
           </select>
@@ -628,15 +631,16 @@ export default function AdminStockInPage() {
 
       {/* Modal: Record New Stock In */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">บันทึกรับสินค้าเข้าคลัง / ซื้อเข้า (Stock In)</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800">บันทึกรับสินค้าเข้าคลัง / ซื้อเข้า (Stock In)</h3>
                   <p className="text-xs text-slate-500">บันทึกยอดซื้อเข้าคลังกลาง หรือจัดสรรส่งตรงให้จุดขายหน้าร้าน</p>
                 </div>
               </div>
@@ -649,237 +653,250 @@ export default function AdminStockInPage() {
             </div>
 
             {formError && (
-              <div className="mt-4 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <div className="mt-3 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmitStockIn} className="mt-5 space-y-4">
-              {/* Destination Radio Selection */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  เลือกปลายทางที่รับสต็อกเข้า <span className="text-red-500">*</span>
-                </label>
+            <form onSubmit={handleSubmitStockIn} className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* Single Scrollable Form Container (No Double Scrollbars!) */}
+              <div className="flex-1 min-h-0 overflow-y-auto pr-1.5 space-y-3.5 scrollbar-thin">
+                {/* Destination Radio Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    เลือกปลายทางที่รับสต็อกเข้า <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <label
+                      className={`p-2.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
+                        targetType === 'WAREHOUSE'
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="targetType"
+                        checked={targetType === 'WAREHOUSE'}
+                        onChange={() => setTargetType('WAREHOUSE')}
+                        className="sr-only"
+                      />
+                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                        <Warehouse className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs">คลังสินค้าส่วนกลาง</div>
+                        <div className="text-[10px] text-slate-400">JJ Mall Warehouse Center</div>
+                      </div>
+                    </label>
+
+                    <label
+                      className={`p-2.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
+                        targetType === 'STORE'
+                          ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
+                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="targetType"
+                        checked={targetType === 'STORE'}
+                        onChange={() => {
+                          setTargetType('STORE');
+                          if (!targetStoreId && staffStores.length > 0) {
+                            setTargetStoreId(String(staffStores[0].id));
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                        <Store className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs">จัดสรรตรงให้จุดขายหน้าร้าน</div>
+                        <div className="text-[10px] text-slate-400">ระบุเคาน์เตอร์ขายประจำร้าน</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* If Store Selected, pick specific staff shop */}
+                {targetType === 'STORE' && (
+                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 animate-in fade-in duration-150 space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                      <Store className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>เลือกร้านค้า / แคชเชียร์ประจำจุดขายที่รับสต็อก:</span>
+                      <span className="text-red-500">*</span>
+                    </div>
+                    <select
+                      value={targetStoreId}
+                      onChange={(e) => setTargetStoreId(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 text-xs rounded-xl border-2 border-amber-400 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    >
+                      {staffStores.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          🏪 {st.name} (@{st.username})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[10px] text-amber-800">
+                      💡 สต็อกวัตถุดิบจะถูกบันทึกจัดสรรส่งตรงให้จุดขายหน้าร้านนี้ทันที เพื่อให้พนักงานใช้ขายได้ทันที
+                    </p>
+                  </div>
+                )}
+
+                {/* Bill Meta: PO Number & Supplier */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label
-                    className={`p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
-                      targetType === 'WAREHOUSE'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
-                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      เลขที่ใบสั่งซื้อ / ใบเสร็จ (PO Number) <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="radio"
-                      name="targetType"
-                      checked={targetType === 'WAREHOUSE'}
-                      onChange={() => setTargetType('WAREHOUSE')}
-                      className="sr-only"
+                      type="text"
+                      required
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                      placeholder="PO-20261106-xxxx"
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
                     />
-                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                      <Warehouse className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs">คลังสินค้าส่วนกลาง</div>
-                      <div className="text-[10px] text-slate-400">JJ Mall Warehouse Center</div>
-                    </div>
-                  </label>
+                  </div>
 
-                  <label
-                    className={`p-3 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
-                      targetType === 'STORE'
-                        ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
-                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      ผู้จำหน่าย / แหล่งซื้อ (Supplier)
+                    </label>
                     <input
-                      type="radio"
-                      name="targetType"
-                      checked={targetType === 'STORE'}
-                      onChange={() => setTargetType('STORE')}
-                      className="sr-only"
+                      type="text"
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      placeholder="เช่น แม็คโคร, ตลาดไท, โรงงาน..."
+                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     />
-                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                      <Store className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-xs">จัดสรรตรงให้จุดขายหน้าร้าน</div>
-                      <div className="text-[10px] text-slate-400">ระบุเคาน์เตอร์ขายประจำร้าน</div>
-                    </div>
-                  </label>
+                  </div>
                 </div>
-              </div>
 
-              {/* If Store Selected, pick specific staff shop */}
-              {targetType === 'STORE' && (
-                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 animate-in fade-in duration-150">
-                  <label className="block text-xs font-bold text-amber-900 mb-1">
-                    เลือกร้านค้า / แคชเชียร์ประจำจุดขาย <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={targetStoreId}
-                    onChange={(e) => setTargetStoreId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white text-slate-800 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                  >
-                    {staffStores.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        🏪 {st.name} (@{st.username})
-                      </option>
-                    ))}
-                  </select>
+                {/* Dynamic Items List (Natural flow without inner nested scrollbar!) */}
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700">
+                      รายการวัตถุดิบที่รับเข้า ({formItems.length} รายการ) <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addItemRow}
+                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>เพิ่มแถววัตถุดิบ</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {formItems.map((item, idx) => {
+                      const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
+                      const rowSubtotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.costPerUnit) || 0);
+
+                      return (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-2 text-xs"
+                        >
+                          {/* Ingredient Select */}
+                          <div className="flex-1 w-full">
+                            <select
+                              value={item.ingredientId}
+                              onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
+                              required
+                              className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none"
+                            >
+                              <option value="">-- เลือกวัตถุดิบ --</option>
+                              {ingredients.map((ing) => (
+                                <option key={ing.id} value={ing.id}>
+                                  {ing.name} (คงเหลือ: {Number(ing.currentStock)} {ing.unit})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Quantity In */}
+                          <div className="w-full sm:w-32 flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="any"
+                              required
+                              placeholder="จำนวน"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                              className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none font-bold"
+                            />
+                            <span className="text-[11px] text-slate-400 font-mono w-10 truncate">
+                              {selectedIng?.unit || 'หน่วย'}
+                            </span>
+                          </div>
+
+                          {/* Cost Per Unit */}
+                          <div className="w-full sm:w-28 flex items-center gap-1">
+                            <span className="text-slate-400 text-[11px]">฿</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="ต้นทุน"
+                              value={item.costPerUnit}
+                              onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
+                              className="w-full px-2 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
+                            />
+                          </div>
+
+                          {/* Subtotal Preview */}
+                          <div className="w-24 text-right font-mono font-bold text-slate-700 hidden sm:block">
+                            ฿{rowSubtotal.toFixed(2)}
+                          </div>
+
+                          {/* Delete Row */}
+                          <button
+                            type="button"
+                            onClick={() => removeItemRow(idx)}
+                            disabled={formItems.length === 1}
+                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-30 cursor-pointer transition-colors"
+                            title="ลบแถวนี้"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
 
-              {/* Bill Meta: PO Number & Supplier */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Grand Total Bar */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-900">ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
+                  <span className="font-mono font-black text-base text-emerald-800">
+                    ฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {/* Note */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    เลขที่ใบสั่งซื้อ / ใบเสร็จ (PO Number) <span className="text-red-500">*</span>
+                    หมายเหตุเพิ่มเติม
                   </label>
                   <input
                     type="text"
-                    required
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="PO-20261106-xxxx"
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ผู้จำหน่าย / แหล่งซื้อ (Supplier)
-                  </label>
-                  <input
-                    type="text"
-                    value={supplier}
-                    onChange={(e) => setSupplier(e.target.value)}
-                    placeholder="เช่น แม็คโคร, ตลาดไท, โรงงาน..."
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="เช่น สต็อกสำรองช่วงเทศกาล, ได้รับส่วนลดพิเศษ..."
                     className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   />
                 </div>
               </div>
 
-              {/* Dynamic Items Table */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-slate-700">
-                    รายการวัตถุดิบที่รับเข้า ({formItems.length} รายการ) <span className="text-red-500">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addItemRow}
-                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>เพิ่มแถววัตถุดิบ</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {formItems.map((item, idx) => {
-                    const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
-                    const rowSubtotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.costPerUnit) || 0);
-
-                    return (
-                      <div
-                        key={idx}
-                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-2 text-xs"
-                      >
-                        {/* Ingredient Select */}
-                        <div className="flex-1 w-full">
-                          <select
-                            value={item.ingredientId}
-                            onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
-                            required
-                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none"
-                          >
-                            <option value="">-- เลือกวัตถุดิบ --</option>
-                            {ingredients.map((ing) => (
-                              <option key={ing.id} value={ing.id}>
-                                {ing.name} (คงเหลือ: {Number(ing.currentStock)} {ing.unit})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Quantity In */}
-                        <div className="w-full sm:w-32 flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="any"
-                            required
-                            placeholder="จำนวน"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
-                          />
-                          <span className="text-[11px] text-slate-400 font-mono w-10 truncate">
-                            {selectedIng?.unit || 'หน่วย'}
-                          </span>
-                        </div>
-
-                        {/* Cost Per Unit */}
-                        <div className="w-full sm:w-28 flex items-center gap-1">
-                          <span className="text-slate-400 text-[11px]">฿</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="ต้นทุน/หน่วย"
-                            value={item.costPerUnit}
-                            onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
-                          />
-                        </div>
-
-                        {/* Subtotal Preview */}
-                        <div className="w-24 text-right font-mono font-bold text-slate-700 hidden sm:block">
-                          ฿{rowSubtotal.toFixed(2)}
-                        </div>
-
-                        {/* Delete Row */}
-                        <button
-                          type="button"
-                          onClick={() => removeItemRow(idx)}
-                          disabled={formItems.length === 1}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-30 cursor-pointer transition-colors"
-                          title="ลบแถวนี้"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Grand Total Bar */}
-              <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-900">ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
-                <span className="font-mono font-black text-base text-emerald-800">
-                  ฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-
-              {/* Note */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  หมายเหตุเพิ่มเติม
-                </label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="เช่น สต็อกสำรองช่วงเทศกาล, ได้รับส่วนลดพิเศษ..."
-                  className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                />
-              </div>
-
-              {/* Footer Actions */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              {/* Fixed Footer Actions pinned inside the modal card */}
+              <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 bg-white">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}

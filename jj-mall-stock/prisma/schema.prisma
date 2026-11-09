@@ -32,7 +32,6 @@ model User {
   id                  Int               @id @default(autoincrement())
   username            String            @unique
   password            String
-  plainPassword       String?           @default("1234")
   name                String
   role                Role              @default(STAFF)
   avatar              String?
