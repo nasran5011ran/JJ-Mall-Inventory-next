@@ -99,7 +99,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
   }, []);
 
   const unreadCount = notificationsList.filter((n: any) => !readIds.includes(n.id)).length;
-  const displayCount = unreadCount > 0 ? unreadCount : notificationCount;
+  const displayCount = unreadCount;
 
   const handleMarkAsRead = (id: string) => {
     if (!readIds.includes(id)) {
@@ -113,9 +113,10 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
 
   const handleMarkAllAsRead = () => {
     const allIds = notificationsList.map((n: any) => n.id);
-    setReadIds(allIds);
+    const updated = Array.from(new Set([...readIds, ...allIds]));
+    setReadIds(updated);
     try {
-      localStorage.setItem('jj_read_notification_ids', JSON.stringify(allIds));
+      localStorage.setItem('jj_read_notification_ids', JSON.stringify(updated));
     } catch (e) {}
   };
 
