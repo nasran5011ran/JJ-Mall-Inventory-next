@@ -214,7 +214,8 @@ export default function SalesPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-8.5rem)] flex flex-col lg:flex-row gap-5">
+    <>
+      <div className="print:hidden h-[calc(100vh-8.5rem)] flex flex-col lg:flex-row gap-5">
         {/* Left Column: Product Selection Grid */}
         <div className="flex-1 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
           {/* Top Bar inside Left Column */}
@@ -800,6 +801,109 @@ export default function SalesPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Official POS Thermal Receipt (สำหรับพิมพ์สลิป 80mm / 58mm ออกเครื่องพิมพ์ความร้อน) */}
+      {completedSale && (
+        <div id="official-pos-receipt" className="hidden print:block text-black bg-white">
+          {/* Header */}
+          <div className="text-center pb-2 border-b border-dashed border-black">
+            <h1 className="text-xs font-black tracking-wider uppercase">JJ MALL BEVERAGE</h1>
+            <p className="text-[10px] font-bold">ศูนย์การค้าเจเจมอลล์ จตุจักร</p>
+            <p className="text-[9px] text-neutral-600">จุดบริการเครื่องดื่ม & เบเกอรี่</p>
+          </div>
+
+          {/* Receipt Meta */}
+          <div className="py-2 border-b border-dashed border-black text-[10px] space-y-0.5">
+            <div className="flex justify-between">
+              <span>เลขที่บิล:</span>
+              <span className="font-mono font-bold">{completedSale.saleNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>วันที่:</span>
+              <span>
+                {new Date(completedSale.createdAt).toLocaleDateString('th-TH')}{' '}
+                {new Date(completedSale.createdAt).toLocaleTimeString('th-TH', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}{' '}
+                น.
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>พนักงาน:</span>
+              <span>{completedSale.createdBy?.name || user?.name || 'พนักงานหน้าร้าน'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>วิธีชำระ:</span>
+              <span className="font-bold">
+                {completedSale.paymentMethod === 'CASH'
+                  ? 'เงินสด (CASH)'
+                  : completedSale.paymentMethod === 'QR'
+                  ? 'สแกน QR พร้อมเพย์'
+                  : 'บัตรเครดิต'}
+              </span>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="py-2 border-b border-dashed border-black">
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-black text-left font-bold">
+                  <th className="py-1">รายการ</th>
+                  <th className="py-1 text-center w-8">จน.</th>
+                  <th className="py-1 text-right w-14">รวม</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dotted divide-neutral-300">
+                {completedSale.items?.map((it: any) => (
+                  <tr key={it.id}>
+                    <td className="py-1 pr-1 leading-tight">{it.product?.name}</td>
+                    <td className="py-1 text-center font-mono">{it.quantity}</td>
+                    <td className="py-1 text-right font-mono font-bold">
+                      {Number(it.subtotal).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals Summary */}
+          <div className="py-2 border-b border-dashed border-black text-[10px] space-y-1">
+            <div className="flex justify-between">
+              <span>รวมสินค้าทั้งหมด:</span>
+              <span className="font-mono font-bold">{completedSale.totalItems} แก้ว/ชิ้น</span>
+            </div>
+            <div className="flex justify-between text-xs font-black pt-1 border-t border-black">
+              <span>ยอดสุทธิ (Total):</span>
+              <span className="font-mono text-sm">฿{Number(completedSale.totalAmount).toFixed(2)}</span>
+            </div>
+            {completedSale.receivedAmount != null && (
+              <>
+                <div className="flex justify-between pt-1">
+                  <span>รับเงินสด (Cash):</span>
+                  <span className="font-mono">฿{Number(completedSale.receivedAmount).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>เงินทอน (Change):</span>
+                  <span className="font-mono">฿{Number(completedSale.changeAmount || 0).toFixed(2)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer Note */}
+          <div className="pt-3 text-center text-[9px] space-y-0.5">
+            <p className="font-bold">** ขอบคุณที่ใช้บริการ **</p>
+            <p>Thank you - Please come again</p>
+            <p className="text-[8px] text-neutral-500 pt-1">
+              กรุณาตรวจสอบสินค้าและเงินทอนก่อนออกจากเคาน์เตอร์
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

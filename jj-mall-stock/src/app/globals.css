@@ -215,6 +215,8 @@ body {
   #official-stock-transactions-report *,
   #official-ingredient-print-report,
   #official-ingredient-print-report *,
+  #official-pos-receipt,
+  #official-pos-receipt *,
   #official-sales-print-report,
   #official-sales-print-report * {
     visibility: visible !important;
@@ -346,5 +348,39 @@ body {
     break-inside: avoid !important;
     margin-top: 10px !important;
     padding-top: 6px !important;
+  }
+
+  /* POS Thermal Slip Receipt (Standard 80mm / 58mm Width) */
+  #official-pos-receipt {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 76mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 3mm !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Courier New', Courier, monospace, 'Sarabun', sans-serif !important;
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  #official-pos-receipt table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  #official-pos-receipt th,
+  #official-pos-receipt td {
+    border: none !important;
+    padding: 2px 0 !important;
+    color: #000000 !important;
+    background: transparent !important;
   }
 }
