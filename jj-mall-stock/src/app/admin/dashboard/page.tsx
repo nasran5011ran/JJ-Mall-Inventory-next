@@ -527,7 +527,7 @@ export default function DashboardPage() {
                 <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
                   <th className="py-3 px-3">เลขที่ใบเสร็จ</th>
                   <th className="py-3 px-3">เวลา</th>
-                  <th className="py-3 px-3">พนักงานขาย</th>
+                  <th className="py-3 px-3">ร้านค้า / จุดขาย</th>
                   <th className="py-3 px-3 text-center">จำนวนแก้ว</th>
                   <th className="py-3 px-3 text-right">ยอดรวม</th>
                 </tr>
@@ -544,7 +544,7 @@ export default function DashboardPage() {
                     <td className="py-3 px-3 text-slate-500">
                       {new Date(sale.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                     </td>
-                    <td className="py-3 px-3 font-medium text-slate-700">{sale.createdBy?.name || 'พนักงาน'}</td>
+                    <td className="py-3 px-3 font-medium text-slate-700">{sale.createdBy?.name || 'ร้านค้าหน้าร้าน'}</td>
                     <td className="py-3 px-3 text-center font-bold text-slate-800">{sale.totalItems} แก้ว</td>
                     <td className="py-3 px-3 text-right font-black text-slate-800">
                       ฿{Number(sale.totalAmount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}

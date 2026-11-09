@@ -341,7 +341,7 @@ export default function SalesPage() {
               <div>
                 <h2 className="text-sm font-bold text-slate-800">ตะกร้าการขาย</h2>
                 <span className="text-[10px] text-slate-400 font-medium">
-                  พนักงาน: <strong className="text-slate-700">{user?.name}</strong>
+                  ร้านค้า: <strong className="text-slate-700">{user?.name}</strong>
                 </span>
               </div>
             </div>
@@ -719,7 +719,7 @@ export default function SalesPage() {
             {/* Bill Summary */}
             <div className="mt-4 space-y-2 text-xs">
               <div className="flex justify-between text-slate-500">
-                <span>พนักงานขาย:</span>
+                <span>ร้านค้า / จุดขาย:</span>
                 <span className="font-bold text-slate-800">{completedSale.createdBy?.name || user?.name}</span>
               </div>
               <div className="flex justify-between text-slate-500">
@@ -831,8 +831,8 @@ export default function SalesPage() {
               </span>
             </div>
             <div className="flex justify-between">
-              <span>พนักงาน:</span>
-              <span>{completedSale.createdBy?.name || user?.name || 'พนักงานหน้าร้าน'}</span>
+              <span>ร้านค้า:</span>
+              <span className="font-bold">{completedSale.createdBy?.name || user?.name || 'ร้านค้าหน้าร้าน'}</span>
             </div>
             <div className="flex justify-between">
               <span>วิธีชำระ:</span>

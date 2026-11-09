@@ -33,7 +33,7 @@ export default function StaffSalesHistoryPage() {
             ประวัติการขายของฉัน (My Sales Log)
           </div>
           <h1 className="text-2xl font-black text-slate-800">
-            ประวัติบิลขายของพนักงาน: {user?.name}
+            ประวัติบิลขายของร้าน: {user?.name}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             รายการบิลขายที่คุณเป็นผู้ทำรายการ
