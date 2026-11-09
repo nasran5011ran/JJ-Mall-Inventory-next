@@ -239,6 +239,8 @@ body {
     background: #ffffff !important;
     color: #000000 !important;
     overflow: visible !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   /* Single slips avoid page breaks */
@@ -274,6 +276,8 @@ body {
     border-collapse: collapse !important;
     page-break-inside: auto !important;
     break-inside: auto !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
   }
 
   /* Repeat table header on top of every page */

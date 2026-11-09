@@ -355,8 +355,10 @@ export default function AdminStockCountPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Normal Screen UI (Hidden during print so it occupies 0px and avoids blank/shifted pages) */}
+      <div className="print:hidden space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs text-slate-500">
             ระบบตรวจนับสินค้าจริงในคลังและประจำแต่ละจุดขายหน้าร้าน (Physical Stock Count & Store Audit)
@@ -631,6 +633,7 @@ export default function AdminStockCountPage() {
             </table>
           </div>
         )}
+      </div>
       </div>
 
       {/* Modal 1: Create New Physical Stock Count */}
@@ -1283,7 +1286,7 @@ export default function AdminStockCountPage() {
             </div>
 
             {/* Official Report Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto print:overflow-visible">
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
                   {/* Super Header Groups */}
