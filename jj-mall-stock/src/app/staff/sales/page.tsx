@@ -59,6 +59,40 @@ interface CartItem {
   quantity: number;
 }
 
+// Helper: สร้าง Official EMVCo Standard Payload สำหรับพร้อมเพย์ (PromptPay)
+function generatePromptPayPayload(target: string, amount: number) {
+  const cleanTarget = target.replace(/[^0-9]/g, '');
+  const targetType = cleanTarget.length >= 13 ? '02' : '01';
+  let targetVal = cleanTarget;
+  if (targetType === '01') {
+    if (targetVal.startsWith('0')) targetVal = targetVal.substring(1);
+    targetVal = '0066' + targetVal;
+  }
+  const targetTag = targetType + ('00' + targetVal.length).slice(-2) + targetVal;
+  const aid = '0016A000000677010111';
+  const merchantInfo = aid + targetTag;
+  const merchantTag = '29' + ('00' + merchantInfo.length).slice(-2) + merchantInfo;
+
+  let payload = '000201010212' + merchantTag + '5303764';
+  if (amount && amount > 0) {
+    const amtStr = Number(amount).toFixed(2);
+    payload += '54' + ('00' + amtStr.length).slice(-2) + amtStr;
+  }
+  payload += '5802TH6304';
+
+  // CRC16-CCITT Checksum
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i++) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) crc = ((crc << 1) ^ 0x1021) & 0xffff;
+      else crc = (crc << 1) & 0xffff;
+    }
+  }
+  const crcStr = crc.toString(16).toUpperCase().padStart(4, '0');
+  return payload + crcStr;
+}
+
 export default function SalesPage() {
   const { user } = useAuth();
 
@@ -82,6 +116,31 @@ export default function SalesPage() {
   // Step 2 Confirmation Modal State (ป้องกันกดผิด 2 ชั้น)
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [cashReceived, setCashReceived] = useState<string>('');
+
+  // PromptPay configuration for store
+  const [promptPayId, setPromptPayId] = useState<string>('');
+  const [isEditingPromptPay, setIsEditingPromptPay] = useState(false);
+  const [promptPayInput, setPromptPayInput] = useState<string>('');
+
+  useEffect(() => {
+    // Load saved PromptPay ID from localStorage
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('jjmall_promptpay_id') : null;
+    if (saved) {
+      setPromptPayId(saved);
+      setPromptPayInput(saved);
+    }
+  }, []);
+
+  const handleSavePromptPay = () => {
+    const clean = promptPayInput.trim();
+    if (clean) {
+      setPromptPayId(clean);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('jjmall_promptpay_id', clean);
+      }
+      setIsEditingPromptPay(false);
+    }
+  };
 
   // Success Receipt Modal
   const [completedSale, setCompletedSale] = useState<any | null>(null);
@@ -647,6 +706,98 @@ export default function SalesPage() {
                       ⚠️ ยอดเงินที่รับมาน้อยกว่ายอดชำระ (ขาดอีก ฿{(totalAmount - parseFloat(cashReceived)).toFixed(2)})
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* If QR selected: PromptPay QR Code Display */}
+              {paymentMethod === 'QR' && (
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center space-y-3 animate-in fade-in duration-150">
+                  {/* Thai QR Header Banner */}
+                  <div className="bg-[#003B64] text-white py-2 px-3 rounded-xl flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="w-5 h-5 text-sky-300" />
+                      <div className="text-left">
+                        <div className="text-[11px] font-black tracking-wide">THAI QR PAYMENT</div>
+                        <div className="text-[9px] text-sky-200">พร้อมเพย์ (PromptPay)</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-bold text-amber-300 truncate max-w-[140px]">
+                        {user?.name || 'ร้านค้า JJ Mall'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Code Container */}
+                  {promptPayId && !isEditingPromptPay ? (
+                    <div className="space-y-3">
+                      <div className="bg-white p-3 rounded-2xl border border-slate-200/80 inline-block shadow-xs">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                            generatePromptPayPayload(promptPayId, totalAmount)
+                          )}`}
+                          alt="PromptPay QR Code"
+                          className="w-44 h-44 object-contain mx-auto"
+                        />
+                      </div>
+
+                      <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-200">
+                        <div className="text-[11px] text-sky-800 font-semibold">ยอดเงินที่ต้องสแกนจ่าย:</div>
+                        <div className="text-2xl font-black text-sky-900 font-mono">฿{totalAmount.toFixed(2)}</div>
+                        <div className="text-[10px] text-slate-500 mt-1">
+                          เบอร์พร้อมเพย์: <strong className="font-mono text-slate-700">{promptPayId}</strong>{' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPromptPayInput(promptPayId);
+                              setIsEditingPromptPay(true);
+                            }}
+                            className="text-sky-600 underline font-semibold ml-1 cursor-pointer"
+                          >
+                            (เปลี่ยนเบอร์)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-white rounded-2xl border border-dashed border-sky-300 space-y-2.5 text-left">
+                      <div className="text-xs font-bold text-slate-800">
+                        ตั้งค่าเบอร์พร้อมเพย์ของร้านสำหรับรับเงิน
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        ระบุเบอร์โทรศัพท์ (10 หลัก) หรือเลขประจำตัวประชาชน/นิติบุคคล (13 หลัก) ของร้าน
+                      </p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="เช่น 0812345678 หรือ 081-xxx-xxxx"
+                          value={promptPayInput}
+                          onChange={(e) => setPromptPayInput(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSavePromptPay}
+                          className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+                        >
+                          บันทึก
+                        </button>
+                        {promptPayId && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingPromptPay(false)}
+                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs cursor-pointer"
+                          >
+                            ยกเลิก
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-slate-400">
+                    💡 ลูกค้าเปิดแอปธนาคารใดก็ได้ สแกน QR ด้านบน ยอดเงินจะขึ้นพอดี ฿{totalAmount.toFixed(2)} ทันที
+                  </p>
                 </div>
               )}
 
