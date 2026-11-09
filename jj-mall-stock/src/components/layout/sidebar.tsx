@@ -25,7 +25,6 @@ import {
   Shield,
   User,
   ShoppingBag,
-  Store,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -56,7 +55,6 @@ export default function Sidebar({ userRole = 'ADMIN', isOpen, onClose }: Sidebar
     {
       title: 'งานคลัง & อนุมัติสต็อก',
       items: [
-        { href: '/admin/sales', label: 'ตรวจสอบยอดขายแต่ละร้าน', icon: Store },
         { href: '/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
         { href: '/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },

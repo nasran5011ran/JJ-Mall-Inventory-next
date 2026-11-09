@@ -19,6 +19,7 @@ import {
   Users,
   ShoppingBag,
   ArrowDownToLine,
+  ArrowUpFromLine,
   ClipboardCheck,
   FileEdit,
   FileSpreadsheet,
@@ -222,6 +223,12 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
       return {
         title: 'รับสินค้าเข้าคลัง / ซื้อเข้า (Stock In)',
         icon: ArrowDownToLine,
+      };
+    }
+    if (path.startsWith('/admin/stock-out')) {
+      return {
+        title: 'เบิกจ่ายสินค้าไปหน้าร้าน (Stock Out / Store Requisition)',
+        icon: ArrowUpFromLine,
       };
     }
     if (path.startsWith('/admin/stock-count')) {

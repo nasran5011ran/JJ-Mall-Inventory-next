@@ -15,9 +15,9 @@ export default function SalesRedirectPage() {
       return;
     }
 
-    // Role-based destination: Admin manages/inspects stores; Staff sells at POS
+    // Role-based destination: Admin manages/inspects sales reports; Staff sells at POS
     if (user.role === 'ADMIN') {
-      router.replace('/admin/sales');
+      router.replace('/admin/reports/sales');
     } else {
       router.replace('/staff/sales');
     }

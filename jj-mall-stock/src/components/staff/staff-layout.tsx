@@ -18,8 +18,8 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
       if (!user) {
         router.replace('/login');
       } else if (user.role === 'ADMIN') {
-        // ผู้ดูแลระบบ (Admin) ไม่มีหน้าที่ขายสินค้าหน้าร้าน ส่งไปยังหน้าตรวจสอบยอดขายแต่ละร้าน
-        router.replace('/admin/sales');
+        // ผู้ดูแลระบบ (Admin) ไม่มีหน้าที่ขายสินค้าหน้าร้าน ส่งไปยังหน้ารายงานยอดขายประจำวัน
+        router.replace('/admin/reports/sales');
       }
     }
   }, [user, loading, router]);

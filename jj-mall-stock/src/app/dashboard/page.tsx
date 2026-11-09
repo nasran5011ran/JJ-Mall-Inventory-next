@@ -531,10 +531,10 @@ export default function DashboardPage() {
             </p>
           </div>
           <Link
-            href="/admin/sales"
+            href="/admin/reports/sales"
             className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 hover:underline cursor-pointer"
           >
-            <span>ดูประวัติการขายทั้งหมด</span>
+            <span>ดูรายงานการขายทั้งหมด</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -559,9 +559,9 @@ export default function DashboardPage() {
                 {recentSales.map((sale: any) => (
                   <tr
                     key={sale.id}
-                    onClick={() => router.push('/admin/sales')}
+                    onClick={() => router.push('/admin/reports/sales')}
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer"
-                    title="คลิกเพื่อดูรายละเอียดในหน้าตรวจสอบยอดขาย"
+                    title="คลิกเพื่อดูรายละเอียดในหน้ารายงานยอดขาย"
                   >
                     <td className="py-3 px-3 font-mono font-bold text-emerald-700">{sale.saleNumber}</td>
                     <td className="py-3 px-3 text-slate-500">

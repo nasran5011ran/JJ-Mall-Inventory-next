@@ -25,7 +25,6 @@ import {
   ChevronRight,
   ShieldAlert,
   Crown,
-  Store,
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -54,7 +53,6 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     {
       title: 'งานคลัง & การอนุมัติ',
       items: [
-        { href: '/admin/sales', label: 'ตรวจสอบยอดขายแต่ละร้าน', icon: Store },
         { href: '/admin/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
         { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
