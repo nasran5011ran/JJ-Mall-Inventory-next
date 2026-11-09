@@ -437,7 +437,7 @@ export default function AdminUsersPage() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
-            placeholder="ค้นหาชื่อผู้ใช้ หรือชื่อ-นามสกุล..."
+            placeholder="ค้นหาชื่อร้าน หรือชื่อล็อกอิน..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-slate-50/50"
@@ -669,12 +669,12 @@ export default function AdminUsersPage() {
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  ชื่อ-นามสกุล / ชื่อเรียก <span className="text-red-500">*</span>
+                  ชื่อร้าน <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="เช่น สมชาย ใจดี (กะเช้า)"
+                  placeholder="เช่น คอฟฟี่-เจเจ มอลล์"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
@@ -808,11 +808,12 @@ export default function AdminUsersPage() {
             <form onSubmit={handleUpdateUser} className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  ชื่อ-นามสกุล / ชื่อเรียก <span className="text-red-500">*</span>
+                  ชื่อร้าน <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
+                  placeholder="เช่น คอฟฟี่-เจเจ มอลล์"
                   value={editForm.name}
                   onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
@@ -1011,7 +1012,7 @@ export default function AdminUsersPage() {
             {/* Target Account Summary Card */}
             <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">ชื่อผู้ใช้งาน:</span>
+                <span className="text-slate-400">ชื่อร้าน:</span>
                 <span className="font-bold text-slate-800">{userToDelete.name}</span>
               </div>
               <div className="flex items-center justify-between">
