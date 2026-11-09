@@ -941,129 +941,129 @@ export default function AdminStockTransactionsPage() {
           {/* Printable Report Sheet (A4 Landscape Style) */}
           <div
             id="official-stock-transactions-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0"
           >
             {/* Document Header */}
-            <div className="relative pb-2 mb-2 border-b-2 border-slate-800">
+            <div className="relative pb-2 mb-2 border-b border-black">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-base font-black tracking-tight text-slate-900 uppercase">
+                  <h1 className="text-base font-bold tracking-tight text-black uppercase">
                     บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
                   </h1>
-                  <h2 className="text-sm font-bold text-slate-800 mt-0.5">
+                  <h2 className="text-sm font-semibold text-black mt-0.5">
                     สมุดบัญชีคุมสต็อกและความเคลื่อนไหวสินค้า (Stock Movement Ledger & Audit Trail)
                   </h2>
                 </div>
-                <div className="text-right text-[10px] text-slate-600 font-mono leading-tight">
-                  <div className="font-bold text-slate-800">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
+                <div className="text-right text-[10px] text-black font-mono leading-tight">
+                  <div className="font-bold text-black">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
                   <div>เลขที่เอกสาร: TX-LEDGER-{new Date().toISOString().slice(0, 10).replace(/-/g, '')}</div>
                   <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
                 </div>
               </div>
 
               {/* Sub-Header: Filter Info */}
-              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-600 font-medium">
+              <div className="mt-2 flex items-center justify-between text-[10px] text-black font-normal">
                 <div>
-                  <span className="font-bold text-slate-800">ประเภทรายการ: </span>
+                  <span className="font-bold text-black">ประเภทรายการ: </span>
                   <span>{typeFilter === 'ALL' ? 'ทุกประเภทรายการ' : typeFilter}</span>
                   <span className="mx-2">•</span>
-                  <span className="font-bold text-slate-800">ช่วงเวลา: </span>
+                  <span className="font-bold text-black">ช่วงเวลา: </span>
                   <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800">จำนวนทั้งหมด: </span>
+                  <span className="font-bold text-black">จำนวนทั้งหมด: </span>
                   <span className="font-bold font-mono">{filteredTransactions.length}</span> รายการ
                 </div>
               </div>
             </div>
 
             {/* Compact Filter & Summary Strip */}
-            <div className="print-avoid-break my-2 p-2 px-3 rounded border border-slate-300 bg-slate-50 flex items-center justify-between text-[9px] font-sans">
+            <div className="print-avoid-break my-2 p-1.5 px-3 border border-black bg-white text-black flex items-center justify-between text-[9px] font-sans">
               <div>
-                <span className="font-bold text-slate-800">ตัวกรอง: </span>
+                <span className="font-bold">ตัวกรอง: </span>
                 <span>{typeFilter === 'ALL' ? 'ทุกประเภทรายการ' : getTypeBadge(typeFilter).label}</span>
                 <span className="mx-2">•</span>
-                <span className="font-bold text-slate-800">ช่วงเวลา: </span>
+                <span className="font-bold">ช่วงเวลา: </span>
                 <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
                 {ingredientFilter !== 'ALL' && (
                   <>
                     <span className="mx-2">•</span>
-                    <span className="font-bold text-slate-800">วัตถุดิบ: </span>
+                    <span className="font-bold">วัตถุดิบ: </span>
                     <span>{ingredients.find((i) => String(i.id) === ingredientFilter)?.name || ingredientFilter}</span>
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-3 font-mono">
-                <span>รับเข้า: <strong className="text-emerald-700">{metrics.purchaseCount}</strong></span>
-                <span>ตัดขาย POS: <strong className="text-amber-700">{metrics.saleDeductCount}</strong></span>
-                <span>ปรับปรุง: <strong className="text-blue-700">{metrics.adjustCount}</strong></span>
-                <span>ตรวจนับ: <strong className="text-purple-700">{metrics.physicalCount}</strong></span>
-                <span className="border-l border-slate-300 pl-2">รวมทั้งหมด: <strong>{filteredTransactions.length}</strong> รายการ</span>
+              <div className="flex items-center gap-3 font-mono text-black">
+                <span>รับเข้า: <strong className="font-bold">{metrics.purchaseCount}</strong></span>
+                <span>ตัดขาย POS: <strong className="font-bold">{metrics.saleDeductCount}</strong></span>
+                <span>ปรับปรุง: <strong className="font-bold">{metrics.adjustCount}</strong></span>
+                <span>ตรวจนับ: <strong className="font-bold">{metrics.physicalCount}</strong></span>
+                <span className="border-l border-black pl-2">รวมทั้งหมด: <strong className="font-bold">{filteredTransactions.length}</strong> รายการ</span>
               </div>
             </div>
 
             {/* Transactions Table */}
             <div className="w-full">
-              <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
+              <table className="w-full table-fixed text-left border-collapse border border-black text-[9px] leading-tight text-black">
                 <thead>
-                  <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
-                    <th style={{ width: '4%' }} className="py-1 px-1 border-r border-slate-300 text-center">ลำดับ</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-center">วันที่ & เวลา</th>
-                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-slate-300 text-center">เลขที่รายการ</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-center">ประเภท</th>
-                    <th style={{ width: '13%' }} className="py-1 px-2 border-r border-slate-300 text-left">วัตถุดิบ</th>
-                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-slate-300 text-right">รับเข้า (+)</th>
-                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-slate-300 text-right">จ่ายออก (-)</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-slate-300 text-right">คงเหลือ</th>
-                    <th style={{ width: '4.5%' }} className="py-1 px-1 border-r border-slate-300 text-center">หน่วย</th>
-                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-slate-300 text-left">เลขอ้างอิง</th>
-                    <th style={{ width: '12.5%' }} className="py-1 px-1.5 text-left">ผู้ทำรายการ</th>
+                  <tr className="border-b border-black text-black font-bold bg-white text-center">
+                    <th style={{ width: '4%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">ลำดับ</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">วันที่ & เวลา</th>
+                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-black text-center font-bold text-black">เลขที่รายการ</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">ประเภท</th>
+                    <th style={{ width: '13%' }} className="py-1 px-2 border-r border-black text-left font-bold text-black">วัตถุดิบ</th>
+                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">รับเข้า (+)</th>
+                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">จ่ายออก (-)</th>
+                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">คงเหลือ</th>
+                    <th style={{ width: '4.5%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">หน่วย</th>
+                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-black text-left font-bold text-black">เลขอ้างอิง</th>
+                    <th style={{ width: '12.5%' }} className="py-1 px-1.5 text-left font-bold text-black">ผู้ทำรายการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 font-mono text-[8.5px]">
+                <tbody className="divide-y divide-black font-mono text-[8.5px] text-black">
                   {printTransactions.map((tx, idx) => {
                     const badge = getTypeBadge(tx.type);
                     const d = new Date(tx.createdAt);
                     const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
                     const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                     return (
-                      <tr key={tx.id} className="hover:bg-slate-50/50">
-                        <td className="py-0.5 px-1 text-center border-r border-slate-200 font-sans">
+                      <tr key={tx.id} className="border-b border-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 font-sans text-center whitespace-nowrap">
-                          {dateStr} <span className="text-[7.5px] text-slate-500">{timeStr}</span>
+                        <td className="py-0.5 px-1 border-r border-black font-sans text-center whitespace-nowrap text-black">
+                          {dateStr} <span className="text-[7.5px] text-black">{timeStr}</span>
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-bold font-mono truncate">
+                        <td className="py-0.5 px-1.5 border-r border-black font-bold font-mono text-black truncate">
                           {tx.transactionNumber}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans font-bold text-[8px] truncate">
+                        <td className="py-0.5 px-1 border-r border-black text-center font-sans font-medium text-[8px] text-black truncate">
                           {badge.label}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-slate-200 font-sans text-left overflow-hidden">
-                          <div className="font-bold text-slate-800 text-[8.5px] truncate" title={tx.ingredient?.name}>
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-left overflow-hidden text-black">
+                          <div className="font-semibold text-black text-[8.5px] truncate" title={tx.ingredient?.name}>
                             {tx.ingredient?.name}
                           </div>
-                          <div className="text-[7.5px] text-slate-500 font-mono">
+                          <div className="text-[7.5px] text-black font-mono">
                             {tx.ingredient?.code}
                           </div>
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-bold text-emerald-700">
+                        <td className="py-0.5 px-1 border-r border-black text-right font-medium text-black">
                           {Number(tx.quantityIn) > 0 ? `+${Number(tx.quantityIn)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-bold text-red-700">
+                        <td className="py-0.5 px-1 border-r border-black text-right font-medium text-black">
                           {Number(tx.quantityOut) > 0 ? `-${Number(tx.quantityOut)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right font-black text-slate-900 whitespace-nowrap">
+                        <td className="py-0.5 px-1 border-r border-black text-right font-bold text-black whitespace-nowrap">
                           {Number(tx.balanceAfter).toLocaleString()}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-600">
+                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
                           {tx.ingredient?.unit}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-mono text-slate-700 text-[8px] truncate" title={tx.refId || ''}>
+                        <td className="py-0.5 px-1.5 border-r border-black font-mono text-black text-[8px] truncate" title={tx.refId || ''}>
                           {tx.refId || '-'}
                         </td>
-                        <td className="py-0.5 px-1.5 font-sans text-slate-700 text-[8.5px] truncate" title={tx.createdBy?.name || ''}>
+                        <td className="py-0.5 px-1.5 font-sans text-black text-[8.5px] truncate" title={tx.createdBy?.name || ''}>
                           {tx.createdBy?.name || '-'}
                         </td>
                       </tr>
@@ -1071,12 +1071,12 @@ export default function AdminStockTransactionsPage() {
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-slate-800 bg-slate-100 font-bold text-[9.5px]">
-                    <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-slate-300">
+                  <tr className="border-t border-black bg-white font-bold text-[9.5px] text-black">
+                    <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-black text-black">
                       รวมรายการความเคลื่อนไหวทั้งหมด:
                     </td>
-                    <td colSpan={6} className="py-1.5 px-3 text-left font-sans text-slate-800">
-                      <span className="font-mono font-bold">{filteredTransactions.length}</span> รายการ
+                    <td colSpan={6} className="py-1.5 px-3 text-left font-sans text-black">
+                      <span className="font-mono font-bold text-black">{filteredTransactions.length}</span> รายการ
                     </td>
                   </tr>
                 </tfoot>
@@ -1084,23 +1084,23 @@ export default function AdminStockTransactionsPage() {
             </div>
 
             {/* Signature Section */}
-            <div className="print-signature-section pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
-              <div className="space-y-1">
-                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้จัดทำรายงาน (เจ้าหน้าที่สต็อก / แคชเชียร์)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+            <div className="print-signature-section pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
+              <div className="space-y-1 text-black">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้จัดทำรายงาน (เจ้าหน้าที่สต็อก / แคชเชียร์)</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
 
-              <div className="space-y-1">
-                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้ตรวจสอบ (ผู้จัดการสาขา)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              <div className="space-y-1 text-black">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้ตรวจสอบ (ผู้จัดการสาขา)</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
 
-              <div className="space-y-1">
-                <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+              <div className="space-y-1 text-black">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
             </div>
           </div>

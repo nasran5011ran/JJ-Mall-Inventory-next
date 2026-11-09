@@ -315,11 +315,12 @@ body {
   #official-sales-print-report th,
   #official-sales-print-report td {
     color: #000000 !important;
-    border-color: #333333 !important;
-    padding-top: 1.5px !important;
-    padding-bottom: 1.5px !important;
+    border: 1px solid #000000 !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
     font-size: 9px !important;
     line-height: 1.2 !important;
+    background: #ffffff !important;
   }
 
   .print-avoid-break {
