@@ -635,7 +635,7 @@ export default function AdminStockCountPage() {
 
       {/* Modal 1: Create New Physical Stock Count */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
           <div className="bg-white rounded-3xl max-w-6xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 shrink-0">
@@ -1015,8 +1015,8 @@ export default function AdminStockCountPage() {
       )}
 
       {/* Modal 2: Stock Count Audit Detail */}
-      {selectedCount && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
+      {selectedCount && !printModalOpen && (
+        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
           <div className="bg-white rounded-3xl max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
@@ -1033,12 +1033,23 @@ export default function AdminStockCountPage() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedCount(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenPrintReport(selectedCount)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                  title="พิมพ์ใบบันทึกผลตรวจนับสินค้าจริง"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>พิมพ์เอกสาร</span>
+                </button>
+                <button
+                  onClick={() => setSelectedCount(null)}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Meta Info */}
@@ -1176,7 +1187,7 @@ export default function AdminStockCountPage() {
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
               >
                 <Printer className="w-4 h-4" />
-                <span>พิมพ์รายงานผลต่าง (ตามแบบฟอร์มทางการ)</span>
+                <span>พิมพ์ใบบันทึกผลตรวจนับสินค้าจริง / รายงานผลต่าง (ตามแบบฟอร์มทางการ)</span>
               </button>
 
               <button
@@ -1193,17 +1204,17 @@ export default function AdminStockCountPage() {
 
       {/* Modal 3: Official Printable Report (ตามแบบฟอร์มรายงานผลต่าง/ใบขออนุมัติปรับปรุงสต็อก) */}
       {printModalOpen && printRecord && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
           <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
-                  ตัวอย่างก่อนพิมพ์: รายงานผลต่างจากการตรวจนับสินค้า / ใบขออนุมัติปรับปรุงสต็อก
+                  ตัวอย่างก่อนพิมพ์: ใบบันทึกผลตรวจนับสินค้าจริง / รายงานผลต่างจากการตรวจนับสินค้า
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  ตัดคอลัมน์ที่ไม่มีตัวเลขออกตามที่กำหนด • จัดหน้ากระดาษ A4 แนวนอน (Landscape) อัตโนมัติ
+                  จัดหน้ากระดาษ A4 แนวนอน (Landscape) อัตโนมัติ • พร้อมพิมพ์หรือบันทึกเป็น PDF
                 </p>
               </div>
             </div>
@@ -1230,33 +1241,33 @@ export default function AdminStockCountPage() {
           {/* Printable Document Sheet (A4 Landscape Style) */}
           <div
             id="official-stock-print-report"
-            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-slate-300 font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
           >
             {/* Document Header */}
             <div className="relative pb-1 mb-2">
               {/* Top Right Reference Meta */}
-              <div className="absolute top-0 right-0 text-right text-[10px] text-slate-600 font-mono leading-tight">
+              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
                 <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
                 <div>RTTR080ATHA.QRP</div>
               </div>
 
               {/* Company & Document Title */}
               <div className="text-center space-y-0.5">
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                <h2 className="text-sm sm:text-base font-bold text-black tracking-tight">
                   บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
                 </h2>
-                <h3 className="text-xs sm:text-sm font-bold text-slate-800">
-                  รายงานผลต่างจากการตรวจนับสินค้า/ใบขออนุมัติปรับปรุงสต็อกสินค้า
+                <h3 className="text-xs sm:text-sm font-bold text-black">
+                  ใบบันทึกผลตรวจนับสินค้าจริง / รายงานผลต่างจากการตรวจนับสินค้า (ใบขออนุมัติปรับปรุงสต็อก)
                 </h3>
               </div>
 
               {/* Sub-Header: Document Number, Date, Store */}
-              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-b border-slate-400 pb-1">
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-b border-black pb-1 text-black">
                 <div>
                   <span className="font-bold">เลขที่เอกสาร </span>
                   <span className="font-mono font-bold ml-1">{printRecord.countNumber}</span>
                   {printRecord.storeName && (
-                    <span className="ml-3 text-slate-700">
+                    <span className="ml-3">
                       (<span className="font-bold">จุดตรวจนับ: </span>{printRecord.storeName})
                     </span>
                   )}
@@ -1273,44 +1284,44 @@ export default function AdminStockCountPage() {
 
             {/* Official Report Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-[10px] leading-tight">
+              <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
                   {/* Super Header Groups */}
-                  <tr className="border-t border-b border-slate-800 text-slate-800 font-bold text-center">
-                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-300 w-8 text-center">ลำดับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-slate-300 w-24">รหัสสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-2 border-r border-slate-300 text-left">ชื่อสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-300 w-12 text-center">หน่วยนับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-slate-300 w-14 text-right">ยกมา</th>
-                    <th colSpan={1} className="py-0.5 px-1 border-r border-slate-300 bg-slate-50 text-center">
+                  <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-24 bg-white">รหัสสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white">ชื่อสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-12 text-center bg-white">หน่วยนับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-14 text-right bg-white">ยกมา</th>
+                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center">
                       &lt;-- รายการรับ --&gt;
                     </th>
-                    <th colSpan={2} className="py-0.5 px-1 border-r border-slate-300 bg-slate-50 text-center">
+                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center">
                       &lt;-- รายการจ่าย --&gt;
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-slate-300 text-right w-20">
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
                       คงเหลือจาก<br />การคำนวณ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-slate-300 text-right w-20">
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
                       คงเหลือจาก<br />การตรวจนับ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-slate-300 text-right w-16">
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">
                       ผลต่าง
                     </th>
-                    <th rowSpan={2} className="py-1 px-1 text-right w-12">
+                    <th rowSpan={2} className="py-1 px-1 text-right w-12 bg-white">
                       DOH<br />(Day)
                     </th>
                   </tr>
 
                   {/* Sub Header Columns */}
-                  <tr className="border-b border-slate-800 text-slate-800 font-bold text-center">
-                    <th className="py-0.5 px-1 border-r border-slate-300 text-right w-16">ปรับปรุงเพิ่ม</th>
-                    <th className="py-0.5 px-1 border-r border-slate-300 text-right w-14">ขาย</th>
-                    <th className="py-0.5 px-1 border-r border-slate-300 text-right w-14">จ่ายทำลาย</th>
+                  <tr className="border-b border-black text-black font-bold text-center bg-white">
+                    <th className="py-0.5 px-1 border-r border-black text-right w-16 bg-white">ปรับปรุงเพิ่ม</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">ขาย</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">จ่ายทำลาย</th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-slate-200 font-mono text-[9.5px]">
+                <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
                   {printRecord.items.map((item, idx) => {
                     const sysQty = Number(item.systemQuantity);
                     const actQty = Number(item.actualQuantity);
@@ -1322,66 +1333,64 @@ export default function AdminStockCountPage() {
                     const dohVal = item.doh !== undefined ? item.doh : 0;
 
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50/50">
+                      <tr key={item.id} className="border-b border-black">
                         {/* No. */}
-                        <td className="py-0.5 px-1 text-center border-r border-slate-200 font-sans">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
 
                         {/* Product Code */}
-                        <td className="py-0.5 px-1.5 border-r border-slate-200 whitespace-nowrap text-slate-700">
+                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
                           {item.ingredient?.code}
                         </td>
 
                         {/* Product Name */}
-                        <td className="py-0.5 px-2 border-r border-slate-200 font-sans font-medium text-slate-900 truncate max-w-[180px]">
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black truncate max-w-[180px]">
                           {item.ingredient?.name}
                         </td>
 
                         {/* Unit */}
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-700">
+                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
                           {item.ingredient?.unit}
                         </td>
 
                         {/* ยกมา (Opening) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-slate-200 text-slate-700">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black text-black">
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
 
                         {/* ปรับปรุงเพิ่ม / รับเข้า */}
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right text-slate-700">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
                           {inQty > 0 ? inQty.toFixed(2) : '-'}
                         </td>
 
                         {/* ขาย (Sales) -> Formatted with parenthesis as deduction */}
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right text-slate-700">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
                           {saleQty > 0 ? `(${saleQty.toFixed(2)})` : '-'}
                         </td>
 
                         {/* จ่ายทำลาย (Waste) */}
-                        <td className="py-0.5 px-1 border-r border-slate-200 text-right text-slate-700">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
                           {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : '-'}
                         </td>
 
                         {/* คงเหลือจากการคำนวณ (System) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-slate-200 font-bold text-slate-800">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
                           {sysQty.toFixed(2)}
                         </td>
 
                         {/* คงเหลือจากการตรวจนับ (Actual) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-slate-200 font-bold text-slate-900">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
                           {actQty.toFixed(2)}
                         </td>
 
                         {/* ผลต่าง (Variance) */}
-                        <td className={`py-0.5 px-1.5 text-right border-r border-slate-200 font-bold ${
-                          diff < 0 ? 'text-red-700' : diff > 0 ? 'text-blue-700' : 'text-slate-800'
-                        }`}>
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
                           {diff === 0 ? '0.00' : diff < 0 ? `(${Math.abs(diff).toFixed(2)})` : `+${diff.toFixed(2)}`}
                         </td>
 
                         {/* DOH (Day) */}
-                        <td className="py-0.5 px-1 text-right text-slate-800 font-bold">
+                        <td className="py-0.5 px-1 text-right text-black font-bold">
                           {dohVal}
                         </td>
                       </tr>
@@ -1393,34 +1402,34 @@ export default function AdminStockCountPage() {
 
             {/* Note Section */}
             {printRecord.note && (
-              <div className="mt-2 pt-1 border-t border-slate-300 text-[9.5px] text-slate-700">
+              <div className="mt-2 pt-1 border-t border-black text-[9.5px] text-black">
                 <span className="font-bold">หมายเหตุการตรวจนับ: </span>
                 <span>{printRecord.note}</span>
               </div>
             )}
 
             {/* Bottom 3 Signature Blocks (Matching User Photo) */}
-            <div className="print-signature-section mt-4 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+            <div className="print-signature-section mt-4 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้ขออนุมัติ (ร้านค้า)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้ขออนุมัติ (ร้านค้า)</div>
+                <div className="text-[9.5px] text-black font-mono">
                   วันที่: ...... / ...... / ..........
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้อนุมัติ (ร้านค้า)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (ร้านค้า)</div>
+                <div className="text-[9.5px] text-black font-mono">
                   วันที่: ...... / ...... / ..........
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้อนุมัติ (บัญชี)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (บัญชี)</div>
+                <div className="text-[9.5px] text-black font-mono">
                   วันที่: ...... / ...... / ..........
                 </div>
               </div>

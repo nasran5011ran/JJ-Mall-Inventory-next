@@ -249,6 +249,7 @@ body {
   }
 
   /* Multi-page reports can break across pages naturally (Page 1, 2, 3...) */
+  #official-stock-print-report,
   #official-stock-transactions-report,
   #official-stock-adjustments-report,
   #official-stock-inventory-report,
