@@ -25,6 +25,7 @@ import {
   QrCode,
   Banknote,
   RotateCcw,
+  X,
 } from 'lucide-react';
 
 interface ProductItem {
@@ -77,6 +78,10 @@ export default function SalesPage() {
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QR' | 'CARD'>('CASH');
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Step 2 Confirmation Modal State (ป้องกันกดผิด 2 ชั้น)
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [cashReceived, setCashReceived] = useState<string>('');
 
   // Success Receipt Modal
   const [completedSale, setCompletedSale] = useState<any | null>(null);
@@ -145,7 +150,19 @@ export default function SalesPage() {
     0
   );
 
-  // Handle Checkout Submit
+  // Step 1: Open Confirmation Modal (ชั้นที่ 1)
+  const handleOpenConfirm = () => {
+    if (cart.length === 0) return;
+    if (user?.role === 'ADMIN') {
+      setErrorMessage('ผู้ดูแลระบบ (Admin) ไม่มีหน้าที่ขายสินค้าหน้าร้าน บัญชีเจ้าหน้าที่ขายประจำร้าน (Staff) เท่านั้นที่สามารถทำรายการขายได้');
+      return;
+    }
+    setErrorMessage(null);
+    setCashReceived('');
+    setShowConfirmModal(true);
+  };
+
+  // Step 2: Handle Checkout Submit (ชั้นที่ 2 กดยืนยันชำระเงินจริง)
   const handleConfirmSale = async () => {
     if (cart.length === 0) return;
     if (user?.role === 'ADMIN') {
@@ -176,7 +193,18 @@ export default function SalesPage() {
         throw new Error(json.message || 'บันทึกการขายไม่สำเร็จ');
       }
 
-      setCompletedSale(json.sale);
+      const receivedNum = cashReceived ? parseFloat(cashReceived) : null;
+      const changeNum =
+        paymentMethod === 'CASH' && receivedNum && receivedNum >= totalAmount
+          ? receivedNum - totalAmount
+          : null;
+
+      setShowConfirmModal(false);
+      setCompletedSale({
+        ...json.sale,
+        receivedAmount: receivedNum,
+        changeAmount: changeNum,
+      });
       clearCart();
     } catch (err: any) {
       setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการขาย');
@@ -449,29 +477,226 @@ export default function SalesPage() {
               </span>
             </div>
 
-            {/* Confirm Sale Button */}
+            {/* Step 1 Button: Opens Step 2 Modal */}
             <button
-              onClick={handleConfirmSale}
+              onClick={handleOpenConfirm}
               disabled={cart.length === 0 || processing}
               className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/25 disabled:opacity-50 transition-all cursor-pointer"
             >
-              {processing ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>กำลังบันทึกการขาย...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>ยืนยันการขาย / รับชำระเงิน</span>
-                </>
-              )}
+              <DollarSign className="w-5 h-5" />
+              <span>ชำระเงิน (฿{totalAmount.toFixed(2)})</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
+
+      {/* Step 2: Payment Confirmation Modal (ป้องกันการกดผิด ชั้นที่ 2) */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    ยืนยันการชำระเงิน (ตรวจสอบก่อนบันทึก)
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    ตรวจสอบยอดและรับเงินจากลูกค้าก่อนกดยืนยันบิล
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto py-4 space-y-4">
+              {/* Order Items Preview */}
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                <div className="text-xs font-bold text-slate-700 flex justify-between">
+                  <span>รายการสินค้า ({totalItems} รายการ)</span>
+                  <span className="text-slate-400">ราคา</span>
+                </div>
+                <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 text-xs">
+                  {cart.map((it) => (
+                    <div key={it.product.id} className="py-1.5 flex justify-between items-center">
+                      <div className="truncate pr-2">
+                        <span className="font-semibold text-slate-800">{it.product.name}</span>
+                        <span className="text-slate-400 text-[11px] ml-1.5">× {it.quantity}</span>
+                      </div>
+                      <span className="font-mono font-bold text-slate-700">
+                        ฿{(Number(it.product.price) * it.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-800">
+                  <span>ยอดชำระสุทธิ:</span>
+                  <span className="text-xl font-mono text-emerald-700">
+                    ฿{totalAmount.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Method Selector in Modal */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">
+                  วิธีชำระเงินของลูกค้า:
+                </label>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod('CASH');
+                      setCashReceived('');
+                    }}
+                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
+                      paymentMethod === 'CASH'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Banknote className="w-5 h-5 text-emerald-600" />
+                    <span>เงินสด</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('QR')}
+                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
+                      paymentMethod === 'QR'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <QrCode className="w-5 h-5 text-sky-600" />
+                    <span>สแกน QR</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('CARD')}
+                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
+                      paymentMethod === 'CARD'
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
+                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CreditCard className="w-5 h-5 text-indigo-600" />
+                    <span>บัตรเครดิต</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* If CASH selected: Quick Cash & Change Calculator */}
+              {paymentMethod === 'CASH' && (
+                <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-2.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-amber-900">รับเงินสดมา (บาท):</span>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setCashReceived(totalAmount.toString())}
+                        className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 cursor-pointer"
+                      >
+                        พอดี
+                      </button>
+                      {[100, 500, 1000].map(
+                        (quick) =>
+                          quick >= totalAmount && (
+                            <button
+                              key={quick}
+                              type="button"
+                              onClick={() => setCashReceived(quick.toString())}
+                              className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 cursor-pointer"
+                            >
+                              ฿{quick}
+                            </button>
+                          )
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder={`ระบุจำนวนเงินที่รับ เช่น ${totalAmount}`}
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(e.target.value)}
+                    className="w-full px-3 py-2 text-sm font-mono font-bold rounded-xl border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/30 text-slate-800"
+                  />
+                  {cashReceived && parseFloat(cashReceived) >= totalAmount && (
+                    <div className="flex justify-between items-center text-xs pt-1 border-t border-amber-200">
+                      <span className="font-bold text-amber-900">เงินทอนลูกค้า:</span>
+                      <span className="text-base font-black font-mono text-emerald-700">
+                        ฿{(parseFloat(cashReceived) - totalAmount).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {cashReceived && parseFloat(cashReceived) < totalAmount && (
+                    <p className="text-[11px] font-semibold text-red-600">
+                      ⚠️ ยอดเงินที่รับมาน้อยกว่ายอดชำระ (ขาดอีก ฿{(totalAmount - parseFloat(cashReceived)).toFixed(2)})
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Error Message inside modal */}
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer with 2 distinct actions */}
+            <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={processing}
+                className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>ยกเลิก / แก้ไข</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleConfirmSale}
+                disabled={
+                  processing ||
+                  (paymentMethod === 'CASH' && !!cashReceived && parseFloat(cashReceived) < totalAmount)
+                }
+                className="py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-700/25 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                {processing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    <span>กำลังบันทึกการขาย...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>ยืนยันการขาย & ออกบิล</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sale Receipt & Deduction Success Modal */}
       {completedSale && (
@@ -533,13 +758,40 @@ export default function SalesPage() {
                   ฿{Number(completedSale.totalAmount).toFixed(2)}
                 </span>
               </div>
+
+              {completedSale.receivedAmount != null && (
+                <div className="pt-2 border-t border-slate-100 space-y-1 text-xs">
+                  <div className="flex justify-between text-slate-500">
+                    <span>รับเงินสดมา:</span>
+                    <span className="font-mono font-bold text-slate-800">
+                      ฿{Number(completedSale.receivedAmount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>เงินทอนลูกค้า:</span>
+                    <span className="font-mono text-sm font-black">
+                      ฿{Number(completedSale.changeAmount || 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
             <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
               <button
+                type="button"
+                onClick={() => window.print()}
+                className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>พิมพ์ใบเสร็จ</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setCompletedSale(null)}
-                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
               >
                 <span>เปิดบิลขายใหม่</span>
                 <ArrowRight className="w-4 h-4" />
