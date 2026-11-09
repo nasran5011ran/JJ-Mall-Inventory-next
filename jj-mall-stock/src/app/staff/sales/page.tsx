@@ -22,7 +22,6 @@ import {
   ArrowRight,
   Clock,
   User,
-  CreditCard,
   QrCode,
   Banknote,
   RotateCcw,
@@ -123,7 +122,7 @@ export default function SalesPage() {
 
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QR' | 'CARD'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'QR'>('CASH');
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -515,45 +514,32 @@ export default function SalesPage() {
 
           {/* Checkout Panel */}
           <div className="p-4 border-t border-slate-200 bg-white space-y-3">
-            {/* Payment Method Selector */}
-            <div className="grid grid-cols-3 gap-1.5 text-xs">
+            {/* Payment Method Selector (เงินสด & สแกน QR) */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => setPaymentMethod('CASH')}
-                className={`py-2 px-1 rounded-xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-colors ${
+                className={`py-2.5 px-2 rounded-xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-colors ${
                   paymentMethod === 'CASH'
                     ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <Banknote className="w-4 h-4" />
-                <span className="text-[10px]">เงินสด</span>
+                <Banknote className="w-4 h-4 text-emerald-600" />
+                <span className="text-[11px]">เงินสด</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setPaymentMethod('QR')}
-                className={`py-2 px-1 rounded-xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-colors ${
+                className={`py-2.5 px-2 rounded-xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-colors ${
                   paymentMethod === 'QR'
                     ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
               >
-                <QrCode className="w-4 h-4" />
-                <span className="text-[10px]">สแกน QR</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('CARD')}
-                className={`py-2 px-1 rounded-xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-colors ${
-                  paymentMethod === 'CARD'
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                <CreditCard className="w-4 h-4" />
-                <span className="text-[10px]">บัตรเครดิต</span>
+                <QrCode className="w-4 h-4 text-sky-600" />
+                <span className="text-[11px]">สแกน QR</span>
               </button>
             </div>
 
@@ -644,47 +630,34 @@ export default function SalesPage() {
                 <label className="text-xs font-bold text-slate-700">
                   วิธีชำระเงินของลูกค้า:
                 </label>
-                <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
                   <button
                     type="button"
                     onClick={() => {
                       setPaymentMethod('CASH');
                       setCashReceived('');
                     }}
-                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
+                    className={`py-3 px-3 rounded-2xl font-bold flex flex-col items-center gap-1.5 border cursor-pointer transition-all ${
                       paymentMethod === 'CASH'
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <Banknote className="w-5 h-5 text-emerald-600" />
-                    <span>เงินสด</span>
+                    <Banknote className="w-6 h-6 text-emerald-600" />
+                    <span className="text-sm">เงินสด</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('QR')}
-                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
+                    className={`py-3 px-3 rounded-2xl font-bold flex flex-col items-center gap-1.5 border cursor-pointer transition-all ${
                       paymentMethod === 'QR'
                         ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
                         : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    <QrCode className="w-5 h-5 text-sky-600" />
-                    <span>สแกน QR</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('CARD')}
-                    className={`py-2.5 px-2 rounded-2xl font-bold flex flex-col items-center gap-1 border cursor-pointer transition-all ${
-                      paymentMethod === 'CARD'
-                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <CreditCard className="w-5 h-5 text-indigo-600" />
-                    <span>บัตรเครดิต</span>
+                    <QrCode className="w-6 h-6 text-sky-600" />
+                    <span className="text-sm">สแกน QR</span>
                   </button>
                 </div>
               </div>
