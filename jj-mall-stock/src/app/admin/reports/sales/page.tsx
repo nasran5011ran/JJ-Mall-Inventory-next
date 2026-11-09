@@ -248,7 +248,10 @@ export default function AdminSalesReportPage() {
 
     const headers = [
       'เลขที่บิล (Sale Number)',
-      'วันที่ & เวลา',
+      'วันที่ & เวลา (Date & Time)',
+      'วันที่ (Date)',
+      'เวลา (Time)',
+      'วันที่ (พ.ศ.)',
       'ร้านค้า / แคชเชียร์',
       'ช่องทางชำระเงิน',
       'จำนวนแก้ว',
@@ -256,15 +259,35 @@ export default function AdminSalesReportPage() {
       'รายการสินค้าในบิล',
     ];
 
-    const rows = filteredSales.map((s) => [
-      `"${s.saleNumber}"`,
-      `"${new Date(s.createdAt).toLocaleString('th-TH')}"`,
-      `"${s.createdBy?.name || ''}"`,
-      `"${s.paymentMethod || 'CASH'}"`,
-      s.totalItems,
-      s.totalAmount,
-      `"${s.items.map((i) => `${i.product?.name} x${i.quantity}`).join(', ')}"`,
-    ]);
+    const rows = filteredSales.map((s) => {
+      const d = new Date(s.createdAt);
+      const isValid = !isNaN(d.getTime());
+
+      const yyyy = isValid ? d.getFullYear() : '';
+      const mm = isValid ? String(d.getMonth() + 1).padStart(2, '0') : '';
+      const dd = isValid ? String(d.getDate()).padStart(2, '0') : '';
+      const hh = isValid ? String(d.getHours()).padStart(2, '0') : '';
+      const min = isValid ? String(d.getMinutes()).padStart(2, '0') : '';
+      const ss = isValid ? String(d.getSeconds()).padStart(2, '0') : '';
+
+      const isoDateTime = isValid ? `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}` : '';
+      const dateOnly = isValid ? `${yyyy}-${mm}-${dd}` : '';
+      const timeOnly = isValid ? `${hh}:${min}:${ss}` : '';
+      const thaiDateTimeFormula = isValid ? `="${dd}/${mm}/${Number(yyyy) + 543} ${hh}:${min}:${ss}"` : '""';
+
+      return [
+        `"${s.saleNumber}"`,
+        `"${isoDateTime}"`,
+        `"${dateOnly}"`,
+        `"${timeOnly}"`,
+        thaiDateTimeFormula,
+        `"${s.createdBy?.name || ''}"`,
+        `"${s.paymentMethod || 'CASH'}"`,
+        s.totalItems,
+        s.totalAmount,
+        `"${s.items.map((i) => `${i.product?.name} x${i.quantity}`).join(', ')}"`,
+      ];
+    });
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

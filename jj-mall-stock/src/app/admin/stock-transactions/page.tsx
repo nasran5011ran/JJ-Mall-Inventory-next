@@ -116,7 +116,10 @@ export default function AdminStockTransactionsPage() {
 
     const headers = [
       'เลขที่รายการ (Tx Number)',
-      'วันที่ & เวลา',
+      'วันที่ & เวลา (Date & Time)',
+      'วันที่ (Date)',
+      'เวลา (Time)',
+      'วันที่ (พ.ศ.)',
       'ประเภท (Type)',
       'รหัสวัตถุดิบ',
       'ชื่อวัตถุดิบ',
@@ -129,20 +132,44 @@ export default function AdminStockTransactionsPage() {
       'หมายเหตุ',
     ];
 
-    const rows = filteredTransactions.map((tx) => [
-      `"${tx.transactionNumber}"`,
-      `"${new Date(tx.createdAt).toLocaleString('th-TH')}"`,
-      `"${tx.type}"`,
-      `"${tx.ingredient?.code || ''}"`,
-      `"${tx.ingredient?.name || ''}"`,
-      tx.quantityIn,
-      tx.quantityOut,
-      tx.balanceAfter,
-      `"${tx.ingredient?.unit || ''}"`,
-      `"${tx.refId || ''}"`,
-      `"${tx.createdBy?.name || ''}"`,
-      `"${(tx.note || '').replace(/"/g, '""')}"`,
-    ]);
+    const rows = filteredTransactions.map((tx) => {
+      const d = new Date(tx.createdAt);
+      const isValid = !isNaN(d.getTime());
+
+      const yyyy = isValid ? d.getFullYear() : '';
+      const mm = isValid ? String(d.getMonth() + 1).padStart(2, '0') : '';
+      const dd = isValid ? String(d.getDate()).padStart(2, '0') : '';
+      const hh = isValid ? String(d.getHours()).padStart(2, '0') : '';
+      const min = isValid ? String(d.getMinutes()).padStart(2, '0') : '';
+      const ss = isValid ? String(d.getSeconds()).padStart(2, '0') : '';
+
+      // Standard ISO Date & Time (recognized natively in all versions of Excel without locale errors)
+      const isoDateTime = isValid ? `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}` : '';
+      const dateOnly = isValid ? `${yyyy}-${mm}-${dd}` : '';
+      const timeOnly = isValid ? `${hh}:${min}:${ss}` : '';
+      // Safe Thai Buddhist text for Excel: prefixed with ="..." so Excel never parses year 2569 as AD
+      const thaiDateTimeFormula = isValid ? `="${dd}/${mm}/${Number(yyyy) + 543} ${hh}:${min}:${ss}"` : '""';
+
+      const typeLabel = getTypeBadge(tx.type).label;
+
+      return [
+        `"${tx.transactionNumber}"`,
+        `"${isoDateTime}"`,
+        `"${dateOnly}"`,
+        `"${timeOnly}"`,
+        thaiDateTimeFormula,
+        `"${typeLabel}"`,
+        `"${tx.ingredient?.code || ''}"`,
+        `"${tx.ingredient?.name || ''}"`,
+        tx.quantityIn,
+        tx.quantityOut,
+        tx.balanceAfter,
+        `"${tx.ingredient?.unit || ''}"`,
+        `"${tx.refId || ''}"`,
+        `"${tx.createdBy?.name || ''}"`,
+        `"${(tx.note || '').replace(/"/g, '""')}"`,
+      ];
+    });
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

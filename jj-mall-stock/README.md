@@ -45,7 +45,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 npm run build  // คอมไพล์โปรเจกต์ทั้งหมดไว้ล่วงหน้า ใช้เวลาสักพัก (ครั้งแรกอาจ 1-3 นาที) และถ้ามี error ในโค้ดจะขึ้นตรงนี้
 
-npm run start  // เปิดเซิร์ฟเวอร์จากที่ build ไว้ แล้วเข้าที่ http://localhost:3000 เหมือนเดิม
+npm run start // เปิดเซิร์ฟเวอร์จากที่ build ไว้ แล้วเข้าที่ http://localhost:3000 เหมือนเดิม
 
 npm run dev //รัน server
 
