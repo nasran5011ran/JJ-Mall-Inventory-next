@@ -27,6 +27,7 @@ import {
   Banknote,
   RotateCcw,
   X,
+  Settings,
 } from 'lucide-react';
 
 interface ProductItem {
@@ -92,6 +93,18 @@ function generatePromptPayPayload(target: string, amount: number) {
   }
   const crcStr = crc.toString(16).toUpperCase().padStart(4, '0');
   return payload + crcStr;
+}
+
+// Helper: ปิดบังข้อมูลส่วนตัว (Mask) เช่น 081-xxx-5678 เพื่อความเป็นส่วนตัว
+function maskPromptPay(id: string) {
+  if (!id) return '';
+  const clean = id.replace(/[^0-9]/g, '');
+  if (clean.length === 10) {
+    return clean.slice(0, 3) + '-xxx-' + clean.slice(7);
+  } else if (clean.length === 13) {
+    return clean.slice(0, 1) + '-xxxx-xxxxx-' + clean.slice(10, 12) + '-' + clean.slice(12);
+  }
+  return clean.slice(0, 3) + '***' + clean.slice(-2);
 }
 
 export default function SalesPage() {
@@ -763,34 +776,39 @@ export default function SalesPage() {
                       )}
                     </div>
 
-                    <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-200">
+                    <div className="bg-sky-50 rounded-xl p-3 border border-sky-200">
                       <div className="text-[11px] text-sky-800 font-semibold">ยอดเงินที่ต้องสแกนจ่าย:</div>
                       <div className="text-2xl font-black text-sky-900 font-mono">฿{totalAmount.toFixed(2)}</div>
-                      <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-center gap-1.5">
-                        <span>เบอร์พร้อมเพย์: <strong className="font-mono text-slate-700">{promptPayId}</strong></span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPromptPayInput(promptPayId);
-                            setIsEditingPromptPay(!isEditingPromptPay);
-                          }}
-                          className="text-sky-600 underline font-semibold cursor-pointer"
-                        >
-                          {isEditingPromptPay ? '(ซ่อน)' : '(แก้ไขเบอร์)'}
-                        </button>
-                      </div>
+                    </div>
+
+                    {/* Discreet Settings Link for Staff */}
+                    <div className="flex items-center justify-center pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPromptPayInput(promptPayId);
+                          setIsEditingPromptPay(!isEditingPromptPay);
+                        }}
+                        className="text-[11px] text-slate-400 hover:text-slate-600 flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        <span>{isEditingPromptPay ? 'ซ่อนการตั้งค่าบัญชี' : 'ตั้งค่าบัญชีพร้อมเพย์ร้าน'}</span>
+                      </button>
                     </div>
 
                     {/* Quick Edit PromptPay Number Drawer */}
                     {isEditingPromptPay && (
                       <div className="p-3 bg-white rounded-xl border border-sky-300 space-y-2 text-left animate-in fade-in duration-150">
                         <div className="text-[11px] font-bold text-slate-700">
-                          เปลี่ยนเบอร์โทรศัพท์ หรือเลขประจำตัวพร้อมเพย์ของร้าน:
+                          ระบุเบอร์โทรศัพท์ หรือเลขประจำตัวพร้อมเพย์ของร้าน:
+                        </div>
+                        <div className="text-[10px] text-slate-500">
+                          บัญชีปัจจุบัน: <strong className="font-mono text-slate-700">{maskPromptPay(promptPayId)}</strong>
                         </div>
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            placeholder="เช่น 0812345678"
+                            placeholder="ระบุเบอร์ใหม่ เช่น 081xxxxxxx"
                             value={promptPayInput}
                             onChange={(e) => setPromptPayInput(e.target.value)}
                             className="flex-1 px-3 py-1.5 text-xs font-mono font-bold rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
