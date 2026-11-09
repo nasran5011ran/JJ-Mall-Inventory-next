@@ -148,6 +148,12 @@ body {
     padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Single-page physical stock count audit constraint */
+  body:has(#official-stock-print-report) {
     height: 100% !important;
     overflow: hidden !important;
   }
@@ -177,7 +183,7 @@ body {
     visibility: visible !important;
   }
 
-  /* Absolute position to occupy page 1 completely */
+  /* Container positioning for print sheets */
   #official-stock-print-report,
   #official-stock-inventory-report,
   #official-stock-adjustment-voucher,
@@ -197,6 +203,24 @@ body {
     box-shadow: none !important;
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  /* Multi-page reports must break across pages naturally without cutting off rows */
+  #official-stock-transactions-report,
+  #official-stock-adjustments-report,
+  #official-stock-inventory-report,
+  #official-ingredient-print-report,
+  #official-sales-print-report {
+    page-break-after: auto !important;
+    break-after: auto !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    overflow: visible !important;
+  }
+
+  #official-stock-print-report,
+  #official-stock-adjustment-voucher,
+  #official-stock-transaction-slip {
     page-break-after: avoid !important;
     break-after: avoid !important;
     page-break-inside: avoid !important;
@@ -212,7 +236,21 @@ body {
   #official-ingredient-print-report table,
   #official-sales-print-report table {
     width: 100% !important;
+    table-layout: fixed !important;
     border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  #official-stock-transactions-report thead,
+  #official-stock-adjustments-report thead,
+  #official-stock-inventory-report thead {
+    display: table-header-group !important;
+  }
+
+  #official-stock-transactions-report tr,
+  #official-stock-adjustments-report tr,
+  #official-stock-inventory-report tr {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }

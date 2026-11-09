@@ -823,44 +823,44 @@ export default function AdminStockTransactionsPage() {
             </div>
 
             {/* Movement Details Table */}
-            <div className="overflow-x-auto my-3">
-              <table className="w-full text-left border-collapse text-[10px] leading-tight">
+            <div className="my-2.5">
+              <table className="w-full table-fixed text-left border-collapse text-[10px] leading-tight">
                 <thead>
                   <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
-                    <th className="py-2 px-3 border-r border-slate-300 w-28">รหัสวัตถุดิบ</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-left">ชื่อวัตถุดิบ</th>
-                    <th className="py-2 px-2 border-r border-slate-300 w-24">หมวดหมู่</th>
-                    <th className="py-2 px-2 border-r border-slate-300 text-right w-24">ต้นทุน/หน่วย</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">รับเข้า (+)</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">จ่ายออก (-)</th>
-                    <th className="py-2 px-3 border-r border-slate-300 text-right w-28">คงเหลือหลังทำรายการ</th>
-                    <th className="py-2 px-2 text-center w-20">หน่วย</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 w-[110px]">รหัสวัตถุดิบ</th>
+                    <th className="py-1.5 px-3 border-r border-slate-300 text-left">ชื่อวัตถุดิบ</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 w-[100px]">หมวดหมู่</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 text-right w-[95px]">ต้นทุน/หน่วย</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 text-right w-[95px]">รับเข้า (+)</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 text-right w-[95px]">จ่ายออก (-)</th>
+                    <th className="py-1.5 px-2 border-r border-slate-300 text-right w-[110px]">คงเหลือหลังทำ</th>
+                    <th className="py-1.5 px-2 text-center w-[60px]">หน่วย</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-mono text-[10px]">
                   <tr>
-                    <td className="py-2.5 px-3 border-r border-slate-200 font-bold text-center">
+                    <td className="py-2 px-2 border-r border-slate-200 font-bold text-center">
                       {selectedTx.ingredient?.code}
                     </td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
+                    <td className="py-2 px-3 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
                       {selectedTx.ingredient?.name}
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-200 text-center font-sans">
+                    <td className="py-2 px-2 border-r border-slate-200 text-center font-sans">
                       {selectedTx.ingredient?.category || '-'}
                     </td>
-                    <td className="py-2.5 px-2 border-r border-slate-200 text-right">
+                    <td className="py-2 px-2 border-r border-slate-200 text-right">
                       ฿{Number(selectedTx.ingredient?.costPerUnit || 0).toFixed(2)}
                     </td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-bold text-emerald-700">
+                    <td className="py-2 px-2 border-r border-slate-200 text-right font-bold text-emerald-700">
                       {Number(selectedTx.quantityIn) > 0 ? `+${Number(selectedTx.quantityIn).toLocaleString()}` : '0'}
                     </td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-bold text-red-700">
+                    <td className="py-2 px-2 border-r border-slate-200 text-right font-bold text-red-700">
                       {Number(selectedTx.quantityOut) > 0 ? `-${Number(selectedTx.quantityOut).toLocaleString()}` : '0'}
                     </td>
-                    <td className="py-2.5 px-3 border-r border-slate-200 text-right font-black text-slate-900">
+                    <td className="py-2 px-2 border-r border-slate-200 text-right font-black text-slate-900">
                       {Number(selectedTx.balanceAfter).toLocaleString()}
                     </td>
-                    <td className="py-2.5 px-2 text-center font-sans text-slate-600">
+                    <td className="py-2 px-2 text-center font-sans text-slate-600">
                       {selectedTx.ingredient?.unit}
                     </td>
                   </tr>
@@ -869,7 +869,7 @@ export default function AdminStockTransactionsPage() {
             </div>
 
             {/* Signature Section */}
-            <div className="print-signature-section pt-8 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+            <div className="print-signature-section pt-5 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
               <div className="space-y-1">
                 <div className="text-slate-400 font-mono text-[10px]">___________________________________</div>
                 <div className="font-bold text-slate-800">ผู้ทำรายการ (Staff / ผู้ส่งมอบ)</div>
@@ -967,93 +967,89 @@ export default function AdminStockTransactionsPage() {
               </div>
             </div>
 
-            {/* 4 Primary KPI Summary Cards Strip */}
-            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2.5">
-              <div className="p-2 rounded border border-emerald-300 bg-emerald-50/50">
-                <div className="text-[9.5px] font-bold text-emerald-800">รับเข้าคลัง (ซื้อเข้า)</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-emerald-700 mt-0.5">
-                  {metrics.purchaseCount} <span className="text-[9.5px] font-normal">ครั้ง</span>
-                </div>
+            {/* Compact Filter & Summary Strip */}
+            <div className="print-avoid-break my-2 p-2 px-3 rounded border border-slate-300 bg-slate-50 flex items-center justify-between text-[9px] font-sans">
+              <div>
+                <span className="font-bold text-slate-800">ตัวกรอง: </span>
+                <span>{typeFilter === 'ALL' ? 'ทุกประเภทรายการ' : getTypeBadge(typeFilter).label}</span>
+                <span className="mx-2">•</span>
+                <span className="font-bold text-slate-800">ช่วงเวลา: </span>
+                <span>{dateFilter === 'ALL' ? 'ทั้งหมด' : dateFilter === 'TODAY' ? 'วันนี้' : dateFilter === 'WEEK' ? '7 วันล่าสุด' : '30 วันล่าสุด'}</span>
+                {ingredientFilter !== 'ALL' && (
+                  <>
+                    <span className="mx-2">•</span>
+                    <span className="font-bold text-slate-800">วัตถุดิบ: </span>
+                    <span>{ingredients.find((i) => String(i.id) === ingredientFilter)?.name || ingredientFilter}</span>
+                  </>
+                )}
               </div>
-
-              <div className="p-2 rounded border border-amber-300 bg-amber-50/50">
-                <div className="text-[9.5px] font-bold text-amber-800">ตัดขายหน้าร้าน (POS)</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-amber-700 mt-0.5">
-                  {metrics.saleDeductCount} <span className="text-[9.5px] font-normal">ครั้ง</span>
-                </div>
-              </div>
-
-              <div className="p-2 rounded border border-blue-300 bg-blue-50/50">
-                <div className="text-[9.5px] font-bold text-blue-800">ปรับปรุงสต็อก</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-blue-700 mt-0.5">
-                  {metrics.adjustCount} <span className="text-[9.5px] font-normal">รายการ</span>
-                </div>
-              </div>
-
-              <div className="p-2 rounded border border-purple-300 bg-purple-50/50">
-                <div className="text-[9.5px] font-bold text-purple-800">ตรวจนับสินค้าจริง</div>
-                <div className="text-xs sm:text-sm font-black font-mono text-purple-700 mt-0.5">
-                  {metrics.physicalCount} <span className="text-[9.5px] font-normal">รายการ</span>
-                </div>
+              <div className="flex items-center gap-3 font-mono">
+                <span>รับเข้า: <strong className="text-emerald-700">{metrics.purchaseCount}</strong></span>
+                <span>ตัดขาย POS: <strong className="text-amber-700">{metrics.saleDeductCount}</strong></span>
+                <span>ปรับปรุง: <strong className="text-blue-700">{metrics.adjustCount}</strong></span>
+                <span>ตรวจนับ: <strong className="text-purple-700">{metrics.physicalCount}</strong></span>
+                <span className="border-l border-slate-300 pl-2">รวม: <strong>{filteredTransactions.length}</strong> รายการ</span>
               </div>
             </div>
 
             {/* Transactions Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-[9.5px] leading-tight">
+            <div className="w-full">
+              <table className="w-full table-fixed text-left border-collapse text-[9px] leading-tight">
                 <thead>
                   <tr className="border-t-2 border-b border-slate-800 text-slate-900 font-bold bg-slate-100 text-center">
-                    <th className="py-1 px-1 border-r border-slate-300 w-7">ลำดับ</th>
-                    <th className="py-1 px-2 border-r border-slate-300 w-24">วันที่ & เวลา</th>
-                    <th className="py-1 px-2 border-r border-slate-300 w-28">เลขที่รายการ</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 w-20">ประเภท</th>
-                    <th className="py-1 px-2 border-r border-slate-300 text-left">วัตถุดิบ</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">รับเข้า (+)</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">จ่ายออก (-)</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-20">คงเหลือ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 text-center w-12">หน่วย</th>
-                    <th className="py-1 px-2 border-r border-slate-300 text-left w-24">เลขที่อ้างอิง</th>
-                    <th className="py-1 px-2 text-left w-20">ผู้ทำรายการ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-[28px]">ลำดับ</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 w-[78px]">วันที่ & เวลา</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 w-[115px]">เลขที่รายการ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 w-[85px]">ประเภท</th>
+                    <th className="py-1 px-2 border-r border-slate-300 text-left">ชื่อวัตถุดิบ (รหัส)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[58px]">รับเข้า (+)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[58px]">จ่ายออก (-)</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-[65px]">คงเหลือ</th>
+                    <th className="py-1 px-1 border-r border-slate-300 text-center w-[36px]">หน่วย</th>
+                    <th className="py-1 px-1.5 border-r border-slate-300 text-left w-[85px]">เลขอ้างอิง</th>
+                    <th className="py-1 px-1.5 text-left w-[75px]">ผู้ทำรายการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 font-mono text-[9px]">
+                <tbody className="divide-y divide-slate-200 font-mono text-[8.5px]">
                   {filteredTransactions.map((tx, idx) => {
                     const badge = getTypeBadge(tx.type);
+                    const d = new Date(tx.createdAt);
+                    const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
+                    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                     return (
-                      <tr key={tx.id}>
-                        <td className="py-1 px-1 text-center border-r border-slate-200 font-sans">
+                      <tr key={tx.id} className="hover:bg-slate-50/50">
+                        <td className="py-0.5 px-1 text-center border-r border-slate-200 font-sans">
                           {idx + 1}
                         </td>
-                        <td className="py-1 px-2 border-r border-slate-200 font-sans text-center">
-                          <div>{new Date(tx.createdAt).toLocaleDateString('th-TH')}</div>
-                          <div className="text-[8px] text-slate-400 font-mono">{new Date(tx.createdAt).toLocaleTimeString('th-TH')}</div>
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-sans text-center whitespace-nowrap">
+                          {dateStr} <span className="text-[7.5px] text-slate-500">{timeStr}</span>
                         </td>
-                        <td className="py-1 px-2 border-r border-slate-200 font-bold font-mono">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-bold font-mono truncate">
                           {tx.transactionNumber}
                         </td>
-                        <td className="py-1 px-1.5 border-r border-slate-200 text-center font-sans font-bold">
+                        <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans font-bold text-[8px] truncate">
                           {badge.label}
                         </td>
-                        <td className="py-1 px-2 border-r border-slate-200 font-sans font-bold text-slate-800 text-left">
-                          <div>{tx.ingredient?.name}</div>
-                          <div className="text-[8px] text-slate-400 font-mono">{tx.ingredient?.code}</div>
+                        <td className="py-0.5 px-2 border-r border-slate-200 font-sans font-bold text-slate-800 text-left truncate">
+                          <span>{tx.ingredient?.name}</span>{' '}
+                          <span className="text-[7.5px] text-slate-500 font-mono font-normal">({tx.ingredient?.code})</span>
                         </td>
-                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-bold text-emerald-700">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-bold text-emerald-700">
                           {Number(tx.quantityIn) > 0 ? `+${Number(tx.quantityIn)}` : '-'}
                         </td>
-                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-bold text-red-700">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-bold text-red-700">
                           {Number(tx.quantityOut) > 0 ? `-${Number(tx.quantityOut)}` : '-'}
                         </td>
-                        <td className="py-1 px-1.5 border-r border-slate-200 text-right font-black text-slate-900">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 text-right font-black text-slate-900">
                           {Number(tx.balanceAfter).toLocaleString()}
                         </td>
-                        <td className="py-1 px-1 border-r border-slate-200 text-center font-sans text-slate-600">
+                        <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-600">
                           {tx.ingredient?.unit}
                         </td>
-                        <td className="py-1 px-2 border-r border-slate-200 font-mono text-slate-600 truncate max-w-[100px]">
+                        <td className="py-0.5 px-1.5 border-r border-slate-200 font-mono text-slate-600 truncate">
                           {tx.refId || '-'}
                         </td>
-                        <td className="py-1 px-2 font-sans text-slate-700 truncate max-w-[90px]">
+                        <td className="py-0.5 px-1.5 font-sans text-slate-700 truncate">
                           {tx.createdBy?.name || '-'}
                         </td>
                       </tr>
