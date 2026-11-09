@@ -240,8 +240,15 @@ export default function AdminStockInPage() {
       } else if (destinationFilter === 'ALL_STORES') {
         if (tx.refType !== 'STORE_ALLOCATE') return false;
       } else if (destinationFilter !== 'ALL') {
+        // เฉพาะร้านค้าที่เลือกเท่านั้น: ต้องเป็น STORE_ALLOCATE และตรงกับ Store/Staff ID นั้นจริง
+        if (tx.refType !== 'STORE_ALLOCATE') return false;
         const staffId = Number(destinationFilter);
-        if (tx.createdBy?.id !== staffId && !tx.refId?.includes(String(staffId))) return false;
+        const selectedStore = staffStores.find((st) => st.id === staffId);
+        const matchStore =
+          tx.createdBy?.id === staffId ||
+          tx.refId === `STORE-${staffId}` ||
+          (selectedStore && tx.note?.includes(selectedStore.name));
+        if (!matchStore) return false;
       }
 
       // Search keyword
@@ -497,7 +504,7 @@ export default function AdminStockInPage() {
                         {isStoreAllocate ? (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
                             <Store className="w-3 h-3 text-amber-700" />
-                            <span>จุดขาย: {tx.createdBy?.name?.split(' ')[0] || 'ร้านค้า'}</span>
+                            <span>จุดขาย: {tx.createdBy?.name || 'ร้านค้า'}</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -586,7 +593,7 @@ export default function AdminStockInPage() {
                   <span className="text-slate-400">ปลายทาง:</span>
                   <span className="font-bold text-emerald-800">
                     {selectedTx.refType === 'STORE_ALLOCATE'
-                      ? `จุดขายหน้าร้าน (${selectedTx.createdBy?.name})`
+                      ? `จุดขายหน้าร้าน (${selectedTx.createdBy?.name || 'ร้านค้า'})`
                       : 'คลังสินค้าส่วนกลาง JJ Mall'}
                   </span>
                 </div>
