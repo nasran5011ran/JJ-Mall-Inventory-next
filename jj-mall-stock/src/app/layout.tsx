@@ -24,34 +24,37 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning className={`${promptFont.variable} h-full antialiased`}>
       <head>
-        {/* Anti-FOUC Theme Script: Prevents white flash when loading Dark Mode (Per-Role Isolation) */}
+        {/* Anti-FOUC Theme Script: Strictly locks /login, /staff, and non-admin routes to Light Mode */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   var path = window.location.pathname || '';
-                  // หน้าร้านค้า / POS (/staff/*) ล็อกให้เป็นโหมดสว่าง (Light Mode) 100% เสมอ
-                  if (path.indexOf('/staff') === 0) {
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.setAttribute('data-theme', 'light');
-                    document.documentElement.style.colorScheme = 'light';
-                    return;
+                  // โหมดมืด (Dark Mode) อนุญาตเฉพาะเส้นทาง /admin เท่านั้น
+                  // หน้าอื่นๆ ทั้งหมด เช่น /login, /staff/* ฯลฯ บังคับเป็นโหมดสว่าง (Light Mode) 100% เสมอ
+                  if (path.indexOf('/admin') === 0) {
+                    var saved = localStorage.getItem('jj_mall_theme_ADMIN');
+                    if (saved === 'dark') {
+                      document.documentElement.classList.add('dark');
+                      document.documentElement.setAttribute('data-theme', 'dark');
+                      document.documentElement.style.colorScheme = 'dark';
+                      return;
+                    }
+                    if (saved === 'system') {
+                      var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                      if (prefersDark) {
+                        document.documentElement.classList.add('dark');
+                        document.documentElement.setAttribute('data-theme', 'dark');
+                        document.documentElement.style.colorScheme = 'dark';
+                        return;
+                      }
+                    }
                   }
-                  var key = 'jj_mall_theme_DEFAULT';
-                  if (path.indexOf('/admin') === 0) key = 'jj_mall_theme_ADMIN';
-                  var saved = localStorage.getItem(key);
-                  if (!saved) {
-                    saved = localStorage.getItem('jj_mall_theme');
-                  }
-                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  if (saved === 'dark' || (saved === 'system' && prefersDark)) {
-                    document.documentElement.classList.add('dark');
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
-                    document.documentElement.setAttribute('data-theme', 'light');
-                  }
+                  // หน้า /login, /staff และหน้าสาธารณะทั้งหมด บังคับโหมดสว่างเสมอ
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.setAttribute('data-theme', 'light');
+                  document.documentElement.style.colorScheme = 'light';
                 } catch (e) {}
               })();
             `,

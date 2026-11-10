@@ -22,19 +22,15 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 /**
- * แยก Key จัดเก็บธีมตาม Role อย่างเด็ดขาด:
- * - Admin (ผู้ดูแลระบบ): 'jj_mall_theme_ADMIN'
- * - Staff (จุดขาย/ร้านค้า): 'jj_mall_theme_STAFF'
- * - หน้าทั่วไป (Login / อื่นๆ): 'jj_mall_theme_DEFAULT'
+ * จัดการ Key จัดเก็บธีมตาม Role:
+ * - Admin (ผู้ดูแลระบบ): 'jj_mall_theme_ADMIN' (สามารถสลับโหมดมืด/สว่างได้)
+ * - หน้าอื่นๆ ทั้งหมด (Login, Staff / จุดขาย, ฯลฯ): บังคับโหมดสว่าง (Light Mode) 100% เสมอ
  */
 export function getThemeStorageKey(pathname?: string | null, userRole?: string): string {
-  if (pathname?.startsWith('/admin') || userRole === 'ADMIN') {
+  if (pathname?.startsWith('/admin')) {
     return 'jj_mall_theme_ADMIN';
   }
-  if (pathname?.startsWith('/staff') || userRole === 'STAFF') {
-    return 'jj_mall_theme_STAFF';
-  }
-  return 'jj_mall_theme_DEFAULT';
+  return 'jj_mall_theme_LIGHT';
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -45,14 +41,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   // Apply theme to HTML document
-  const applyTheme = useCallback((targetTheme: Theme) => {
+  const applyTheme = useCallback((targetTheme: Theme, isAdminPath: boolean) => {
     let effectiveTheme: ResolvedTheme = 'light';
 
-    if (targetTheme === 'system') {
-      const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      effectiveTheme = prefersDark ? 'dark' : 'light';
+    // ถ้าไม่ใช่เส้นทาง /admin บังคับให้เป็น 'light' 100% เสมอ
+    if (isAdminPath) {
+      if (targetTheme === 'system') {
+        const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        effectiveTheme = prefersDark ? 'dark' : 'light';
+      } else {
+        effectiveTheme = targetTheme;
+      }
     } else {
-      effectiveTheme = targetTheme;
+      effectiveTheme = 'light';
     }
 
     setResolvedTheme(effectiveTheme);
@@ -75,30 +76,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
 
-    // หน้าร้านค้า / POS (/staff/*) ล็อกให้เป็นโหมดสว่างเสมอ 100% แม้ admin จะปรับมืดก็ตาม
-    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
+    const isAdminPath = Boolean(pathname?.startsWith('/admin'));
+
+    // หน้าเข้าสู่ระบบ (/login), หน้าร้านค้า / POS (/staff/*) และหน้าสาธารณะทั้งหมด ล็อกให้เป็นโหมดสว่างเสมอ 100%
+    if (!isAdminPath) {
       setThemeState('light');
-      applyTheme('light');
+      applyTheme('light', false);
       return;
     }
 
-    const key = getThemeStorageKey(pathname, user?.role);
-    const saved = localStorage.getItem(key);
-    // If no specific role theme saved yet, fallback to legacy key or default light
-    const fallback = localStorage.getItem('jj_mall_theme');
-    const roleTheme: Theme = (saved as Theme) || (fallback as Theme) || 'light';
+    // เฉพาะเส้นทาง /admin เท่านั้นที่ดึงธีมของผู้ดูแลระบบ
+    const saved = localStorage.getItem('jj_mall_theme_ADMIN');
+    const adminTheme: Theme = (saved as Theme) || 'light';
 
-    setThemeState(roleTheme);
-    applyTheme(roleTheme);
-  }, [pathname, user?.role, applyTheme]);
+    setThemeState(adminTheme);
+    applyTheme(adminTheme, true);
+  }, [pathname, applyTheme]);
 
-  // Listen to system preference changes if active role's theme is 'system'
+  // Listen to system preference changes ONLY when in /admin and theme is 'system'
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const isAdminPath = Boolean(pathname?.startsWith('/admin'));
+    if (!isAdminPath) return;
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleSystemChange = (e: MediaQueryListEvent) => {
-      const key = getThemeStorageKey(pathname, user?.role);
-      const current = (localStorage.getItem(key) as Theme) || 'light';
+      const current = (localStorage.getItem('jj_mall_theme_ADMIN') as Theme) || 'light';
       if (current === 'system') {
         const newEffective = e.matches ? 'dark' : 'light';
         setResolvedTheme(newEffective);
@@ -117,27 +120,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     mediaQuery.addEventListener('change', handleSystemChange);
     return () => mediaQuery.removeEventListener('change', handleSystemChange);
-  }, [pathname, user?.role]);
+  }, [pathname]);
 
-  // Set theme ONLY for the active role (หน้าร้าน staff จะถูกล็อกไว้ที่ light เสมอ)
+  // Set theme ONLY for the Admin
   const setTheme = (newTheme: Theme) => {
-    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
+    const isAdminPath = Boolean(pathname?.startsWith('/admin'));
+    if (!isAdminPath) {
       setThemeState('light');
-      applyTheme('light');
+      applyTheme('light', false);
       return;
     }
 
-    const key = getThemeStorageKey(pathname, user?.role);
     setThemeState(newTheme);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(key, newTheme);
+      localStorage.setItem('jj_mall_theme_ADMIN', newTheme);
     }
-    applyTheme(newTheme);
+    applyTheme(newTheme, true);
   };
 
   const toggleTheme = () => {
-    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
-      return; // หน้าร้านค้าล็อกโหมดสว่างถาวร
+    const isAdminPath = Boolean(pathname?.startsWith('/admin'));
+    if (!isAdminPath) {
+      return; // หน้าที่ไม่ใช่แอดมินล็อกโหมดสว่างถาวร
     }
     const nextTheme: ResolvedTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
