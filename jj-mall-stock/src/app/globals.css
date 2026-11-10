@@ -339,7 +339,9 @@ body {
   #official-stock-transactions-report th,
   #official-stock-transactions-report td,
   #official-ingredient-print-report th,
-  #official-ingredient-print-report td {
+  #official-ingredient-print-report td,
+  #official-sales-print-report th,
+  #official-sales-print-report td {
     color: #000000 !important;
     border: 1px solid #000000 !important;
     padding-top: 2px !important;
@@ -347,24 +349,6 @@ body {
     font-size: 9px !important;
     line-height: 1.2 !important;
     background: #ffffff !important;
-  }
-
-  /* Soft and clean gray/slate borders for Daily Sales Report (not harsh pitch black) */
-  #official-sales-print-report th,
-  #official-sales-print-report td {
-    color: #1e293b !important;
-    border: 1px solid #cbd5e1 !important;
-    padding-top: 2.5px !important;
-    padding-bottom: 2.5px !important;
-    font-size: 9px !important;
-    line-height: 1.25 !important;
-    background: #ffffff !important;
-  }
-
-  #official-sales-print-report th {
-    background: #f8fafc !important;
-    color: #0f172a !important;
-    font-weight: 700 !important;
   }
 
   .print-avoid-break {
