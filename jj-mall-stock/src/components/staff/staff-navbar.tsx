@@ -17,7 +17,6 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
-import ThemeToggle from '@/components/theme-toggle';
 
 export default function StaffNavbar() {
   const pathname = usePathname();
@@ -59,7 +58,6 @@ export default function StaffNavbar() {
             <Clock className="w-3.5 h-3.5" />
             <span>{currentTime}</span>
           </div>
-          <ThemeToggle className="!p-1 !h-7 !w-7 bg-white/20 hover:bg-white/30 border-white/30 text-white" />
         </div>
       </div>
 

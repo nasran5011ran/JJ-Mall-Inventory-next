@@ -31,9 +31,15 @@ export default function RootLayout({
               (function() {
                 try {
                   var path = window.location.pathname || '';
+                  // หน้าร้านค้า / POS (/staff/*) ล็อกให้เป็นโหมดสว่าง (Light Mode) 100% เสมอ
+                  if (path.indexOf('/staff') === 0) {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                    return;
+                  }
                   var key = 'jj_mall_theme_DEFAULT';
                   if (path.indexOf('/admin') === 0) key = 'jj_mall_theme_ADMIN';
-                  else if (path.indexOf('/staff') === 0) key = 'jj_mall_theme_STAFF';
                   var saved = localStorage.getItem(key);
                   if (!saved) {
                     saved = localStorage.getItem('jj_mall_theme');

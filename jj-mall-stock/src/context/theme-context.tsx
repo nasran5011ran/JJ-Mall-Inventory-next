@@ -74,6 +74,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // When pathname or user role changes, automatically switch to that Role's stored preference
   useEffect(() => {
     setMounted(true);
+
+    // หน้าร้านค้า / POS (/staff/*) ล็อกให้เป็นโหมดสว่างเสมอ 100% แม้ admin จะปรับมืดก็ตาม
+    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
+      setThemeState('light');
+      applyTheme('light');
+      return;
+    }
+
     const key = getThemeStorageKey(pathname, user?.role);
     const saved = localStorage.getItem(key);
     // If no specific role theme saved yet, fallback to legacy key or default light
@@ -111,8 +119,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleSystemChange);
   }, [pathname, user?.role]);
 
-  // Set theme ONLY for the active role
+  // Set theme ONLY for the active role (หน้าร้าน staff จะถูกล็อกไว้ที่ light เสมอ)
   const setTheme = (newTheme: Theme) => {
+    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
+      setThemeState('light');
+      applyTheme('light');
+      return;
+    }
+
     const key = getThemeStorageKey(pathname, user?.role);
     setThemeState(newTheme);
     if (typeof window !== 'undefined') {
@@ -122,6 +136,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTheme = () => {
+    if (pathname?.startsWith('/staff') || user?.role === 'STAFF') {
+      return; // หน้าร้านค้าล็อกโหมดสว่างถาวร
+    }
     const nextTheme: ResolvedTheme = resolvedTheme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
   };

@@ -24,6 +24,13 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
     }
   }, [user, loading, router]);
 
+  useEffect(() => {
+    // หน้าร้านค้า / POS บังคับให้อยู่ในโหมดสว่างเสมอ 100% แม้แอดมินจะเปิดโหมดมืด
+    document.documentElement.classList.remove('dark');
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = 'light';
+  }, []);
+
   if (loading || !user || user.role === 'ADMIN') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
