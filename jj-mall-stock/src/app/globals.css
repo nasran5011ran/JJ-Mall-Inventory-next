@@ -263,6 +263,12 @@ body {
     break-after: avoid !important;
   }
 
+  /* Compact requisition slip width for neat printing without over-stretching */
+  #official-stock-out-slip {
+    max-width: 195mm !important;
+    margin: 0 auto !important;
+  }
+
   /* Multi-page reports can break across pages naturally (Page 1, 2, 3...) */
   #official-stock-print-report,
   #official-stock-transactions-report,

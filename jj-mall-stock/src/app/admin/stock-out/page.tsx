@@ -1023,12 +1023,12 @@ export default function AdminStockOutPage() {
       {printSlipOpen && printSlipMeta && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
-          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-3xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
-                  ตัวอย่างพิมพ์: ใบเบิกจ่ายสินค้าจากคลังไปหน้าร้าน (A4 แนวนอน)
+                  ตัวอย่างพิมพ์: ใบเบิกจ่ายสินค้าจากคลังไปหน้าร้าน (ขนาดพอดีเอกสาร)
                 </h4>
                 <p className="text-[11px] text-slate-500">
                   เลขที่เอกสาร: <span className="font-mono font-bold text-slate-800">{printSlipMeta.refId}</span> • จุดรับ: <span className="font-semibold text-slate-800">{printSlipMeta.storeName}</span>
@@ -1055,10 +1055,10 @@ export default function AdminStockOutPage() {
             </div>
           </div>
 
-          {/* Printable Document Sheet (A4 Landscape Style, Standard Official Monochrome Black & White) */}
+          {/* Printable Document Sheet (Compact Standard Voucher Style) */}
           <div
             id="official-stock-out-slip"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
+            className="w-full max-w-3xl mx-auto bg-white text-black p-6 sm:p-7 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
           >
             {/* Top Right Reference Meta */}
             <div className="absolute top-4 right-6 text-right text-[10px] text-black font-mono leading-tight">
@@ -1123,12 +1123,12 @@ export default function AdminStockOutPage() {
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
                   <tr className="border-b border-black text-black font-bold bg-white text-center">
-                    <th className="py-1.5 px-2 border-r border-black w-10 text-center">ลำดับ</th>
-                    <th className="py-1.5 px-3 border-r border-black w-28">รหัสวัตถุดิบ</th>
-                    <th className="py-1.5 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
-                    <th className="py-1.5 px-3 border-r border-black text-right w-28">จำนวนที่เบิกจ่าย</th>
-                    <th className="py-1.5 px-2 border-r border-black text-center w-20">หน่วยนับ</th>
-                    <th className="py-1.5 px-3 text-right w-36">คงเหลือในคลังกลางหลังเบิก</th>
+                    <th className="py-2 px-2 border-r border-black w-10 text-center">ลำดับ</th>
+                    <th className="py-2 px-2.5 border-r border-black w-28">รหัสวัตถุดิบ</th>
+                    <th className="py-2 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
+                    <th className="py-2 px-2.5 border-r border-black text-right w-24">จำนวนที่เบิกจ่าย</th>
+                    <th className="py-2 px-2 border-r border-black text-center w-16">หน่วยนับ</th>
+                    <th className="py-2 px-3 text-right w-36">คงเหลือในคลังหลังเบิก</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
@@ -1138,22 +1138,22 @@ export default function AdminStockOutPage() {
 
                     return (
                       <tr key={item.id} className="border-b border-black">
-                        <td className="py-1.5 px-2 text-center border-r border-black font-sans text-black">
+                        <td className="py-2 px-2 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black font-bold text-black font-mono">
+                        <td className="py-2 px-2.5 border-r border-black font-bold text-black font-mono">
                           {item.ingredient?.code}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black font-sans font-medium text-black text-left">
+                        <td className="py-2 px-3 border-r border-black font-sans font-medium text-black text-left">
                           {item.ingredient?.name}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black text-right font-bold text-black font-mono">
+                        <td className="py-2 px-2.5 border-r border-black text-right font-bold text-black font-mono">
                           {qtyOut.toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-2 text-center font-sans text-black border-r border-black">
+                        <td className="py-2 px-2 text-center font-sans text-black border-r border-black">
                           {item.ingredient?.unit}
                         </td>
-                        <td className="py-1.5 px-3 text-right font-mono font-bold text-black">
+                        <td className="py-2 px-3 text-right font-mono font-bold text-black">
                           {balAfter.toLocaleString()} {item.ingredient?.unit}
                         </td>
                       </tr>
@@ -1162,15 +1162,15 @@ export default function AdminStockOutPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
-                    <td colSpan={3} className="py-1.5 px-3 text-right font-sans border-r border-black">
+                    <td colSpan={3} className="py-2 px-3 text-right font-sans border-r border-black">
                       รวมรายการวัตถุดิบที่เบิกจ่ายทั้งสิ้น:
                     </td>
-                    <td className="py-1.5 px-3 text-right font-mono font-bold border-r border-black">
+                    <td className="py-2 px-2.5 text-right font-mono font-bold border-r border-black">
                       {printGroupItems
                         .reduce((sum, it) => sum + Number(it.quantityOut || 0), 0)
                         .toLocaleString()}
                     </td>
-                    <td colSpan={2} className="py-1.5 px-3 text-left font-sans text-black">
+                    <td colSpan={2} className="py-2 px-3 text-left font-sans text-black">
                       <span className="font-mono font-bold">{printGroupItems.length}</span> รายการ
                     </td>
                   </tr>
@@ -1213,12 +1213,12 @@ export default function AdminStockOutPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
           {/* Top Control Toolbar (Hidden when printing) */}
-          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-4xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
-                  ตัวอย่างพิมพ์: รายงานสรุปการเบิกจ่ายสินค้าไปหน้าร้านทั้งหมด (A4 แนวนอน)
+                  ตัวอย่างพิมพ์: รายงานสรุปการเบิกจ่ายสินค้าไปหน้าร้านทั้งหมด (ขนาดกระชับพอดี)
                 </h4>
                 <p className="text-[11px] text-slate-500">
                   รายงานสรุปการเบิกจ่ายวัตถุดิบและพัสดุตามเงื่อนไขตัวกรอง
@@ -1252,7 +1252,7 @@ export default function AdminStockOutPage() {
           {/* Printable Document Sheet (A4 Landscape Style, Standard Official Monochrome Black & White) */}
           <div
             id="official-stock-out-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
+            className="w-full max-w-4xl mx-auto bg-white text-black p-6 sm:p-7 shadow-2xl rounded-xl border border-black font-sans text-[10px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
           >
             {/* Document Header */}
             <div className="relative pb-1 mb-2 border-b border-black">
