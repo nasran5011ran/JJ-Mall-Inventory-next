@@ -66,9 +66,14 @@ export default function AdminStockTransactionsPage() {
   const [dateFilter, setDateFilter] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
 
-  // Instant SWR Cache
+  // Instant SWR Cache with Real-time Auto-refresh
   const { data: swrData, isLoading, isValidating, mutate } = useSWR(
-    `/api/stock-transactions?type=${typeFilter}&ingredientId=${ingredientFilter}&dateRange=${dateFilter}`
+    `/api/stock-transactions?type=${typeFilter}&ingredientId=${ingredientFilter}&dateRange=${dateFilter}`,
+    {
+      refreshInterval: 5000,   // ดึงข้อมูลอัปเดตอัตโนมัติทุก 5 วินาทีแบบ Real-time
+      revalidateOnFocus: true, // ดึงข้อมูลใหม่ทันทีเมื่อสลับหน้าต่างกลับมา
+      dedupingInterval: 2000,
+    }
   );
 
   const transactions: StockTransactionRecord[] = useMemo(() => {

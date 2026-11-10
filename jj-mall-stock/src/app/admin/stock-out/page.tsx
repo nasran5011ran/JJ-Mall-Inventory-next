@@ -70,6 +70,8 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 export default function AdminStockOutPage() {
   const { data, error, isLoading, mutate } = useSWR('/api/stock-out', fetcher, {
     revalidateOnFocus: true,
+    refreshInterval: 5000,
+    dedupingInterval: 2000,
   });
 
   const transactions: StockTransaction[] = data?.transactions || [];

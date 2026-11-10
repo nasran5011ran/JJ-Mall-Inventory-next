@@ -43,8 +43,12 @@ export default function IngredientsPage() {
   const { user: currentUser, isAdmin } = useAuth();
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
 
-  // Instant SWR Cache: Shows cached ingredients immediately on page switch
-  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/ingredients');
+  // Instant SWR Cache: Shows cached ingredients immediately & auto-refreshes in real-time
+  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/ingredients', {
+    refreshInterval: 5000,   // ดึงข้อมูลอัปเดตอัตโนมัติทุก 5 วินาทีแบบ Real-time
+    revalidateOnFocus: true, // ดึงข้อมูลใหม่ทันทีเมื่อสลับหน้าต่างกลับมา
+    dedupingInterval: 2000,
+  });
 
   useEffect(() => {
     if (swrData?.success && Array.isArray(swrData.ingredients)) {
