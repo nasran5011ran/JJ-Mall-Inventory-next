@@ -269,8 +269,9 @@ body {
     margin: 0 auto !important;
   }
 
-  /* Sales report width for landscape printing - comfortable breathing room without overstretching */
-  #official-sales-print-report {
+  /* Sales report and stock inventory report width for landscape printing - comfortable breathing room without overstretching */
+  #official-sales-print-report,
+  #official-stock-inventory-report {
     max-width: 250mm !important;
     margin: 0 auto !important;
   }
