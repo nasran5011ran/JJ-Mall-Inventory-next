@@ -263,10 +263,15 @@ body {
     break-after: avoid !important;
   }
 
-  /* Compact requisition slip and sales report width for neat printing without over-stretching */
-  #official-stock-out-slip,
-  #official-sales-print-report {
+  /* Compact requisition slip width for neat printing */
+  #official-stock-out-slip {
     max-width: 195mm !important;
+    margin: 0 auto !important;
+  }
+
+  /* Sales report width for landscape printing - comfortable breathing room without overstretching */
+  #official-sales-print-report {
+    max-width: 250mm !important;
     margin: 0 auto !important;
   }
 
