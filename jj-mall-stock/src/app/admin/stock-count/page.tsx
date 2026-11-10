@@ -418,37 +418,25 @@ export default function AdminStockCountPage() {
 
       {/* Normal Screen UI (Hidden during print) */}
       <div className="print:hidden space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-              <ClipboardCheck className="w-6 h-6 text-emerald-700" />
-              <span>ตรวจนับสต็อกจริง (Physical Stock Count)</span>
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              ระบบตรวจนับสินค้าจริงแยกอิสระระหว่าง <strong>คลังสินค้าส่วนกลาง</strong> และ <strong>จุดขายหน้าร้าน</strong> (กระทบยอด: ยกมา + เบิกเข้า - ขายไป)
-            </p>
-          </div>
+        {/* Top Action Bar */}
+        <div className="flex items-center justify-end gap-2.5">
+          <button
+            onClick={() => mutate()}
+            disabled={isValidating}
+            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+            title="รีเฟรชข้อมูล"
+          >
+            <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">รีเฟรช</span>
+          </button>
 
-          <div className="flex items-center gap-2.5 ml-auto">
-            <button
-              onClick={() => mutate()}
-              disabled={isValidating}
-              className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
-              title="รีเฟรชข้อมูล"
-            >
-              <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">รีเฟรช</span>
-            </button>
-
-            <button
-              onClick={openNewStockCount}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ ทำรายการตรวจนับสต็อกจริงใหม่</span>
-            </button>
-          </div>
+          <button
+            onClick={openNewStockCount}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ ทำรายการตรวจนับสต็อกจริงใหม่</span>
+          </button>
         </div>
 
         {/* 4 KPI Cards */}
