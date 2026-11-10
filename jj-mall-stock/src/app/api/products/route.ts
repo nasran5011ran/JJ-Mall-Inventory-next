@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
     const status = searchParams.get('status') || '';
+    const storeIdParam = searchParams.get('storeId') || '';
 
     const where: any = {};
 
@@ -32,10 +33,23 @@ export async function GET(req: NextRequest) {
       where.status = status;
     }
 
+    if (storeIdParam === 'CENTRAL') {
+      where.storeId = null;
+    } else if (storeIdParam && storeIdParam !== 'ALL') {
+      where.storeId = Number(storeIdParam);
+    }
+
     const products = await prisma.product.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         recipe: {
           include: {
             items: {
@@ -55,10 +69,18 @@ export async function GET(req: NextRequest) {
     });
     const categories = allProducts.map((p) => p.category).filter(Boolean);
 
+    // Get staff stores for store dropdown filter
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, username: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+
     return NextResponse.json({
       success: true,
       products,
       categories,
+      staffStores,
     });
   } catch (error: any) {
     console.error('Error fetching products:', error);
@@ -77,15 +99,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถเพิ่มสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status } = body;
+    const { code, name, category, unit, price, cost, minStock, status, storeId } = body;
+
+    let targetStoreId: number | null = null;
+    if (session.role === 'STAFF') {
+      // พนักงานร้านค้า เพิ่มเมนูจะถูกผูกเข้ากับร้านตัวเองโดยอัตโนมัติ
+      targetStoreId = session.id;
+    } else {
+      // แอดมินสามารถเลือกผูกร้าน หรือเว้นว่างให้เป็นส่วนกลาง
+      targetStoreId = storeId ? Number(storeId) : null;
+    }
 
     if (!code || !name || price === undefined) {
       return NextResponse.json(
@@ -116,8 +140,16 @@ export async function POST(req: NextRequest) {
         cost: cost !== undefined && cost !== '' ? Number(cost) : null,
         minStock: minStock !== undefined && minStock !== '' ? Number(minStock) : 10,
         status: status || 'ACTIVE',
+        storeId: targetStoreId,
       },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         recipe: {
           include: {
             items: {

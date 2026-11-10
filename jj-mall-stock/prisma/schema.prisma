@@ -32,6 +32,7 @@ model User {
   id                  Int               @id @default(autoincrement())
   username            String            @unique
   password            String
+  plainPassword       String?
   name                String
   role                Role              @default(STAFF)
   avatar              String?
@@ -44,6 +45,7 @@ model User {
   stockCounts         StockCount[]
   requestedAdjustments StockAdjustment[] @relation("RequestedAdjustments")
   approvedAdjustments  StockAdjustment[] @relation("ApprovedAdjustments")
+  products            Product[]         @relation("StoreProducts")
 
   @@map("users")
 }
@@ -60,6 +62,8 @@ model Product {
   minStock     Decimal     @default(10) @db.Decimal(10, 2)
   image        String?
   status       String      @default("ACTIVE")
+  storeId      Int?
+  store        User?       @relation("StoreProducts", fields: [storeId], references: [id], onDelete: SetNull)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

@@ -19,7 +19,15 @@ import {
   Eye,
   Check,
   Sparkles,
+  Store,
+  Warehouse,
 } from 'lucide-react';
+
+interface StaffStore {
+  id: number;
+  name: string;
+  username: string;
+}
 
 interface ProductItem {
   id: number;
@@ -31,6 +39,12 @@ interface ProductItem {
   cost: number | null;
   minStock: number;
   status: 'ACTIVE' | 'INACTIVE';
+  storeId?: number | null;
+  store?: {
+    id: number;
+    name: string;
+    username: string;
+  } | null;
   recipe: {
     id: number;
     description: string;
@@ -53,8 +67,12 @@ export default function ProductsPage() {
   const { user: currentUser, isAdmin } = useAuth();
   const [products, setProducts] = useState<ProductItem[]>([]);
 
-  // Instant SWR Cache: Shows cached products immediately without waiting/spinner
-  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/products');
+  // Instant SWR Cache: Shows cached products immediately & auto-refreshes in real-time
+  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/products', {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    dedupingInterval: 2000,
+  });
 
   useEffect(() => {
     if (swrData?.success && Array.isArray(swrData.products)) {
@@ -62,11 +80,16 @@ export default function ProductsPage() {
     }
   }, [swrData]);
 
+  const staffStores: StaffStore[] = useMemo(() => {
+    return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
+  }, [swrData]);
+
   const initialLoading = isLoading && products.length === 0;
   const refreshing = isValidating;
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedStore, setSelectedStore] = useState('ALL');
 
   // Highlight updated or newly added row ID
   const [highlightId, setHighlightId] = useState<number | null>(null);
@@ -91,6 +114,7 @@ export default function ProductsPage() {
     cost: '',
     minStock: '10',
     status: 'ACTIVE',
+    storeId: '',
   });
 
   const showToast = (msg: string) => {
@@ -120,14 +144,19 @@ export default function ProductsPage() {
         !q ||
         p.code.toLowerCase().includes(q) ||
         p.name.toLowerCase().includes(q) ||
-        (p.category && p.category.toLowerCase().includes(q));
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.store?.name && p.store.name.toLowerCase().includes(q));
 
       const matchCategory = selectedCategory === 'ALL' || p.category === selectedCategory;
       const matchStatus = selectedStatus === 'ALL' || p.status === selectedStatus;
+      const matchStore =
+        selectedStore === 'ALL' ||
+        (selectedStore === 'CENTRAL' && !p.storeId) ||
+        String(p.storeId) === String(selectedStore);
 
-      return matchSearch && matchCategory && matchStatus;
+      return matchSearch && matchCategory && matchStatus && matchStore;
     });
-  }, [products, search, selectedCategory, selectedStatus]);
+  }, [products, search, selectedCategory, selectedStatus, selectedStore]);
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -140,6 +169,7 @@ export default function ProductsPage() {
       cost: '',
       minStock: '10',
       status: 'ACTIVE',
+      storeId: selectedStore !== 'ALL' && selectedStore !== 'CENTRAL' ? selectedStore : (staffStores[0]?.id ? String(staffStores[0].id) : ''),
     });
     setFormError(null);
     setModalOpen(true);
@@ -156,6 +186,7 @@ export default function ProductsPage() {
       cost: p.cost ? p.cost.toString() : '',
       minStock: p.minStock.toString(),
       status: p.status,
+      storeId: p.storeId ? String(p.storeId) : '',
     });
     setFormError(null);
     setModalOpen(true);
@@ -337,7 +368,22 @@ export default function ProductsPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Store Filter */}
+            <select
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/50 text-emerald-900 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
+            >
+              <option value="ALL">🏪 ร้านค้าทั้งหมด ({staffStores.length + 1})</option>
+              <option value="CENTRAL">🏬 ส่วนกลาง (ทุกร้านค้า)</option>
+              {staffStores.map((st) => (
+                <option key={st.id} value={st.id}>
+                  🏪 {st.name}
+                </option>
+              ))}
+            </select>
+
             {/* Category Filter */}
             <select
               value={selectedCategory}
@@ -390,6 +436,7 @@ export default function ProductsPage() {
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                     <th className="py-3.5 px-4">รหัสสินค้า</th>
                     <th className="py-3.5 px-4">ชื่อสินค้า</th>
+                    <th className="py-3.5 px-4">ร้านค้า</th>
                     <th className="py-3.5 px-4">หมวดหมู่</th>
                     <th className="py-3.5 px-4">หน่วยนับ</th>
                     <th className="py-3.5 px-4 text-right">ราคาขาย</th>
@@ -445,6 +492,21 @@ export default function ProductsPage() {
                             <div className="text-[11px] text-emerald-600 font-semibold">
                               กำไรขั้นต้น: ~฿{margin?.toFixed(2)} ({marginPercent}%)
                             </div>
+                          )}
+                        </td>
+
+                        {/* Store Badge */}
+                        <td className="py-3.5 px-4">
+                          {p.store ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                              <Store className="w-3 h-3 text-amber-700" />
+                              <span>{p.store.name}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                              <Warehouse className="w-3 h-3 text-slate-400" />
+                              <span>ส่วนกลาง</span>
+                            </span>
                           )}
                         </td>
 
@@ -637,6 +699,28 @@ export default function ProductsPage() {
                   placeholder="เช่น น้ำไมโลเย็น 22oz"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
+              </div>
+
+              {/* Store Owner */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  ร้านค้าเจ้าของเมนู / จุดขายประจำ
+                </label>
+                <select
+                  value={formData.storeId}
+                  onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium"
+                >
+                  <option value="">🏬 ส่วนกลาง (ใช้ได้ทุกร้านค้า)</option>
+                  {staffStores.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      🏪 {st.name} (@{st.username})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  เลือกเพื่อกำหนดว่าเมนูนี้เป็นของร้านค้าใด เช่น &quot;ร้าน กันเอง(Coffee)&quot; หรือเมนูส่วนกลาง
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -59,17 +59,26 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await params;
     const productId = parseInt(id, 10);
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status } = body;
+    const { code, name, category, unit, price, cost, minStock, status, storeId } = body;
+
+    // Check existing product and permission
+    const currentProduct = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!currentProduct) {
+      return NextResponse.json({ success: false, message: 'ไม่พบสินค้า' }, { status: 404 });
+    }
+
+    if (session.role === 'STAFF' && currentProduct.storeId && currentProduct.storeId !== session.id) {
+      return NextResponse.json(
+        { success: false, message: 'ไม่มีสิทธิ์แก้ไขเมนูของร้านค้าอื่น' },
+        { status: 403 }
+      );
+    }
 
     // Check code collision if code changed
     if (code) {
@@ -88,19 +97,33 @@ export async function PUT(
       }
     }
 
+    const updateData: any = {
+      ...(code && { code: code.trim().toUpperCase() }),
+      ...(name && { name: name.trim() }),
+      ...(category !== undefined && { category: category.trim() }),
+      ...(unit !== undefined && { unit: unit.trim() }),
+      ...(price !== undefined && { price: Number(price) }),
+      ...(cost !== undefined && { cost: cost !== '' ? Number(cost) : null }),
+      ...(minStock !== undefined && { minStock: Number(minStock) }),
+      ...(status && { status }),
+    };
+
+    // เฉพาะ Admin เท่านั้นที่สามารถเปลี่ยนร้านค้าเจ้าของเมนูได้
+    if (session.role === 'ADMIN' && storeId !== undefined) {
+      updateData.storeId = storeId ? Number(storeId) : null;
+    }
+
     const updated = await prisma.product.update({
       where: { id: productId },
-      data: {
-        ...(code && { code: code.trim().toUpperCase() }),
-        ...(name && { name: name.trim() }),
-        ...(category !== undefined && { category: category.trim() }),
-        ...(unit !== undefined && { unit: unit.trim() }),
-        ...(price !== undefined && { price: Number(price) }),
-        ...(cost !== undefined && { cost: cost !== '' ? Number(cost) : null }),
-        ...(minStock !== undefined && { minStock: Number(minStock) }),
-        ...(status && { status }),
-      },
+      data: updateData,
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         recipe: {
           include: {
             items: {
@@ -130,12 +153,27 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถลบสินค้าได้' }, { status: 403 });
+    if (!session) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const productId = parseInt(id, 10);
+
+    const currentProduct = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!currentProduct) {
+      return NextResponse.json({ success: false, message: 'ไม่พบสินค้า' }, { status: 404 });
+    }
+
+    if (session.role === 'STAFF' && currentProduct.storeId && currentProduct.storeId !== session.id) {
+      return NextResponse.json(
+        { success: false, message: 'ไม่มีสิทธิ์ลบเมนูของร้านค้าอื่น' },
+        { status: 403 }
+      );
+    }
 
     // Check if product is in any sales
     const salesCount = await prisma.saleItem.count({
