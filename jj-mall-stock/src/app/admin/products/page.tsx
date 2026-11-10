@@ -391,8 +391,8 @@ export default function ProductsPage() {
                 onClick={() => setSelectedStore(String(st.id))}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                   isSelected
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
                 <Store className="w-3.5 h-3.5" />
@@ -547,8 +547,8 @@ export default function ProductsPage() {
                         {/* Store Badge */}
                         <td className="py-3.5 px-4">
                           {p.store ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                              <Store className="w-3 h-3 text-amber-700" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <Store className="w-3 h-3 text-emerald-700" />
                               <span>{p.store.name}</span>
                             </span>
                           ) : (
