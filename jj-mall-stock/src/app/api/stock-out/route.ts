@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
+    const limit = parseInt(searchParams.get('limit') || '500', 10);
 
     // 1. Fetch all active ingredients for dropdown with realtime stock
     const allIngredients = await prisma.ingredient.findMany({
