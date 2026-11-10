@@ -1489,11 +1489,8 @@ export default function AdminStockCountPage() {
                     <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
                       คงเหลือจาก<br />การตรวจนับ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">
+                    <th rowSpan={2} className="py-1 px-1.5 text-right w-16 bg-white">
                       ผลต่าง
-                    </th>
-                    <th rowSpan={2} className="py-1 px-1 text-right w-12 bg-white">
-                      DOH<br />(Day)
                     </th>
                   </tr>
 
@@ -1571,13 +1568,8 @@ export default function AdminStockCountPage() {
                         </td>
 
                         {/* ผลต่าง (Variance) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right font-bold text-black">
                           {diff === 0 ? '0.00' : diff < 0 ? `(${Math.abs(diff).toFixed(2)})` : `+${diff.toFixed(2)}`}
-                        </td>
-
-                        {/* DOH (Day) */}
-                        <td className="py-0.5 px-1 text-right text-black font-bold">
-                          {dohVal}
                         </td>
                       </tr>
                     );
