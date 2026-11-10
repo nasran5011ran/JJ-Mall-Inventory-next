@@ -655,24 +655,24 @@ export default function AdminStockReportPage() {
             {/* Document Header */}
             <div className="relative pb-2 mb-3 border-b border-black">
               {/* Company & Document Title */}
-              <div className="text-center space-y-1">
-                <h2 className="text-base sm:text-lg font-bold text-black tracking-tight uppercase">
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-semibold text-black tracking-tight uppercase">
                   บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
                 </h2>
-                <h3 className="text-xs sm:text-sm font-bold text-black">
+                <h3 className="text-xs sm:text-sm font-normal text-black">
                   รายงานสรุปสต็อกสินค้าคงคลังและมูลค่า (Stock Inventory & Valuation Report)
                 </h3>
               </div>
 
               {/* Sub-Header: Filter Info */}
-              <div className="mt-4 flex items-center justify-between text-[11px] font-medium border-t border-black pt-2.5 text-black">
+              <div className="mt-3.5 flex items-center justify-between text-[11px] font-normal border-t border-black pt-2 text-black">
                 <div className="flex items-center gap-5">
                   <div>
-                    <span className="font-bold">หมวดหมู่: </span>
+                    <span className="font-medium">หมวดหมู่: </span>
                     <span>{categoryFilter === 'ALL' ? 'ทุกหมวดหมู่' : categoryFilter}</span>
                   </div>
                   <div>
-                    <span className="font-bold">สถานะสต็อก: </span>
+                    <span className="font-medium">สถานะสต็อก: </span>
                     <span>
                       {statusFilter === 'ALL'
                         ? 'ทั้งหมด'
@@ -684,12 +684,12 @@ export default function AdminStockReportPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="font-bold">จำนวนรายการ: </span>
-                    <span className="font-bold font-mono">{filteredItems.length}</span> รายการ
+                    <span className="font-medium">จำนวนรายการ: </span>
+                    <span className="font-mono">{filteredItems.length}</span> รายการ
                   </div>
                 </div>
                 <div>
-                  <span className="font-bold">พิมพ์เมื่อ: </span>
+                  <span className="font-medium">พิมพ์เมื่อ: </span>
                   <span className="font-mono">
                     {new Date().toLocaleDateString('th-TH', {
                       year: 'numeric',
@@ -703,69 +703,69 @@ export default function AdminStockReportPage() {
               </div>
             </div>
 
-            {/* 4 Primary KPI Summary Cards Strip (Monochrome Black & White) */}
-            <div className="print-avoid-break grid grid-cols-4 gap-3.5 text-center my-4 text-black">
-              <div className="p-3 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10.5px] font-bold text-black">มูลค่าสต็อกรวมในคลัง</div>
-                <div className="text-base font-black font-mono text-black my-1">
+            {/* 4 Primary KPI Summary Cards Strip (Normal Black - Not Heavy Bold) */}
+            <div className="print-avoid-break grid grid-cols-4 gap-3 text-center my-3.5 text-black">
+              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
+                <div className="text-[10px] font-medium text-black">มูลค่าสต็อกรวมในคลัง</div>
+                <div className="text-sm sm:text-base font-semibold font-mono text-black my-0.5">
                   ฿{Number(kpis.totalStockValue).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                 </div>
-                <div className="text-[9.5px] text-black">บาท</div>
+                <div className="text-[9px] text-black">บาท</div>
               </div>
 
-              <div className="p-3 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10.5px] font-bold text-black">จำนวนวัตถุดิบทั้งหมด</div>
-                <div className="text-base font-black font-mono text-black my-1">
+              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
+                <div className="text-[10px] font-medium text-black">จำนวนวัตถุดิบทั้งหมด</div>
+                <div className="text-sm sm:text-base font-semibold font-mono text-black my-0.5">
                   {kpis.totalIngredients}
                 </div>
-                <div className="text-[9.5px] text-black">รายการ / ชนิด</div>
+                <div className="text-[9px] text-black">รายการ / ชนิด</div>
               </div>
 
-              <div className="p-3 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10.5px] font-bold text-black">วิกฤต / ต้องสั่งด่วน (ต่ำกว่า Min)</div>
-                <div className="text-base font-black font-mono text-black my-1">
+              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
+                <div className="text-[10px] font-medium text-black">วิกฤต / ต้องสั่งด่วน (ต่ำกว่า Min)</div>
+                <div className="text-sm sm:text-base font-semibold font-mono text-black my-0.5">
                   {kpis.criticalCount}
                 </div>
-                <div className="text-[9.5px] text-black">รายการ</div>
+                <div className="text-[9px] text-black">รายการ</div>
               </div>
 
-              <div className="p-3 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10.5px] font-bold text-black">ใกล้หมด (เฝ้าระวัง)</div>
-                <div className="text-base font-black font-mono text-black my-1">
+              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
+                <div className="text-[10px] font-medium text-black">ใกล้หมด (เฝ้าระวัง)</div>
+                <div className="text-sm sm:text-base font-semibold font-mono text-black my-0.5">
                   {kpis.lowCount}
                 </div>
-                <div className="text-[9.5px] text-black">รายการ</div>
+                <div className="text-[9px] text-black">รายการ</div>
               </div>
             </div>
 
             {/* Official Stock Table Section */}
-            <div className="pt-2 text-black space-y-1.5">
-              <div className="flex items-center justify-between pb-1.5">
-                <span className="text-[11px] font-bold text-black">
+            <div className="pt-1.5 text-black space-y-1.5">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-[10.5px] font-medium text-black">
                   รายละเอียดรายการสต็อกสินค้าคงคลังและมูลค่า (Stock Items Inventory Ledger)
                 </span>
-                <span className="text-[10px] text-black font-mono">
+                <span className="text-[9.5px] text-black font-mono">
                   แสดงทั้งหมด {filteredItems.length} รายการ
                 </span>
               </div>
               <div className="border border-black overflow-hidden bg-white">
-                <table className="w-full text-left text-[9.5px] border-collapse text-black">
+                <table className="w-full text-left text-[9.5px] border-collapse text-black font-normal">
                   <thead>
-                    <tr className="border-b border-black text-black font-bold bg-white text-center">
-                      <th className="py-2 px-2 border-r border-black w-8 text-center">ลำดับ</th>
-                      <th className="py-2 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
-                      <th className="py-2 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
-                      <th className="py-2 px-2 border-r border-black w-24">หมวดหมู่</th>
-                      <th className="py-2 px-2 border-r border-black w-12 text-center">หน่วย</th>
-                      <th className="py-2 px-2.5 border-r border-black text-right w-20">คงเหลือปัจจุบัน</th>
-                      <th className="py-2 px-2.5 border-r border-black text-right w-20">เกณฑ์ขั้นต่ำ (Min)</th>
-                      <th className="py-2 px-2.5 border-r border-black text-right w-18">ต้นทุน/หน่วย</th>
-                      <th className="py-2 px-3 border-r border-black text-right w-24">มูลค่ารวม (บาท)</th>
-                      <th className="py-2 px-2 border-r border-black text-center w-24">สถานะสต็อก</th>
-                      <th className="py-2 px-2 text-center w-24">ข้อเสนอแนะ</th>
+                    <tr className="border-b border-black text-black font-semibold bg-white text-center">
+                      <th className="py-1.5 px-2 border-r border-black w-8 text-center">ลำดับ</th>
+                      <th className="py-1.5 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
+                      <th className="py-1.5 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
+                      <th className="py-1.5 px-2 border-r border-black w-24">หมวดหมู่</th>
+                      <th className="py-1.5 px-2 border-r border-black w-12 text-center">หน่วย</th>
+                      <th className="py-1.5 px-2.5 border-r border-black text-right w-20">คงเหลือปัจจุบัน</th>
+                      <th className="py-1.5 px-2.5 border-r border-black text-right w-20">เกณฑ์ขั้นต่ำ (Min)</th>
+                      <th className="py-1.5 px-2.5 border-r border-black text-right w-18">ต้นทุน/หน่วย</th>
+                      <th className="py-1.5 px-3 border-r border-black text-right w-24">มูลค่ารวม (บาท)</th>
+                      <th className="py-1.5 px-2 border-r border-black text-center w-24">สถานะสต็อก</th>
+                      <th className="py-1.5 px-2 text-center w-24">ข้อเสนอแนะ</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-black font-mono text-black">
+                  <tbody className="divide-y divide-black font-mono text-black font-normal">
                     {filteredItems.length === 0 ? (
                       <tr>
                         <td colSpan={11} className="py-4 text-center text-black font-sans">
@@ -781,10 +781,10 @@ export default function AdminStockReportPage() {
                             <td className="py-1.5 px-2 text-center font-sans text-black border-r border-black">
                               {idx + 1}
                             </td>
-                            <td className="py-1.5 px-2 border-r border-black font-bold text-black font-mono">
+                            <td className="py-1.5 px-2 border-r border-black text-black font-mono">
                               {item.code}
                             </td>
-                            <td className="py-1.5 px-3 border-r border-black font-sans font-bold text-black text-left">
+                            <td className="py-1.5 px-3 border-r border-black font-sans text-black text-left">
                               {item.name}
                             </td>
                             <td className="py-1.5 px-2 border-r border-black text-center font-sans text-black">
@@ -793,7 +793,7 @@ export default function AdminStockReportPage() {
                             <td className="py-1.5 px-2 border-r border-black text-center font-sans text-black">
                               {item.unit}
                             </td>
-                            <td className="py-1.5 px-2.5 border-r border-black text-right font-bold text-black font-mono">
+                            <td className="py-1.5 px-2.5 border-r border-black text-right text-black font-mono">
                               {item.currentStock.toLocaleString()}
                             </td>
                             <td className="py-1.5 px-2.5 border-r border-black text-right text-black font-mono">
@@ -802,10 +802,10 @@ export default function AdminStockReportPage() {
                             <td className="py-1.5 px-2.5 border-r border-black text-right font-mono text-black">
                               {item.costPerUnit.toFixed(2)}
                             </td>
-                            <td className="py-1.5 px-3 border-r border-black text-right font-bold text-black font-mono">
+                            <td className="py-1.5 px-3 border-r border-black text-right text-black font-mono">
                               {item.totalValue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </td>
-                            <td className="py-1.5 px-2 border-r border-black text-center font-sans font-bold text-black">
+                            <td className="py-1.5 px-2 border-r border-black text-center font-sans text-black">
                               {statusBadge.label}
                             </td>
                             <td className="py-1.5 px-2 text-center font-sans text-[9px] text-black">
@@ -818,14 +818,14 @@ export default function AdminStockReportPage() {
                   </tbody>
                   {filteredItems.length > 0 && (
                     <tfoot>
-                      <tr className="border-t-2 border-black font-bold text-black bg-white text-[10px]">
+                      <tr className="border-t-2 border-black font-semibold text-black bg-white text-[10px]">
                         <td colSpan={8} className="py-2 px-3 text-right font-sans border-r border-black">
                           รวมมูลค่าสต็อกคงคลังทั้งสิ้น ({filteredItems.length} รายการ):
                         </td>
-                        <td className="py-2 px-3 text-right font-mono text-black border-r border-black font-black">
+                        <td className="py-2 px-3 text-right font-mono text-black border-r border-black font-semibold">
                           ฿{filteredItems.reduce((acc, i) => acc + i.totalValue, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                         </td>
-                        <td colSpan={2} className="py-2 px-2 text-center text-black font-sans text-[9px]">
+                        <td colSpan={2} className="py-2 px-2 text-center text-black font-sans text-[9px] font-normal">
                           สถานะ: {kpis.criticalCount > 0 ? `วิกฤต ${kpis.criticalCount} รายการ` : 'ระดับสต็อกปลอดภัย'}
                         </td>
                       </tr>

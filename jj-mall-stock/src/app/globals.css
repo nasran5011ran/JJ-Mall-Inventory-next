@@ -364,6 +364,21 @@ body {
     background: #ffffff !important;
   }
 
+  /* Normal weight and comfortable row height for clean non-heavy black text */
+  #official-stock-inventory-report td,
+  #official-sales-print-report td {
+    font-weight: 400 !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+
+  #official-stock-inventory-report th,
+  #official-sales-print-report th {
+    font-weight: 600 !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+  }
+
   .print-avoid-break {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
