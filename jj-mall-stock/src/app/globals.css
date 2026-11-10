@@ -269,9 +269,10 @@ body {
     margin: 0 auto !important;
   }
 
-  /* Sales report and stock inventory report width for landscape printing - comfortable breathing room without overstretching */
+  /* Sales report, stock inventory report, and ingredient usage report width for landscape printing */
   #official-sales-print-report,
-  #official-stock-inventory-report {
+  #official-stock-inventory-report,
+  #official-ingredient-print-report {
     max-width: 250mm !important;
     margin: 0 auto !important;
   }
@@ -366,14 +367,16 @@ body {
 
   /* Normal weight and comfortable row height for clean non-heavy black text */
   #official-stock-inventory-report td,
-  #official-sales-print-report td {
+  #official-sales-print-report td,
+  #official-ingredient-print-report td {
     font-weight: 400 !important;
     padding-top: 4px !important;
     padding-bottom: 4px !important;
   }
 
   #official-stock-inventory-report th,
-  #official-sales-print-report th {
+  #official-sales-print-report th,
+  #official-ingredient-print-report th {
     font-weight: 600 !important;
     padding-top: 5px !important;
     padding-bottom: 5px !important;

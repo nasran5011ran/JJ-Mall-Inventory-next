@@ -161,7 +161,9 @@ export default function AdminIngredientsReportPage() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Toolbar */}
+      {/* Normal Screen UI (Hidden on print so it occupies 0px and avoids blank pages) */}
+      <div className="print:hidden space-y-6">
+        {/* 1. Header Toolbar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
@@ -685,203 +687,234 @@ export default function AdminIngredientsReportPage() {
           </table>
         </div>
       </div>
+      </div>
 
       {/* 6. Printable Official Report Modal */}
       {printModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
-          <div className="no-print w-full max-w-5xl bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-4xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
-              <Printer className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+              <Printer className="w-5 h-5 text-emerald-700" />
               <div>
-                <h4 className="font-bold text-xs sm:text-sm text-slate-800 dark:text-white">
-                  ตัวอย่างก่อนพิมพ์: รายงานสรุปการใช้วัตถุดิบและต้นทุน
+                <h4 className="font-bold text-xs sm:text-sm text-slate-800">
+                  ตัวอย่างพิมพ์รายงานสรุปการใช้วัตถุดิบและต้นทุน (A4 แนวนอน)
                 </h4>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  ช่วงเวลา: {periodLabel} • จัดรูปแบบสำหรับกระดาษ A4 แนวนอน (Landscape)
+                <p className="text-[11px] text-slate-500">
+                  รายงานสรุปการใช้วัตถุดิบ ปริมาณขาย ของเสีย และต้นทุนสินค้า (สีขาว-ดำ ทางการ)
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-slate-600 font-medium bg-slate-100 px-3 py-1.5 rounded-xl">
+                รวมทั้งหมด <span className="font-bold font-mono text-slate-900">{filteredItems.length}</span> รายการ
+              </div>
+
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
               >
                 <Printer className="w-4 h-4" />
-                <span>🖨️ สั่งพิมพ์เอกสาร</span>
+                <span>พิมพ์เอกสาร</span>
               </button>
               <button
                 type="button"
                 onClick={() => setPrintModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs cursor-pointer transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
               >
                 ปิด
               </button>
             </div>
           </div>
 
-          {/* Printable Document Sheet (A4 Landscape Style) */}
+          {/* Printable Document Sheet (Standard Official Monochrome Black & White) */}
           <div
             id="official-ingredient-print-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-slate-300 font-sans text-[11px] leading-tight relative my-2"
+            className="w-full max-w-4xl mx-auto bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[11px] leading-normal relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-4"
           >
-            {/* Document Header */}
-            <div className="relative pb-2 mb-3">
-              {/* Top Right Reference Meta */}
-              <div className="absolute top-0 right-0 text-right text-[10px] text-slate-600 font-mono leading-tight">
-                <div>หน้า: 1</div>
-                <div>ING-REP-{new Date().toISOString().slice(0, 10)}</div>
-                <div className="font-bold mt-0.5">ฝ่ายควบคุมต้นทุน & คลัง</div>
-              </div>
+            {/* Top Right Reference Meta */}
+            <div className="absolute top-4 right-6 text-right text-[10px] text-black font-mono leading-tight">
+              <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+              <div>RTTR070ATHA.QRP</div>
+            </div>
 
+            {/* Document Header */}
+            <div className="relative pb-2 mb-3 border-b border-black">
               {/* Company & Document Title */}
-              <div className="text-center space-y-1">
-                <h2 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-semibold text-black tracking-tight uppercase">
                   บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
                 </h2>
-                <h3 className="text-xs sm:text-sm font-bold text-slate-800">
-                  รายงานสรุปการใช้วัตถุดิบและมูลค่าต้นทุนสินค้า (Ingredient Usage & Cost Analysis)
+                <h3 className="text-xs sm:text-sm font-normal text-black">
+                  รายงานสรุปการใช้วัตถุดิบและมูลค่าต้นทุนสินค้า (Ingredient Usage & Cost Analysis Report)
                 </h3>
               </div>
 
               {/* Sub-Header: Date, Filter Info */}
-              <div className="mt-4 flex items-center justify-between text-[11px] font-medium border-b border-slate-400 pb-1.5">
-                <div>
-                  <span className="font-bold">ช่วงเวลาข้อมูล: </span>
-                  <span className="font-mono">{periodLabel}</span>
+              <div className="mt-3.5 flex items-center justify-between text-[11px] font-normal border-t border-black pt-2 text-black">
+                <div className="flex items-center gap-5">
+                  <div>
+                    <span className="font-medium">ช่วงเวลา: </span>
+                    <span className="font-mono">{periodLabel}</span>
+                  </div>
                   {categoryFilter !== 'ALL' && (
-                    <span className="ml-3 text-slate-700">
-                      (<span className="font-bold">หมวดหมู่: </span>{categoryFilter})
-                    </span>
+                    <div>
+                      <span className="font-medium">หมวดหมู่: </span>
+                      <span>{categoryFilter}</span>
+                    </div>
                   )}
+                  <div>
+                    <span className="font-medium">จำนวนรายการ: </span>
+                    <span className="font-mono">{filteredItems.length}</span> รายการ
+                  </div>
                 </div>
                 <div>
-                  <span className="font-bold">พิมพ์ ณ วันที่: </span>
+                  <span className="font-medium">พิมพ์เมื่อ: </span>
                   <span className="font-mono">
                     {new Date().toLocaleDateString('th-TH', {
                       year: 'numeric',
-                      month: 'long',
+                      month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
-                    })}
+                    })} น.
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Print Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-[10px] leading-tight">
-                <thead>
-                  <tr className="border-t border-b border-slate-800 text-slate-800 font-bold text-center bg-slate-50">
-                    <th className="py-1 px-1 border-r border-slate-300 w-8 text-center">ลำดับ</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 w-24">รหัสวัตถุดิบ</th>
-                    <th className="py-1 px-2 border-r border-slate-300 text-left">ชื่อวัตถุดิบ</th>
-                    <th className="py-1 px-1 border-r border-slate-300 w-20 text-center">หมวดหมู่</th>
-                    <th className="py-1 px-1 border-r border-slate-300 w-12 text-center">หน่วย</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ยกมา</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">รับเข้า</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-20">ใช้ผลิต/ขาย</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ของเสีย</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-20">คงเหลือ</th>
-                    <th className="py-1 px-1.5 border-r border-slate-300 text-right w-16">ต้นทุน/หน.</th>
-                    <th className="py-1 px-2 text-right w-24">มูลค่าใช้จริง (฿)</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-200 font-mono text-[9.5px]">
-                  {filteredItems.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="py-0.5 px-1 text-center border-r border-slate-200 font-sans">
-                        {idx + 1}
-                      </td>
-                      <td className="py-0.5 px-1.5 border-r border-slate-200 text-slate-700 whitespace-nowrap">
-                        {item.code}
-                      </td>
-                      <td className="py-0.5 px-2 border-r border-slate-200 font-sans font-medium text-slate-900 truncate max-w-[180px]">
-                        {item.name}
-                      </td>
-                      <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-700">
-                        {item.category}
-                      </td>
-                      <td className="py-0.5 px-1 border-r border-slate-200 text-center font-sans text-slate-700">
-                        {item.unit}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 text-slate-700">
-                        {item.openingStock.toFixed(2)}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 text-slate-700">
-                        {item.inboundQty > 0 ? item.inboundQty.toFixed(2) : '-'}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 font-bold text-slate-900">
-                        {item.salesUsage > 0 ? `(${item.salesUsage.toFixed(2)})` : '-'}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 text-slate-700">
-                        {item.wasteQty > 0 ? `(${item.wasteQty.toFixed(2)})` : '-'}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 font-bold text-slate-900">
-                        {item.currentStock.toFixed(2)}
-                      </td>
-                      <td className="py-0.5 px-1.5 text-right border-r border-slate-200 text-slate-700">
-                        {item.costPerUnit.toFixed(2)}
-                      </td>
-                      <td className="py-0.5 px-2 text-right font-bold text-slate-900">
-                        {item.usedCost > 0 ? item.usedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 }) : '0.00'}
-                      </td>
+            {/* Print Table Section */}
+            <div className="pt-1 text-black space-y-1.5">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-[10.5px] font-medium text-black">
+                  รายละเอียดรายการใช้วัตถุดิบและต้นทุน (Ingredient Usage & Cost Ledger)
+                </span>
+                <span className="text-[9.5px] text-black font-mono">
+                  แสดงทั้งหมด {filteredItems.length} รายการ
+                </span>
+              </div>
+              <div className="border border-black overflow-hidden bg-white">
+                <table className="w-full text-left text-[9.5px] border-collapse text-black font-normal">
+                  <thead>
+                    <tr className="border-b border-black text-black font-semibold bg-white text-center">
+                      <th className="py-1.5 px-1.5 border-r border-black w-8 text-center">ลำดับ</th>
+                      <th className="py-1.5 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
+                      <th className="py-1.5 px-2.5 border-r border-black text-left">ชื่อวัตถุดิบ</th>
+                      <th className="py-1.5 px-2 border-r border-black w-20 text-center">หมวดหมู่</th>
+                      <th className="py-1.5 px-1.5 border-r border-black w-12 text-center">หน่วย</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ยกมา</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-16">รับเข้า</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-20">ใช้ผลิต/ขาย</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ของเสีย</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-20">คงเหลือ</th>
+                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ต้นทุน/หน.</th>
+                      <th className="py-1.5 px-2.5 text-right w-24">มูลค่าใช้จริง (฿)</th>
                     </tr>
-                  ))}
-                </tbody>
+                  </thead>
 
-                <tfoot>
-                  <tr className="border-t-2 border-b-2 border-slate-800 font-bold text-slate-900 bg-slate-50 text-[10px]">
-                    <td colSpan={5} className="py-1 px-2 text-right border-r border-slate-300 font-sans">
-                      รวมทั้งสิ้น ({filteredItems.length} รายการ):
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 font-mono">
-                      {filteredItems.reduce((acc, i) => acc + i.openingStock, 0).toFixed(2)}
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 font-mono">
-                      {filteredItems.reduce((acc, i) => acc + i.inboundQty, 0).toFixed(2)}
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 font-mono">
-                      ({filteredItems.reduce((acc, i) => acc + i.salesUsage, 0).toFixed(2)})
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 font-mono">
-                      ({filteredItems.reduce((acc, i) => acc + i.wasteQty, 0).toFixed(2)})
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 font-mono">
-                      {filteredItems.reduce((acc, i) => acc + i.currentStock, 0).toFixed(2)}
-                    </td>
-                    <td className="py-1 px-1.5 text-right border-r border-slate-300 text-slate-400">-</td>
-                    <td className="py-1 px-2 text-right font-black font-mono">
-                      ฿{filteredItems.reduce((acc, i) => acc + i.usedCost, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  <tbody className="divide-y divide-black font-mono text-black font-normal">
+                    {filteredItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={12} className="py-4 text-center text-black font-sans">
+                          ไม่พบข้อมูลการใช้วัตถุดิบในช่วงเวลาที่เลือก
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredItems.map((item, idx) => (
+                        <tr key={item.id} className="border-b border-black hover:bg-slate-50/50">
+                          <td className="py-1 px-1.5 text-center border-r border-black font-sans text-black">
+                            {idx + 1}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-black whitespace-nowrap">
+                            {item.code}
+                          </td>
+                          <td className="py-1 px-2.5 border-r border-black font-sans text-black truncate max-w-[180px] text-left">
+                            {item.name}
+                          </td>
+                          <td className="py-1 px-2 border-r border-black text-center font-sans text-black">
+                            {item.category}
+                          </td>
+                          <td className="py-1 px-1.5 border-r border-black text-center font-sans text-black">
+                            {item.unit}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.openingStock.toFixed(2)}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.inboundQty > 0 ? item.inboundQty.toFixed(2) : '-'}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.salesUsage > 0 ? `(${item.salesUsage.toFixed(2)})` : '-'}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.wasteQty > 0 ? `(${item.wasteQty.toFixed(2)})` : '-'}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.currentStock.toFixed(2)}
+                          </td>
+                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                            {item.costPerUnit.toFixed(2)}
+                          </td>
+                          <td className="py-1 px-2.5 text-right font-medium text-black">
+                            {item.usedCost > 0 ? item.usedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 }) : '0.00'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+
+                  {filteredItems.length > 0 && (
+                    <tfoot>
+                      <tr className="border-t-2 border-black font-semibold text-black bg-white text-[10px]">
+                        <td colSpan={5} className="py-1.5 px-2.5 text-right border-r border-black font-sans">
+                          รวมทั้งสิ้น ({filteredItems.length} รายการ):
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black font-mono">
+                          {filteredItems.reduce((acc, i) => acc + i.openingStock, 0).toFixed(2)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black font-mono">
+                          {filteredItems.reduce((acc, i) => acc + i.inboundQty, 0).toFixed(2)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black font-mono">
+                          ({filteredItems.reduce((acc, i) => acc + i.salesUsage, 0).toFixed(2)})
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black font-mono">
+                          ({filteredItems.reduce((acc, i) => acc + i.wasteQty, 0).toFixed(2)})
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black font-mono">
+                          {filteredItems.reduce((acc, i) => acc + i.currentStock, 0).toFixed(2)}
+                        </td>
+                        <td className="py-1.5 px-2 text-right border-r border-black text-black">-</td>
+                        <td className="py-1.5 px-2.5 text-right font-semibold font-mono">
+                          ฿{filteredItems.reduce((acc, i) => acc + i.usedCost, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
             </div>
 
             {/* Bottom 3 Signature Blocks */}
-            <div className="print-signature-section mt-5 pt-3 grid grid-cols-3 gap-6 text-center text-[10px] font-sans">
+            <div className="print-signature-section mt-6 pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้จัดทำรายงาน (สโตร์)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-medium text-black">ผู้จัดทำรายงาน (สโตร์ / เจ้าหน้าที่คลัง)</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้ตรวจสอบ (ผู้จัดการสาขา)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-medium text-black">ผู้ตรวจสอบ (ผู้จัดการสาขา)</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-slate-500 font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-slate-800">ผู้อนุมัติ (ฝ่ายบัญชี / ต้นทุน)</div>
-                <div className="text-[9.5px] text-slate-500 font-mono">วันที่: ...... / ...... / ..........</div>
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-medium text-black">ผู้อนุมัติ (ฝ่ายบัญชี / ต้นทุน)</div>
+                <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
             </div>
           </div>
