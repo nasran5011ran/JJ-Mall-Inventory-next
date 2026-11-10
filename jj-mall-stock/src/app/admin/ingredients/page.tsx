@@ -634,13 +634,13 @@ export default function IngredientsPage() {
                       <th className="py-3.5 px-4 text-center">จัดการ</th>
                     </tr>
                   ) : (
-                    <tr className="bg-emerald-50/80 border-b border-emerald-200 text-emerald-950 font-bold uppercase tracking-wider">
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                       <th className="py-3.5 px-4">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-3.5 px-4">หมวดหมู่</th>
                       <th className="py-3.5 px-3 text-right">ยอดยกมา</th>
-                      <th className="py-3.5 px-3 text-right text-emerald-700">รับเข้า (+)</th>
-                      <th className="py-3.5 px-3 text-right text-red-700">ขาย POS (-)</th>
-                      <th className="py-3.5 px-4 text-right bg-emerald-100/70 font-black text-emerald-950">คงเหลือในร้าน</th>
+                      <th className="py-3.5 px-3 text-right">รับเข้า (+)</th>
+                      <th className="py-3.5 px-3 text-right">ขาย POS (-)</th>
+                      <th className="py-3.5 px-4 text-right text-slate-800">คงเหลือในร้าน</th>
                       <th className="py-3.5 px-4 text-right">ขั้นต่ำ (Min)</th>
                       <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3.5 px-4 text-right">มูลค่าในร้าน</th>
@@ -667,8 +667,6 @@ export default function IngredientsPage() {
                         className={`transition-colors duration-500 ${
                           isHighlighted
                             ? 'bg-emerald-50 ring-2 ring-emerald-500/50'
-                            : !isCentral
-                            ? 'hover:bg-emerald-50/40'
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
@@ -822,7 +820,7 @@ export default function IngredientsPage() {
                             </td>
 
                             {/* Expected In-Store Stock */}
-                            <td className="py-3.5 px-4 text-right bg-emerald-50/70 font-black text-sm text-emerald-950 font-mono">
+                            <td className="py-3.5 px-4 text-right bg-slate-50/60 font-black text-sm text-slate-900 font-mono">
                               <span className={isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-slate-900'}>
                                 {stock.toLocaleString()}
                               </span>{' '}
