@@ -118,7 +118,10 @@ export async function GET(req: NextRequest) {
     const storeFilter = searchParams.get('storeId') || 'ALL';
 
     const whereClause: any = {};
-    if (storeFilter === 'WAREHOUSE') {
+    if (session.role === 'STAFF') {
+      whereClause.location = 'STORE';
+      whereClause.storeId = session.id;
+    } else if (storeFilter === 'WAREHOUSE') {
       whereClause.location = 'WAREHOUSE';
     } else if (storeFilter !== 'ALL') {
       whereClause.storeId = Number(storeFilter);
@@ -294,7 +297,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const {
+    let {
       countNumber,
       location = 'WAREHOUSE', // 'WAREHOUSE' | 'STORE'
       storeId = null,
@@ -302,6 +305,12 @@ export async function POST(req: NextRequest) {
       syncStock = true,
       items, // Array of { ingredientId: number, actualQuantity: number }
     } = body;
+
+    // If request is from STAFF, enforce STORE location and their own storeId
+    if (session.role === 'STAFF') {
+      location = 'STORE';
+      storeId = session.id;
+    }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -500,6 +509,29 @@ export async function POST(req: NextRequest) {
 
       return createdCount;
     });
+
+    // Notify Admin if submitted by STAFF
+    if (session.role === 'STAFF') {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'STOCK',
+            type: 'STAFF_STOCK_COUNT',
+            severity: 'INFO',
+            title: 'ร้านค้าบันทึกผลการตรวจนับสต็อก',
+            description: `${storeName} ได้บันทึกผลการตรวจนับสต็อกปิดร้าน #${result.countNumber} (${result.items.length} รายการ)`,
+            actionUrl: '/admin/stock-count',
+            actionLabel: 'ดูผลการตรวจนับ',
+            storeId: targetStore?.id || session.id,
+            storeName: targetStore?.name || session.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to create stock count notification:', notifErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
