@@ -456,11 +456,11 @@ export default function IngredientsPage() {
                 onClick={() => setSelectedStoreId(String(st.id))}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
                   isSelected
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
                 }`}
               >
-                <Store className="w-4 h-4 text-amber-700" />
+                <Store className="w-4 h-4" />
                 <span>🏪 สต็อกร้าน: {st.name}</span>
               </button>
             );
@@ -469,17 +469,17 @@ export default function IngredientsPage() {
 
         {/* Store Context Banner (when a store is selected) */}
         {!isCentral && currentSelectedStore && (
-          <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-amber-900 animate-in fade-in">
+          <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-950 animate-in fade-in">
             <div className="flex items-center gap-2">
-              <Store className="w-4 h-4 text-amber-700 shrink-0" />
+              <Store className="w-4 h-4 text-emerald-700 shrink-0" />
               <span>
                 กำลังดูสต็อกหน้าร้าน: <strong>{currentSelectedStore.name}</strong> (@{currentSelectedStore.username}) —
-                คำนวณจากสูตร: <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono font-bold">ยอดยกมา + รับเข้าจากคลัง - ตัดขาย POS</code>
+                คำนวณจากสูตร: <code className="bg-emerald-100 px-1.5 py-0.5 rounded font-mono font-bold text-emerald-900">ยอดยกมา + รับเข้าจากคลัง - ตัดขาย POS</code>
               </span>
             </div>
             <Link
               href="/admin/stock-out"
-              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
             >
               <ArrowUpFromLine className="w-3.5 h-3.5" />
               <span>+ โอนของให้ร้านนี้</span>
@@ -560,7 +560,7 @@ export default function IngredientsPage() {
             <select
               value={selectedStoreId}
               onChange={(e) => setSelectedStoreId(e.target.value)}
-              className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-amber-50/70 text-amber-950 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
+              className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/70 text-emerald-950 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
               <option value="CENTRAL">🏬 คลังสินค้าส่วนกลาง</option>
               {staffStores.map((st) => (
@@ -634,13 +634,13 @@ export default function IngredientsPage() {
                       <th className="py-3.5 px-4 text-center">จัดการ</th>
                     </tr>
                   ) : (
-                    <tr className="bg-amber-50/80 border-b border-amber-200 text-amber-900 font-bold uppercase tracking-wider">
+                    <tr className="bg-emerald-50/80 border-b border-emerald-200 text-emerald-950 font-bold uppercase tracking-wider">
                       <th className="py-3.5 px-4">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-3.5 px-4">หมวดหมู่</th>
                       <th className="py-3.5 px-3 text-right">ยอดยกมา</th>
                       <th className="py-3.5 px-3 text-right text-emerald-700">รับเข้า (+)</th>
                       <th className="py-3.5 px-3 text-right text-red-700">ขาย POS (-)</th>
-                      <th className="py-3.5 px-4 text-right bg-amber-100/70 font-black text-amber-950">คงเหลือในร้าน</th>
+                      <th className="py-3.5 px-4 text-right bg-emerald-100/70 font-black text-emerald-950">คงเหลือในร้าน</th>
                       <th className="py-3.5 px-4 text-right">ขั้นต่ำ (Min)</th>
                       <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3.5 px-4 text-right">มูลค่าในร้าน</th>
@@ -668,7 +668,7 @@ export default function IngredientsPage() {
                           isHighlighted
                             ? 'bg-emerald-50 ring-2 ring-emerald-500/50'
                             : !isCentral
-                            ? 'hover:bg-amber-50/40'
+                            ? 'hover:bg-emerald-50/40'
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
@@ -822,7 +822,7 @@ export default function IngredientsPage() {
                             </td>
 
                             {/* Expected In-Store Stock */}
-                            <td className="py-3.5 px-4 text-right bg-amber-50 font-black text-sm text-amber-950 font-mono">
+                            <td className="py-3.5 px-4 text-right bg-emerald-50/70 font-black text-sm text-emerald-950 font-mono">
                               <span className={isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-slate-900'}>
                                 {stock.toLocaleString()}
                               </span>{' '}
@@ -868,10 +868,10 @@ export default function IngredientsPage() {
                             <td className="py-3.5 px-4 text-center">
                               <Link
                                 href="/admin/stock-out"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 transition-colors cursor-pointer"
                                 title="โอนวัตถุดิบไปให้ร้านนี้"
                               >
-                                <ArrowUpFromLine className="w-3 h-3 text-amber-700" />
+                                <ArrowUpFromLine className="w-3.5 h-3.5 text-emerald-700" />
                                 <span>โอนของ</span>
                               </Link>
                             </td>
