@@ -89,9 +89,6 @@ export default function AdminStockOutPage() {
   const ingredients: Ingredient[] = data?.ingredients || [];
   const staffStores: StaffStore[] = data?.staffStores || [];
 
-  // View Mode: 'SLIPS' (Default: Grouped by Requisition Slip) vs 'ITEMS' (List each ingredient)
-  const [viewMode, setViewMode] = useState<'SLIPS' | 'ITEMS'>('SLIPS');
-
   // Filter States
   const [storeFilter, setStoreFilter] = useState<string>('ALL');
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
@@ -110,9 +107,8 @@ export default function AdminStockOutPage() {
     { ingredientId: '', quantity: '1' },
   ]);
 
-  // Modal 2: View Detail (Single item or Full Requisition Slip)
+  // Modal 2: View Detail
   const [selectedTx, setSelectedTx] = useState<StockTransaction | null>(null);
-  const [selectedSlip, setSelectedSlip] = useState<RequisitionSlipGroup | null>(null);
 
   // Modal 3: Print Slip
   const [printSlipOpen, setPrintSlipOpen] = useState(false);
@@ -124,6 +120,9 @@ export default function AdminStockOutPage() {
     note: string | null;
     creatorName: string;
   } | null>(null);
+
+  // Modal 4: Print All Outbound Transactions in 1 Combined Report (พิมพ์ทีเดียวรวมทุกรายการ)
+  const [printAllModalOpen, setPrintAllModalOpen] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -372,6 +371,9 @@ export default function AdminStockOutPage() {
     return Array.from(map.values());
   }, [filteredTransactions]);
 
+  // Items for batch report (all filtered transactions)
+  const batchReportItems = filteredTransactions;
+
   // Executive Metrics
   const todayStr = new Date().toISOString().split('T')[0];
   const todayTransactions = transactions.filter((t) => t.createdAt.startsWith(todayStr));
@@ -414,7 +416,7 @@ export default function AdminStockOutPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 ml-auto">
+          <div className="flex flex-wrap items-center gap-2.5 ml-auto">
             <button
               onClick={() => mutate()}
               disabled={refreshing}
@@ -425,9 +427,20 @@ export default function AdminStockOutPage() {
               <span className="hidden sm:inline">รีเฟรช</span>
             </button>
 
+            {/* Print All Outbound Transactions Report Button */}
+            <button
+              type="button"
+              onClick={() => setPrintAllModalOpen(true)}
+              className="px-4 py-2.5 rounded-2xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-all"
+              title="พิมพ์รายงานสรุปการเบิกจ่ายสินค้าทั้งหมดทีเดียว"
+            >
+              <Printer className="w-4 h-4 text-emerald-700" />
+              <span>🖨️ พิมพ์รายการเบิกจ่ายทั้งหมด ({filteredTransactions.length} รายการ)</span>
+            </button>
+
             <button
               onClick={openNewStockOutModal}
-              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-700/20 cursor-pointer transition-all"
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
             >
               <ArrowUpFromLine className="w-4 h-4" />
               <span>+ บันทึกเบิกจ่ายสินค้าไปหน้าร้าน</span>
@@ -440,10 +453,10 @@ export default function AdminStockOutPage() {
           {/* Card 1: Today Dispatches */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                 ใบเบิกจ่ายวันนี้
               </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                 <FileText className="w-4 h-4" />
               </div>
             </div>
@@ -457,10 +470,10 @@ export default function AdminStockOutPage() {
           {/* Card 2: Today Units Out */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-orange-600 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-teal-700 uppercase tracking-wider">
                 จำนวนที่เบิกไปวันนี้
               </span>
-              <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
                 <TrendingDown className="w-4 h-4" />
               </div>
             </div>
@@ -474,10 +487,10 @@ export default function AdminStockOutPage() {
           {/* Card 3: Stores Count */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                 ร้านค้าประจำสาขา
               </span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
                 <Store className="w-4 h-4" />
               </div>
             </div>
@@ -491,10 +504,10 @@ export default function AdminStockOutPage() {
           {/* Card 4: Total Slips History */}
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                 ใบเบิกสะสมทั้งหมด
               </span>
-              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
                 <Layers className="w-4 h-4" />
               </div>
             </div>
@@ -504,55 +517,6 @@ export default function AdminStockOutPage() {
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">รวม {totalDispatches} รายการตัดสต็อก</p>
           </div>
-        </div>
-
-        {/* View Mode Toggle Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setViewMode('SLIPS')}
-              className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                viewMode === 'SLIPS'
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                  : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>📑 แสดงตามใบเบิกสินค้า (แนะนำสำหรับสั่งพิมพ์)</span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                  viewMode === 'SLIPS' ? 'bg-amber-700 text-white' : 'bg-slate-200 text-slate-700'
-                }`}
-              >
-                {requisitionSlips.length} ใบ
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode('ITEMS')}
-              className={`px-4 py-2 rounded-2xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
-                viewMode === 'ITEMS'
-                  ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
-                  : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Package className="w-4 h-4" />
-              <span>📋 แสดงแยกรายการวัตถุดิบ</span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                  viewMode === 'ITEMS' ? 'bg-amber-700 text-white' : 'bg-slate-200 text-slate-700'
-                }`}
-              >
-                {filteredTransactions.length} รายการ
-              </span>
-            </button>
-          </div>
-
-          <p className="text-[11px] text-slate-400 hidden lg:block pr-2">
-            💡 กดปุ่ม <b>&quot;พิมพ์ใบเบิก&quot;</b> เพื่อสั่งพิมพ์ใบเบิกจ่ายฉบับสมบูรณ์พร้อมลายเซ็น
-          </p>
         </div>
 
         {/* Filter and Search Bar */}
@@ -565,7 +529,7 @@ export default function AdminStockOutPage() {
               placeholder="ค้นหาเลขที่ใบเบิก, วัตถุดิบ, หมายเหตุ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 bg-slate-50/50"
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-slate-50/50"
             />
           </div>
 
@@ -599,243 +563,149 @@ export default function AdminStockOutPage() {
           </div>
         </div>
 
-        {/* Main Content Area */}
-        {isLoading ? (
-          <div className="py-20 bg-white rounded-3xl border border-slate-200 shadow-2xs flex flex-col items-center justify-center gap-2">
-            <div className="w-8 h-8 border-4 border-amber-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-slate-400">กำลังโหลดประวัติการเบิกจ่ายสินค้า...</span>
-          </div>
-        ) : viewMode === 'SLIPS' ? (
-          /* ========================================================
-             VIEW 1: GROUPED BY REQUISITION SLIP (PRIMARY VIEW)
-             ======================================================== */
-          <div className="space-y-3">
-            {requisitionSlips.length === 0 ? (
-              <div className="py-20 bg-white rounded-3xl border border-slate-200 shadow-2xs text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                <FileText className="w-10 h-10 text-slate-300" />
-                <span>ไม่พบใบเบิกสินค้าที่ตรงกับเงื่อนไขการค้นหา</span>
-              </div>
-            ) : (
-              requisitionSlips.map((slip) => (
-                <div
-                  key={slip.slipNumber}
-                  className="bg-white rounded-3xl border border-slate-200 shadow-2xs hover:border-amber-300 transition-all p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                >
-                  {/* Left: Slip Header & Meta */}
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono font-black text-xs sm:text-sm text-amber-900 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200 flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-amber-700 shrink-0" />
-                        <span>{slip.slipNumber}</span>
-                      </span>
+        {/* Stock Out Transactions Table */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+          {isLoading ? (
+            <div className="py-20 flex flex-col items-center justify-center gap-2">
+              <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs text-slate-400">กำลังโหลดประวัติการเบิกจ่ายสินค้า...</span>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="py-20 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+              <ArrowUpFromLine className="w-10 h-10 text-slate-300" />
+              <span>ไม่พบรายการเบิกจ่ายสินค้าที่ตรงกับเงื่อนไข</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3.5 px-4">เลขที่ใบเบิก / เลขที่รายการ</th>
+                    <th className="py-3.5 px-4">วันที่ & เวลาเบิก</th>
+                    <th className="py-3.5 px-4">ร้านค้าผู้เบิกรับ</th>
+                    <th className="py-3.5 px-4">วัตถุดิบที่เบิก</th>
+                    <th className="py-3.5 px-4 text-right">จำนวนที่เบิกจ่าย</th>
+                    <th className="py-3.5 px-4 text-right">คลังกลางคงเหลือ</th>
+                    <th className="py-3.5 px-4">หมายเหตุ</th>
+                    <th className="py-3.5 px-4 text-right">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredTransactions.map((tx) => {
+                    const qtyOut = Number(tx.quantityOut);
+                    const balAfter = Number(tx.balanceAfter);
 
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                        <Store className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                        <span>{slip.storeName}</span>
-                      </span>
+                    // Extract store name
+                    let storeNameDisplay = tx.createdBy?.name || 'ร้านค้าหน้าร้าน';
+                    if (tx.note && tx.note.includes('เบิกจ่ายให้ร้าน:')) {
+                      const m = tx.note.match(/เบิกจ่ายให้ร้าน:\s*([^\(@•]+)/);
+                      if (m && m[1]) storeNameDisplay = m[1].trim();
+                    }
 
-                      <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
-                        <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>
-                          {new Date(slip.createdAt).toLocaleDateString('th-TH')}{' '}
-                          {new Date(slip.createdAt).toLocaleTimeString('th-TH')} น.
-                        </span>
-                      </span>
+                    return (
+                      <tr
+                        key={tx.id}
+                        onClick={() => setSelectedTx(tx)}
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      >
+                        {/* Requisition Number */}
+                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
+                          <div className="group-hover:underline flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                            <span>{tx.refId || tx.transactionNumber}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            {tx.transactionNumber}
+                          </div>
+                        </td>
 
-                      <span className="text-[11px] font-bold text-amber-700 bg-amber-50/80 px-2.5 py-0.5 rounded-full border border-amber-200">
-                        {slip.totalItemsCount} รายการ
-                      </span>
-                    </div>
+                        {/* Date & Time */}
+                        <td className="py-3.5 px-4 text-slate-500">
+                          <div className="font-bold text-slate-700">
+                            {new Date(tx.createdAt).toLocaleDateString('th-TH')}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(tx.createdAt).toLocaleTimeString('th-TH')} น.
+                          </div>
+                        </td>
 
-                    {/* Middle: Item Breakdown Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      {slip.items.map((item, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-[11px] font-medium flex items-center gap-1.5"
-                        >
-                          <Package className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span className="font-bold text-slate-800">{item.ingredient?.name}</span>
-                          <span className="font-mono text-amber-700 font-bold">
-                            -{Number(item.quantityOut).toLocaleString()} {item.ingredient?.unit}
+                        {/* Store Destination Badge */}
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-900 border border-emerald-200">
+                            <Store className="w-3 h-3 text-emerald-700" />
+                            <span>{storeNameDisplay}</span>
                           </span>
-                        </span>
-                      ))}
-                    </div>
+                        </td>
 
-                    {slip.note && (
-                      <p className="text-[11px] text-slate-500 italic pt-0.5">
-                        หมายเหตุ: {slip.note}
-                      </p>
-                    )}
-                  </div>
+                        {/* Ingredient Name */}
+                        <td className="py-3.5 px-4">
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <Package className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{tx.ingredient?.name || '-'}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-400">
+                            รหัส: {tx.ingredient?.code}
+                          </div>
+                        </td>
 
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPrintSlipByGroup(slip)}
-                      className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-700/20 cursor-pointer transition-all"
-                      title="พิมพ์ใบเบิกจ่ายฉบับสมบูรณ์ (รวมทุกรายการ)"
-                    >
-                      <Printer className="w-4 h-4" />
-                      <span>🖨️ พิมพ์ใบเบิก</span>
-                    </button>
+                        {/* Quantity Out */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="font-mono font-bold text-sm text-emerald-700">
+                            -{qtyOut.toLocaleString()}
+                          </span>
+                          <span className="text-xs text-slate-500 ml-1">
+                            {tx.ingredient?.unit}
+                          </span>
+                        </td>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedSlip(slip)}
-                      className="px-3.5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                    >
-                      ดูรายละเอียด
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        ) : (
-          /* ========================================================
-             VIEW 2: RAW ITEM TRANSACTIONS TABLE
-             ======================================================== */
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-            {filteredTransactions.length === 0 ? (
-              <div className="py-20 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-                <ArrowUpFromLine className="w-10 h-10 text-slate-300" />
-                <span>ไม่พบรายการเบิกจ่ายสินค้าที่ตรงกับเงื่อนไข</span>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                      <th className="py-3.5 px-4">เลขที่ใบเบิก / เลขที่รายการ</th>
-                      <th className="py-3.5 px-4">วันที่ & เวลาเบิก</th>
-                      <th className="py-3.5 px-4">ร้านค้าผู้เบิกรับ</th>
-                      <th className="py-3.5 px-4">วัตถุดิบที่เบิก</th>
-                      <th className="py-3.5 px-4 text-right">จำนวนที่เบิกจ่าย</th>
-                      <th className="py-3.5 px-4 text-right">คลังกลางคงเหลือ</th>
-                      <th className="py-3.5 px-4">หมายเหตุ</th>
-                      <th className="py-3.5 px-4 text-right">การจัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {filteredTransactions.map((tx) => {
-                      const qtyOut = Number(tx.quantityOut);
-                      const balAfter = Number(tx.balanceAfter);
+                        {/* Balance After in Central Warehouse */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="font-mono font-bold text-slate-800">
+                            {balAfter.toLocaleString()}
+                          </span>
+                          <span className="text-xs text-slate-400 ml-1">
+                            {tx.ingredient?.unit}
+                          </span>
+                        </td>
 
-                      // Extract store name
-                      let storeNameDisplay = tx.createdBy?.name || 'ร้านค้าหน้าร้าน';
-                      if (tx.note && tx.note.includes('เบิกจ่ายให้ร้าน:')) {
-                        const m = tx.note.match(/เบิกจ่ายให้ร้าน:\s*([^\(@•]+)/);
-                        if (m && m[1]) storeNameDisplay = m[1].trim();
-                      }
+                        {/* Note */}
+                        <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                          {tx.note || '-'}
+                        </td>
 
-                      return (
-                        <tr
-                          key={tx.id}
-                          onClick={() => setSelectedTx(tx)}
-                          className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                        >
-                          {/* Requisition Number */}
-                          <td className="py-3.5 px-4 font-mono font-bold text-amber-700">
-                            <div className="group-hover:underline flex items-center gap-1.5">
-                              <FileText className="w-3.5 h-3.5 text-amber-600" />
-                              <span>{tx.refId || tx.transactionNumber}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 font-normal">
-                              {tx.transactionNumber}
-                            </div>
-                          </td>
-
-                          {/* Date & Time */}
-                          <td className="py-3.5 px-4 text-slate-500">
-                            <div className="font-bold text-slate-700">
-                              {new Date(tx.createdAt).toLocaleDateString('th-TH')}
-                            </div>
-                            <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(tx.createdAt).toLocaleTimeString('th-TH')} น.
-                            </div>
-                          </td>
-
-                          {/* Store Destination Badge */}
-                          <td className="py-3.5 px-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                              <Store className="w-3 h-3 text-amber-700" />
-                              <span>{storeNameDisplay}</span>
-                            </span>
-                          </td>
-
-                          {/* Ingredient Name */}
-                          <td className="py-3.5 px-4">
-                            <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                              <Package className="w-3.5 h-3.5 text-slate-400" />
-                              <span>{tx.ingredient?.name || '-'}</span>
-                            </div>
-                            <div className="text-[10px] font-mono text-slate-400">
-                              รหัส: {tx.ingredient?.code}
-                            </div>
-                          </td>
-
-                          {/* Quantity Out */}
-                          <td className="py-3.5 px-4 text-right">
-                            <span className="font-mono font-bold text-sm text-amber-700">
-                              -{qtyOut.toLocaleString()}
-                            </span>
-                            <span className="text-xs text-slate-500 ml-1">
-                              {tx.ingredient?.unit}
-                            </span>
-                          </td>
-
-                          {/* Balance After in Central Warehouse */}
-                          <td className="py-3.5 px-4 text-right">
-                            <span className="font-mono font-bold text-slate-800">
-                              {balAfter.toLocaleString()}
-                            </span>
-                            <span className="text-xs text-slate-400 ml-1">
-                              {tx.ingredient?.unit}
-                            </span>
-                          </td>
-
-                          {/* Note */}
-                          <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
-                            {tx.note || '-'}
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                            <div
-                              className="flex items-center justify-end gap-1.5"
-                              onClick={(e) => e.stopPropagation()}
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div
+                            className="flex items-center justify-end gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPrintSlip(tx)}
+                              className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200 flex items-center gap-1"
+                              title="พิมพ์ใบเบิกจ่ายสินค้าไปหน้าร้าน"
                             >
-                              <button
-                                type="button"
-                                onClick={() => handleOpenPrintSlip(tx)}
-                                className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs transition-colors cursor-pointer border border-amber-200 flex items-center gap-1"
-                                title="พิมพ์ใบเบิกจ่ายสินค้าไปหน้าร้าน"
-                              >
-                                <Printer className="w-3.5 h-3.5 text-amber-700" />
-                                <span>พิมพ์ใบเบิก</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTx(tx)}
-                                className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                              >
-                                ดูรายละเอียด
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+                              <Printer className="w-3.5 h-3.5 text-emerald-700" />
+                              <span>พิมพ์ใบเบิก</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedTx(tx)}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              ดูรายละเอียด
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal 1: Create New Stock Out (บันทึกเบิกจ่ายสินค้าไปหน้าร้าน) */}
@@ -845,7 +715,7 @@ export default function AdminStockOutPage() {
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                   <ArrowUpFromLine className="w-5 h-5" />
                 </div>
                 <div>
@@ -875,9 +745,9 @@ export default function AdminStockOutPage() {
             <form onSubmit={handleSubmitStockOut} className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden">
               <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3.5 scrollbar-thin">
                 {/* Store Selection */}
-                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
-                    <Store className="w-4 h-4 text-amber-700 shrink-0" />
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-950">
+                    <Store className="w-4 h-4 text-emerald-700 shrink-0" />
                     <span>เลือกร้านค้า / จุดขายหน้าร้านที่มารับของ:</span>
                     <span className="text-red-500">*</span>
                   </div>
@@ -885,7 +755,7 @@ export default function AdminStockOutPage() {
                     value={targetStoreId}
                     onChange={(e) => setTargetStoreId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-300 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   >
                     {staffStores.map((st) => (
                       <option key={st.id} value={st.id}>
@@ -893,7 +763,7 @@ export default function AdminStockOutPage() {
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-amber-800">
+                  <p className="text-[10px] text-emerald-800">
                     💡 สต็อกจะถูกตัดลดออกจากคลังสินค้าส่วนกลางทันทีเมื่อกดยืนยันการเบิกจ่าย
                   </p>
                 </div>
@@ -909,7 +779,7 @@ export default function AdminStockOutPage() {
                       required
                       value={requisitionNumber}
                       onChange={(e) => setRequisitionNumber(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 font-mono"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono"
                     />
                   </div>
 
@@ -922,7 +792,7 @@ export default function AdminStockOutPage() {
                       placeholder="เช่น เบิกใช้ขายกะเช้า, เติมสต็อกวันหยุด..."
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600"
+                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
                     />
                   </div>
                 </div>
@@ -936,7 +806,7 @@ export default function AdminStockOutPage() {
                     <button
                       type="button"
                       onClick={addItemRow}
-                      className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors border border-amber-200"
+                      className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors border border-emerald-200"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>เพิ่มรายการวัตถุดิบ</span>
@@ -971,7 +841,7 @@ export default function AdminStockOutPage() {
                                   handleItemChange(idx, 'ingredientId', e.target.value)
                                 }
                                 required
-                                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                               >
                                 {ingredients.map((ing) => (
                                   <option key={ing.id} value={ing.id}>
@@ -999,7 +869,7 @@ export default function AdminStockOutPage() {
                                 className={`w-full px-3 py-2 text-xs rounded-xl border font-mono font-bold text-right focus:outline-none focus:ring-2 ${
                                   isOverStock
                                     ? 'border-red-400 bg-white text-red-700 focus:ring-red-500/20'
-                                    : 'border-slate-200 bg-white text-slate-900 focus:ring-amber-500/20'
+                                    : 'border-slate-200 bg-white text-slate-900 focus:ring-emerald-500/20'
                                 }`}
                               />
                             </div>
@@ -1047,7 +917,7 @@ export default function AdminStockOutPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-amber-700/20 cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50"
                 >
                   <ArrowUpFromLine className="w-4 h-4" />
                   <span>
@@ -1060,122 +930,13 @@ export default function AdminStockOutPage() {
         </div>
       )}
 
-      {/* Modal 2A: View Requisition Slip Detail (All items in this slip) */}
-      {selectedSlip && !printSlipOpen && (
-        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                    <span>ใบเบิกจ่ายสินค้า #{selectedSlip.slipNumber}</span>
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    ร้านค้าผู้เบิกรับ: <span className="font-bold text-amber-800">{selectedSlip.storeName}</span> • วันที่{' '}
-                    {new Date(selectedSlip.createdAt).toLocaleString('th-TH')} น.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedSlip(null)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Slip Items Table */}
-            <div className="flex-1 min-h-0 overflow-y-auto my-3 scrollbar-thin">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-                    <th className="py-2.5 px-3">ลำดับ</th>
-                    <th className="py-2.5 px-3">รหัส / ชื่อวัตถุดิบ</th>
-                    <th className="py-2.5 px-3 text-right">จำนวนที่เบิกจ่าย</th>
-                    <th className="py-2.5 px-3 text-right">คลังกลางคงเหลือ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {selectedSlip.items.map((item, idx) => (
-                    <tr key={item.id} className="hover:bg-slate-50/50">
-                      <td className="py-2.5 px-3 text-slate-400 font-mono">{idx + 1}</td>
-                      <td className="py-2.5 px-3">
-                        <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
-                        <div className="text-[10px] font-mono text-slate-400">
-                          รหัส: {item.ingredient?.code}
-                        </div>
-                      </td>
-                      <td className="py-2.5 px-3 text-right">
-                        <span className="font-mono font-bold text-amber-700">
-                          -{Number(item.quantityOut).toLocaleString()}
-                        </span>
-                        <span className="text-slate-500 ml-1">{item.ingredient?.unit}</span>
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-700 font-bold">
-                        {Number(item.balanceAfter).toLocaleString()} {item.ingredient?.unit}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-slate-200 bg-slate-50/60 font-bold text-xs">
-                    <td colSpan={2} className="py-2.5 px-3 text-right text-slate-600">
-                      รวมรายการวัตถุดิบทั้งหมด:
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono text-amber-700">
-                      {selectedSlip.totalQuantity.toLocaleString()} หน่วย
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-slate-600">
-                      ({selectedSlip.totalItemsCount} รายการ)
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              {selectedSlip.note && (
-                <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-                  <span className="font-bold text-slate-600">หมายเหตุการเบิกจ่าย: </span>
-                  <span className="text-slate-700">{selectedSlip.note}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Actions */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  handleOpenPrintSlipByGroup(selectedSlip);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-700 hover:to-orange-800 text-white font-bold text-xs flex items-center gap-2 cursor-pointer shadow-md shadow-amber-700/20 transition-all"
-              >
-                <Printer className="w-4 h-4" />
-                <span>🖨️ สั่งพิมพ์ใบเบิกฉบับสมบูรณ์</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedSlip(null)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 2B: View Single Transaction Detail */}
-      {selectedTx && !printSlipOpen && !selectedSlip && (
+      {/* Modal 2: View Single Transaction Detail */}
+      {selectedTx && !printSlipOpen && !printAllModalOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
@@ -1205,7 +966,7 @@ export default function AdminStockOutPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">ร้านค้าผู้เบิกรับ:</span>
-                <span className="font-bold text-amber-800">
+                <span className="font-bold text-emerald-800">
                   {selectedTx.createdBy?.name || 'ร้านค้าหน้าร้าน'}
                 </span>
               </div>
@@ -1217,7 +978,7 @@ export default function AdminStockOutPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">จำนวนที่เบิกจ่าย:</span>
-                <span className="font-mono font-bold text-sm text-amber-700">
+                <span className="font-mono font-bold text-sm text-emerald-700">
                   -{Number(selectedTx.quantityOut).toLocaleString()} {selectedTx.ingredient?.unit}
                 </span>
               </div>
@@ -1240,7 +1001,7 @@ export default function AdminStockOutPage() {
               <button
                 type="button"
                 onClick={() => handleOpenPrintSlip(selectedTx)}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-sm transition-colors"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-700/20 transition-all"
               >
                 <Printer className="w-4 h-4" />
                 <span>พิมพ์ใบเบิกจ่ายสินค้า</span>
@@ -1258,13 +1019,13 @@ export default function AdminStockOutPage() {
         </div>
       )}
 
-      {/* Modal 3: Official Printable Store Requisition Slip (A4 Landscape, 100% Monochrome B&W) */}
+      {/* Modal 3: Official Printable Store Requisition Slip (Single Slip / Voucher) */}
       {printSlipOpen && printSlipMeta && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
           <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
-              <Printer className="w-5 h-5 text-amber-700" />
+              <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
                   ตัวอย่างก่อนพิมพ์: ใบเบิกจ่ายสินค้าจากคลังไปหน้าร้าน
@@ -1279,7 +1040,7 @@ export default function AdminStockOutPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-amber-700/20 cursor-pointer transition-all"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
               >
                 <Printer className="w-4 h-4" />
                 <span>🖨️ สั่งพิมพ์เอกสาร</span>
@@ -1401,6 +1162,210 @@ export default function AdminStockOutPage() {
                     </td>
                     <td colSpan={2} className="py-1.5 px-3 text-left font-sans text-black">
                       <span className="font-mono font-bold">{printGroupItems.length}</span> รายการ
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Bottom 3 Signature Blocks */}
+            <div className="print-signature-section mt-5 pt-3 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้เบิกสินค้า (เจ้าของร้าน / พนักงานหน้าร้าน)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้จ่ายสินค้า (เจ้าหน้าที่คลังสินค้าส่วนกลาง)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้ตรวจสอบ / ผู้อนุมัติ (บัญชี / แอดมิน)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Official Multi-Item Outbound Report (พิมพ์ทีเดียวรวมทุกรายการ) */}
+      {printAllModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
+          {/* Top Control Toolbar (Hidden when printing) */}
+          <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-emerald-700" />
+              <div>
+                <h4 className="font-bold text-xs sm:text-sm text-slate-800">
+                  ตัวอย่างก่อนพิมพ์: รายงานการเบิกจ่ายสินค้าไปหน้าร้านทั้งหมด (พิมพ์รวมทุกรายการ)
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  พิมพ์รายการเบิกจ่ายทั้งหมดตามตัวกรอง ({filteredTransactions.length} รายการ)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+              >
+                <Printer className="w-4 h-4" />
+                <span>🖨️ สั่งพิมพ์เอกสารทั้งหมด</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintAllModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Document Sheet (A4 Landscape Style) */}
+          <div
+            id="official-stock-out-report"
+            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+          >
+            {/* Document Header */}
+            <div className="relative pb-1 mb-2 border-b border-black">
+              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
+                <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+                <div>RTTR060ATHA.QRP</div>
+              </div>
+
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-bold text-black tracking-tight uppercase">
+                  บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                </h2>
+                <h3 className="text-xs sm:text-sm font-bold text-black">
+                  รายงานการเบิกจ่ายสินค้าไปหน้าร้าน (Stock Requisition & Outbound Ledger Report)
+                </h3>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px] pt-1">
+                <div>
+                  <span className="font-bold">ร้านค้าปลายทาง: </span>
+                  <span>
+                    {storeFilter === 'ALL'
+                      ? 'ทุกร้านค้าปลายทาง'
+                      : staffStores.find((s) => String(s.id) === storeFilter)?.name || storeFilter}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold">ช่วงเวลา: </span>
+                  <span>
+                    {dateFilter === 'ALL'
+                      ? 'ทั้งหมด'
+                      : dateFilter === 'TODAY'
+                      ? 'วันนี้'
+                      : dateFilter === 'WEEK'
+                      ? '7 วันล่าสุด'
+                      : '30 วันล่าสุด'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold">พิมพ์เมื่อ: </span>
+                  <span className="font-mono">
+                    {new Date().toLocaleDateString('th-TH')}{' '}
+                    {new Date().toLocaleTimeString('th-TH')} น.
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold">คลังสินค้า: </span>
+                  <span>คลังสินค้าส่วนกลาง JJ Mall</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Requisition Items Table */}
+            <div className="overflow-x-auto print:overflow-visible my-2">
+              <table className="w-full text-left border-collapse text-[9px] leading-tight text-black border border-black">
+                <thead>
+                  <tr className="border-b border-black text-black font-bold bg-white text-center">
+                    <th className="py-1 px-1 border-r border-black w-8 text-center">ลำดับ</th>
+                    <th className="py-1 px-2 border-r border-black w-24">เลขที่ใบเบิก</th>
+                    <th className="py-1 px-2 border-r border-black w-20">วันที่เบิก</th>
+                    <th className="py-1 px-2 border-r border-black w-24 text-left">ร้านค้าผู้เบิกรับ</th>
+                    <th className="py-1 px-2 border-r border-black w-20">รหัสวัตถุดิบ</th>
+                    <th className="py-1 px-2 border-r border-black text-left">ชื่อวัตถุดิบ</th>
+                    <th className="py-1 px-2 border-r border-black text-right w-20">จำนวนที่เบิก</th>
+                    <th className="py-1 px-1 border-r border-black text-center w-14">หน่วย</th>
+                    <th className="py-1 px-2 border-r border-black text-right w-24">คลังกลางคงเหลือ</th>
+                    <th className="py-1 px-2 text-left">หมายเหตุ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black font-mono text-[9px] text-black">
+                  {batchReportItems.map((item, idx) => {
+                    const qtyOut = Number(item.quantityOut);
+                    const balAfter = Number(item.balanceAfter);
+
+                    let stName = item.createdBy?.name || 'ร้านค้า';
+                    if (item.note && item.note.includes('เบิกจ่ายให้ร้าน:')) {
+                      const m = item.note.match(/เบิกจ่ายให้ร้าน:\s*([^\(@•]+)/);
+                      if (m && m[1]) stName = m[1].trim();
+                    }
+
+                    return (
+                      <tr key={item.id} className="border-b border-black">
+                        <td className="py-1 px-1 text-center border-r border-black font-sans">
+                          {idx + 1}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-bold font-mono">
+                          {item.refId || item.transactionNumber}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black text-center font-sans">
+                          {new Date(item.createdAt).toLocaleDateString('th-TH')}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans font-medium text-left truncate max-w-[100px]">
+                          {stName}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-bold font-mono">
+                          {item.ingredient?.code}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans font-medium text-left truncate max-w-[130px]">
+                          {item.ingredient?.name}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black text-right font-bold font-mono">
+                          {qtyOut.toLocaleString()}
+                        </td>
+                        <td className="py-1 px-1 text-center font-sans border-r border-black">
+                          {item.ingredient?.unit}
+                        </td>
+                        <td className="py-1 px-2 text-right font-mono font-bold border-r border-black">
+                          {balAfter.toLocaleString()}
+                        </td>
+                        <td className="py-1 px-2 font-sans truncate max-w-[120px]">
+                          {item.note || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-black bg-white font-bold text-[9.5px] text-black">
+                    <td colSpan={6} className="py-1.5 px-2 text-right font-sans border-r border-black">
+                      รวมรายการเบิกจ่ายทั้งสิ้น ({batchReportItems.length} รายการ):
+                    </td>
+                    <td className="py-1.5 px-2 text-right font-mono font-bold border-r border-black">
+                      {batchReportItems
+                        .reduce((sum, it) => sum + Number(it.quantityOut || 0), 0)
+                        .toLocaleString()}
+                    </td>
+                    <td colSpan={3} className="py-1.5 px-2 text-left font-sans text-black">
+                      หน่วยนับ
                     </td>
                   </tr>
                 </tfoot>

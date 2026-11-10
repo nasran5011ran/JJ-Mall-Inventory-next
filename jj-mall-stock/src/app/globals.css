@@ -213,7 +213,10 @@ body {
   #official-stock-transaction-slip,
   #official-stock-transaction-slip *,
   #official-stock-out-slip,
+  #official-stock-out-report,
   #official-stock-out-slip *,
+  #official-stock-out-report,
+  #official-stock-out-report *,
   #official-stock-transactions-report,
   #official-stock-transactions-report *,
   #official-ingredient-print-report,
@@ -232,6 +235,7 @@ body {
   #official-stock-adjustments-report,
   #official-stock-transaction-slip,
   #official-stock-out-slip,
+  #official-stock-out-report,
   #official-stock-transactions-report,
   #official-ingredient-print-report,
   #official-sales-print-report {
@@ -265,7 +269,8 @@ body {
   #official-stock-adjustments-report,
   #official-stock-inventory-report,
   #official-ingredient-print-report,
-  #official-sales-print-report {
+  #official-sales-print-report,
+  #official-stock-out-report {
     page-break-after: auto !important;
     break-after: auto !important;
     page-break-inside: auto !important;
@@ -278,6 +283,7 @@ body {
   #official-stock-adjustments-report table,
   #official-stock-transaction-slip table,
   #official-stock-out-slip table,
+  #official-stock-out-report table,
   #official-stock-transactions-report table,
   #official-ingredient-print-report table,
   #official-sales-print-report table {
@@ -296,7 +302,8 @@ body {
   #official-stock-adjustments-report thead,
   #official-stock-transactions-report thead,
   #official-ingredient-print-report thead,
-  #official-sales-print-report thead {
+  #official-sales-print-report thead,
+  #official-stock-out-report thead {
     display: table-header-group !important;
   }
 
@@ -307,6 +314,7 @@ body {
   #official-stock-adjustments-report tr,
   #official-stock-transaction-slip tr,
   #official-stock-out-slip tr,
+  #official-stock-out-report tr,
   #official-stock-transactions-report tr,
   #official-ingredient-print-report tr,
   #official-sales-print-report tr {
@@ -326,6 +334,8 @@ body {
   #official-stock-transaction-slip td,
   #official-stock-out-slip th,
   #official-stock-out-slip td,
+  #official-stock-out-report th,
+  #official-stock-out-report td,
   #official-stock-transactions-report th,
   #official-stock-transactions-report td,
   #official-ingredient-print-report th,
