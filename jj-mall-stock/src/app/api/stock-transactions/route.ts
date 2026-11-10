@@ -101,6 +101,8 @@ export async function GET(req: NextRequest) {
     let saleDeductCount = 0;
     let adjustCount = 0;
     let physicalCount = 0;
+    let transferCount = 0;
+    let damageCount = 0;
     let totalQtyIn = 0;
     let totalQtyOut = 0;
 
@@ -110,6 +112,8 @@ export async function GET(req: NextRequest) {
 
       if (tx.type === 'PURCHASE_IN') purchaseCount++;
       else if (tx.type === 'SALE_DEDUCT') saleDeductCount++;
+      else if (tx.type === 'TRANSFER_OUT') transferCount++;
+      else if (tx.type === 'DAMAGE_OUT') damageCount++;
       else if (tx.type === 'ADJUST_ADD' || tx.type === 'ADJUST_SUB') adjustCount++;
       else if (tx.type === 'PHYSICAL_COUNT') physicalCount++;
     });
@@ -122,6 +126,8 @@ export async function GET(req: NextRequest) {
         totalTransactions: allTxTypes.length,
         purchaseCount,
         saleDeductCount,
+        transferCount,
+        damageCount,
         adjustCount,
         physicalCount,
         totalQtyIn,

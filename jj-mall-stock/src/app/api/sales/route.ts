@@ -75,19 +75,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Fetch products
+    // 1. Fetch products & BOM recipes
     const productIds = items.map((i: any) => Number(i.productId));
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
+      include: {
+        recipe: {
+          include: {
+            items: {
+              include: {
+                ingredient: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // Map for fast lookup
     const productMap = new Map(products.map((p) => [p.id, p]));
 
-    // 2. Calculate Total Sale Amount and Items
+    // 2. Calculate Total Sale Amount and Required Ingredients
     let totalAmount = 0;
     let totalItems = 0;
     const saleItemsData: Array<{ productId: number; quantity: number; unitPrice: number; subtotal: number }> = [];
+
+    // Map ingredientId -> required total quantity from recipes
+    const requiredIngredientsMap = new Map<
+      number,
+      {
+        ingredientId: number;
+        code: string;
+        name: string;
+        unit: string;
+        currentStock: number;
+        requiredQty: number;
+      }
+    >();
 
     for (const item of items) {
       const prod = productMap.get(Number(item.productId));
@@ -120,43 +144,106 @@ export async function POST(req: NextRequest) {
         unitPrice,
         subtotal,
       });
+
+      // Calculate BOM ingredients needed
+      if (prod.recipe && prod.recipe.items) {
+        for (const recipeItem of prod.recipe.items) {
+          const ing = recipeItem.ingredient;
+          const needed = Number(recipeItem.quantity) * qty;
+
+          const existing = requiredIngredientsMap.get(ing.id) || {
+            ingredientId: ing.id,
+            code: ing.code,
+            name: ing.name,
+            unit: recipeItem.unit || ing.unit,
+            currentStock: Number(ing.currentStock),
+            requiredQty: 0,
+          };
+
+          existing.requiredQty += needed;
+          requiredIngredientsMap.set(ing.id, existing);
+        }
+      }
     }
 
-    // 3. Generate Sale Number (e.g. SALE-20261105-0001)
+    // 3. Generate Sale Number (e.g. SALE-20261110-0001)
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const saleNumber = `SALE-${dateStr}-${randomSuffix}`;
 
-    // 4. Create Sale Record
-    const createdSale = await prisma.sale.create({
-      data: {
-        saleNumber,
-        totalAmount,
-        totalItems,
-        paymentMethod: paymentMethod || 'CASH',
-        note: note || null,
-        createdById: session.id,
-        items: {
-          create: saleItemsData,
-        },
-      },
-      include: {
-        items: {
-          include: {
-            product: true,
+    // 4. Execute Atomic Transaction: Create Sale + Auto-deduct BOM Ingredients + Log Real-time Stock Transactions
+    const result = await prisma.$transaction(async (tx) => {
+      // A. Create Sale Record
+      const createdSale = await tx.sale.create({
+        data: {
+          saleNumber,
+          totalAmount,
+          totalItems,
+          paymentMethod: paymentMethod || 'CASH',
+          note: note || null,
+          createdById: session.id,
+          items: {
+            create: saleItemsData,
           },
         },
-        createdBy: {
-          select: { id: true, name: true, username: true, role: true },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          createdBy: {
+            select: { id: true, name: true, username: true, role: true },
+          },
         },
-      },
+      });
+
+      // B. Deduct ingredients & create stock transactions for audit trail
+      const deductions: any[] = [];
+
+      for (const [_, reqIng] of requiredIngredientsMap.entries()) {
+        const updatedIng = await tx.ingredient.update({
+          where: { id: reqIng.ingredientId },
+          data: {
+            currentStock: {
+              decrement: reqIng.requiredQty,
+            },
+          },
+        });
+
+        // Record stock transaction in real-time
+        await tx.stockTransaction.create({
+          data: {
+            transactionNumber: `TX-SALE-${saleNumber}-${reqIng.code}`,
+            ingredientId: reqIng.ingredientId,
+            type: 'SALE_DEDUCT',
+            quantityIn: 0,
+            quantityOut: reqIng.requiredQty,
+            balanceAfter: updatedIng.currentStock,
+            refType: 'SALE',
+            refId: saleNumber,
+            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber}`,
+            createdById: session.id,
+          },
+        });
+
+        deductions.push({
+          name: reqIng.name,
+          quantityOut: reqIng.requiredQty,
+          unit: reqIng.unit,
+          remainingStock: updatedIng.currentStock,
+        });
+      }
+
+      return { createdSale, deductions };
     });
 
     return NextResponse.json({
       success: true,
-      message: 'บันทึกการขายสำเร็จ!',
-      sale: createdSale,
+      message: 'บันทึกการขายและตัดสต็อกวัตถุดิบเรียลไทม์สำเร็จ!',
+      sale: result.createdSale,
+      deductions: result.deductions,
     });
   } catch (error: any) {
     console.error('POS Sale Processing Error:', error);

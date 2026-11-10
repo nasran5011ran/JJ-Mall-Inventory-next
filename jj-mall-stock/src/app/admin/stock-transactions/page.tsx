@@ -26,6 +26,7 @@ import {
   Printer,
   Sparkles,
   Info,
+  Store,
 } from 'lucide-react';
 
 interface Ingredient {
@@ -88,6 +89,8 @@ export default function AdminStockTransactionsPage() {
     totalTransactions: 0,
     purchaseCount: 0,
     saleDeductCount: 0,
+    transferCount: 0,
+    damageCount: 0,
     adjustCount: 0,
     physicalCount: 0,
     totalQtyIn: 0,
@@ -205,9 +208,21 @@ export default function AdminStockTransactionsPage() {
         };
       case 'SALE_DEDUCT':
         return {
-          label: 'ตัดสต็อกจากการขาย',
+          label: 'ตัดสต็อกจากการขาย (POS)',
           className: 'bg-amber-50 text-amber-900 border-amber-200',
           icon: ShoppingCart,
+        };
+      case 'TRANSFER_OUT':
+        return {
+          label: 'เบิกจ่ายให้ร้านค้า',
+          className: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+          icon: Store,
+        };
+      case 'DAMAGE_OUT':
+        return {
+          label: 'ตัดจำหน่าย (เสียหาย)',
+          className: 'bg-rose-50 text-rose-800 border-rose-200',
+          icon: TrendingDown,
         };
       case 'ADJUST_ADD':
         return {
@@ -401,6 +416,19 @@ export default function AdminStockTransactionsPage() {
           >
             <ArrowDownToLine className="w-3.5 h-3.5" />
             <span>รับเข้าคลัง ({metrics.purchaseCount})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTypeFilter('TRANSFER_OUT')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1.5 ${
+              typeFilter === 'TRANSFER_OUT'
+                ? 'bg-indigo-600 text-white shadow-2xs'
+                : 'bg-indigo-50 text-indigo-800 hover:bg-indigo-100 border border-indigo-200'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5" />
+            <span>เบิกไปร้านค้า ({metrics.transferCount})</span>
           </button>
 
           <button
