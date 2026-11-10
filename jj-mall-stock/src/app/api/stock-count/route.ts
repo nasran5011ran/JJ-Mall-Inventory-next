@@ -176,7 +176,7 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    // 5. Transaction breakdown for warehouse reporting
+    // 5. Transaction breakdown for warehouse reporting and daily sales rate
     const txSummary = await prisma.stockTransaction.groupBy({
       by: ['ingredientId', 'type'],
       _sum: { quantityIn: true, quantityOut: true },
@@ -188,12 +188,30 @@ export async function GET(req: NextRequest) {
       txMap.set(`${t.ingredientId}_${t.type}_OUT`, Number(t._sum.quantityOut || 0));
     });
 
+    // 6. Recent 7-day sales rate per store and ingredient
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentStoreSales = await prisma.stockTransaction.groupBy({
+      by: ['ingredientId', 'createdById'],
+      where: {
+        type: TransactionType.SALE_DEDUCT,
+        createdAt: { gte: sevenDaysAgo },
+      },
+      _sum: { quantityOut: true },
+    });
+
+    const storeSalesMap = new Map<string, number>();
+    recentStoreSales.forEach((s) => {
+      storeSalesMap.set(`${s.createdById}_${s.ingredientId}`, Number(s._sum.quantityOut || 0));
+    });
+
     const stockCounts = rawStockCounts.map((sc) => {
       const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
+      const storeUser = sc.storeId || sc.createdById;
 
       const enrichedItems = sc.items.map((item) => {
         const ingId = item.ingredientId;
         const sysQty = Number(item.systemQuantity);
+        const actQty = Number(item.actualQuantity);
 
         if (isStore) {
           // For Store count records, use stored breakdown or fallback
@@ -207,13 +225,18 @@ export async function GET(req: NextRequest) {
             ? Number(item.salesQuantity)
             : 0;
 
+          // Calculate DOH: (Actual Stock / Daily Sales Rate)
+          const recent7DaySales = storeSalesMap.get(`${storeUser}_${ingId}`) || salesQty;
+          const dailyRate = recent7DaySales > 0 ? recent7DaySales / 7 : (salesQty > 0 ? salesQty : 0);
+          const doh = (dailyRate > 0 && actQty > 0) ? parseFloat((actQty / dailyRate).toFixed(1)) : 0;
+
           return {
             ...item,
             openingQuantity: openingQty,
             inboundQuantity: inboundQty,
             salesQuantity: salesQty,
             wasteQuantity: 0,
-            doh: 0,
+            doh,
           };
         } else {
           // For Central Warehouse count records
@@ -224,7 +247,7 @@ export async function GET(req: NextRequest) {
             ? Number(item.openingQuantity)
             : Math.max(0, sysQty - inboundQty + salesQty + wasteQty);
           const dailyRate = salesQty > 0 ? salesQty / 7 : 0;
-          const doh = dailyRate > 0 ? parseFloat((sysQty / dailyRate).toFixed(1)) : 0;
+          const doh = (dailyRate > 0 && actQty > 0) ? parseFloat((actQty / dailyRate).toFixed(1)) : 0;
 
           return {
             ...item,
