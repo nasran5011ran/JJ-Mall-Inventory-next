@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
     const whereClause: any = {};
+    if (session.role === 'STAFF') {
+      whereClause.requestedById = session.id;
+    }
     if (status !== 'ALL') {
       whereClause.status = status as AdjustmentStatus;
     }
@@ -62,6 +65,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Compute KPI metrics
     const allAdjustments = await prisma.stockAdjustment.findMany({
+      where: session.role === 'STAFF' ? { requestedById: session.id } : undefined,
       select: { status: true },
     });
 
@@ -234,6 +238,29 @@ export async function POST(req: NextRequest) {
       return createdAdjustment;
     });
 
+    // Notify Admin of new Stock Adjustment Request if pending approval
+    if (!willApproveImmediately) {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'APPROVAL',
+            type: 'STOCK_ADJUSTMENT_REQUEST',
+            severity: 'WARNING',
+            title: 'มีใบขอปรับสต็อก/ตัดของเสียใหม่',
+            description: `${session.name} ขอปรับสต็อก #${result.adjustmentNumber} (${result.items.length} รายการ): "${reason.trim()}"`,
+            actionUrl: '/admin/stock-adjustments',
+            actionLabel: 'พิจารณาอนุมัติ',
+            storeId: session.id,
+            storeName: session.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to create adjustment notification:', notifErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: willApproveImmediately
@@ -365,6 +392,31 @@ export async function PATCH(req: NextRequest) {
         },
       });
     });
+
+    // Notify requesting store on approval or rejection
+    if (updated.requestedById) {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'APPROVAL',
+            type: action === 'APPROVE' ? 'STOCK_ADJUSTMENT_APPROVED' : 'STOCK_ADJUSTMENT_REJECTED',
+            severity: action === 'APPROVE' ? 'SUCCESS' : 'DANGER',
+            title: action === 'APPROVE' ? 'ใบขอปรับสต็อกได้รับการอนุมัติแล้ว' : 'ใบขอปรับสต็อกถูกปฏิเสธ',
+            description: action === 'APPROVE'
+              ? `ผู้ดูแลระบบได้อนุมัติใบปรับสต็อก #${updated.adjustmentNumber} เรียบร้อยแล้ว`
+              : `ผู้ดูแลระบบได้ปฏิเสธใบปรับสต็อก #${updated.adjustmentNumber} เหตุผล: ${rejectReason || 'ไม่อนุมัติ'}`,
+            actionUrl: '/staff/stock-adjustments',
+            actionLabel: 'ดูรายการปรับสต็อก',
+            storeId: updated.requestedById,
+            storeName: updated.requestedBy?.name || '',
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to notify staff on adjustment update:', notifErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
