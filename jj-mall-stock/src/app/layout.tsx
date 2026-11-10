@@ -24,15 +24,22 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning className={`${promptFont.variable} h-full antialiased`}>
       <head>
-        {/* Anti-FOUC Theme Script: Prevents white flash when loading Dark Mode */}
+        {/* Anti-FOUC Theme Script: Prevents white flash when loading Dark Mode (Per-Role Isolation) */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var saved = localStorage.getItem('jj_mall_theme');
+                  var path = window.location.pathname || '';
+                  var key = 'jj_mall_theme_DEFAULT';
+                  if (path.indexOf('/admin') === 0) key = 'jj_mall_theme_ADMIN';
+                  else if (path.indexOf('/staff') === 0) key = 'jj_mall_theme_STAFF';
+                  var saved = localStorage.getItem(key);
+                  if (!saved) {
+                    saved = localStorage.getItem('jj_mall_theme');
+                  }
                   var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  if (saved === 'dark' || (!saved && prefersDark) || (saved === 'system' && prefersDark)) {
+                  if (saved === 'dark' || (saved === 'system' && prefersDark)) {
                     document.documentElement.classList.add('dark');
                     document.documentElement.setAttribute('data-theme', 'dark');
                   } else {
@@ -46,11 +53,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
-        <ThemeProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
             <SWRProvider>{children}</SWRProvider>
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
