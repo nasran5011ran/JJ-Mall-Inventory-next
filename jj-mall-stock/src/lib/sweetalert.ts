@@ -29,6 +29,7 @@ export const confirmDeleteAlert = async (options?: {
     title,
     text,
     icon: 'warning',
+    width: 360,
     showCancelButton: true,
     confirmButtonColor: '#f27474',
     cancelButtonColor: '#7a7a7a',
@@ -57,12 +58,15 @@ export const showSuccessAlert = async (title: string, text?: string, timer = 160
     icon: 'success',
     title,
     text,
+    width: 340,
     timer,
     showConfirmButton: timer ? false : true,
     confirmButtonColor: '#10b981',
     confirmButtonText: 'ตกลง',
     customClass: {
       popup: 'swal2-thai-popup',
+      title: 'swal2-thai-title',
+      htmlContainer: 'swal2-thai-text',
     },
   });
 };
@@ -75,10 +79,13 @@ export const showErrorAlert = async (title: string, text?: string) => {
     icon: 'error',
     title,
     text,
+    width: 340,
     confirmButtonColor: '#ef4444',
     confirmButtonText: 'ตกลง',
     customClass: {
       popup: 'swal2-thai-popup',
+      title: 'swal2-thai-title',
+      htmlContainer: 'swal2-thai-text',
     },
   });
 };
