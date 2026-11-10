@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/context/auth-context';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 import {
   Layers,
   Search,
@@ -338,13 +339,16 @@ export default function IngredientsPage() {
 
   // Delete / Inactive
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`คุณต้องการลบหรือระงับการใช้งานวัตถุดิบ "${name}" ใช่หรือไม่?`)) return;
+    const isConfirmed = await confirmDeleteAlert({
+      itemName: name,
+    });
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch(`/api/ingredients/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.message || 'ไม่สามารถลบวัตถุดิบได้');
+        await showErrorAlert('ไม่สามารถลบวัตถุดิบได้', json.message);
         return;
       }
 
@@ -352,13 +356,13 @@ export default function IngredientsPage() {
         setIngredients((prev) =>
           prev.map((i) => (i.id === id ? { ...i, status: 'INACTIVE' } : i))
         );
-        showToast(`เปลี่ยนสถานะ "${name}" เป็นระงับการใช้งานเรียบร้อย`);
+        await showSuccessAlert('ระงับการใช้งานสำเร็จ', `เปลี่ยนสถานะ "${name}" เป็นระงับการใช้งานเรียบร้อย`);
       } else {
         setIngredients((prev) => prev.filter((i) => i.id !== id));
-        showToast(`ลบวัตถุดิบ "${name}" ออกจากระบบเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบวัตถุดิบ "${name}" ออกจากระบบเรียบร้อย`);
       }
     } catch (error: any) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+      await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);
     }
   };
 

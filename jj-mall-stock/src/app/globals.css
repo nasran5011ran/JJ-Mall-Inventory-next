@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "sweetalert2/dist/sweetalert2.min.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -428,3 +429,76 @@ body {
     background: transparent !important;
   }
 }
+
+/* ========================================================
+   SWEETALERT2 THAI CUSTOM STYLES (MATCH USER'S REFERENCE)
+   ======================================================== */
+.swal2-thai-popup {
+  border-radius: 14px !important;
+  padding: 28px 24px 24px !important;
+  font-family: var(--font-sans) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.swal2-thai-title {
+  font-size: 1.65rem !important;
+  font-weight: 700 !important;
+  color: #262626 !important;
+  margin-top: 14px !important;
+  margin-bottom: 8px !important;
+}
+
+.swal2-thai-text {
+  font-size: 1.05rem !important;
+  color: #64748b !important;
+  margin-top: 4px !important;
+  line-height: 1.5 !important;
+}
+
+.swal2-thai-actions {
+  margin-top: 24px !important;
+  gap: 12px !important;
+}
+
+.swal2-thai-confirm {
+  background-color: #f27474 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  padding: 10px 28px !important;
+  box-shadow: 0 4px 6px -1px rgba(242, 116, 116, 0.2) !important;
+  transition: all 0.15s ease !important;
+}
+.swal2-thai-confirm:hover {
+  background-color: #e05e5e !important;
+  box-shadow: 0 6px 12px -1px rgba(242, 116, 116, 0.3) !important;
+}
+
+.swal2-thai-cancel {
+  background-color: #7a7a7a !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  padding: 10px 28px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.15s ease !important;
+}
+.swal2-thai-cancel:hover {
+  background-color: #666666 !important;
+}
+
+/* Dark mode for SweetAlert */
+.dark .swal2-thai-popup {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155 !important;
+}
+.dark .swal2-thai-title {
+  color: #f1f5f9 !important;
+}
+.dark .swal2-thai-text {
+  color: #94a3b8 !important;
+}
+

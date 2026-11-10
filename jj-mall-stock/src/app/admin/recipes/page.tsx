@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/context/auth-context';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 import {
   ChefHat,
   Search,
@@ -259,21 +260,24 @@ export default function RecipesPage() {
 
   // Delete Recipe
   const handleDelete = async (id: number, prodName: string) => {
-    if (!confirm(`คุณต้องการลบสูตรการผลิตของสินค้า "${prodName}" ใช่หรือไม่?`)) return;
+    const isConfirmed = await confirmDeleteAlert({
+      itemName: `สูตร ${prodName}`,
+    });
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch(`/api/recipes/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.message || 'ไม่สามารถลบสูตรได้');
+        await showErrorAlert('ไม่สามารถลบสูตรได้', json.message);
         return;
       }
 
       setRecipes((prev) => prev.filter((r) => r.id !== id));
-      showToast(`ลบสูตรสินค้า "${prodName}" เรียบร้อยแล้ว`);
+      await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบสูตรสินค้า "${prodName}" เรียบร้อยแล้ว`);
       loadRecipes(true);
     } catch (err: any) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+      await showErrorAlert('เกิดข้อผิดพลาดในการลบ', err.message);
     }
   };
 

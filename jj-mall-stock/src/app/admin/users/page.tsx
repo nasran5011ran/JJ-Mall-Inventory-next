@@ -25,6 +25,7 @@ import {
   History,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 
 interface UserData {
   id: number;
@@ -304,24 +305,20 @@ export default function AdminUsersPage() {
     }
   };
 
-  // Open Delete Confirmation Modal (No browser alert)
-  const handleDeleteUser = (u: UserData) => {
+  // Open Delete Confirmation via SweetAlert2 (Match reference UI)
+  const handleDeleteUser = async (u: UserData) => {
     if (u.id === currentUser?.id) {
-      showToast('⚠️ ไม่สามารถลบบัญชีผู้ใช้ที่กำลังล็อกอินอยู่ได้');
+      await showErrorAlert('ไม่สามารถดำเนินการได้', 'ไม่สามารถลบบัญชีผู้ใช้ที่กำลังล็อกอินอยู่ได้');
       return;
     }
-    setDeleteError(null);
-    setUserToDelete(u);
-  };
 
-  // Confirm Delete User action from modal
-  const confirmDeleteUser = async () => {
-    if (!userToDelete) return;
-    setDeleteSubmitting(true);
-    setDeleteError(null);
+    const isConfirmed = await confirmDeleteAlert({
+      itemName: `${u.name} (@${u.username})`,
+    });
+    if (!isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/users/${userToDelete.id}`, {
+      const res = await fetch(`/api/users/${u.id}`, {
         method: 'DELETE',
       });
 
@@ -330,23 +327,26 @@ export default function AdminUsersPage() {
         throw new Error(data.message || 'ลบผู้ใช้ไม่สำเร็จ');
       }
 
-      showToast(data.message || `ลบบัญชีผู้ใช้ "${userToDelete.name}" เรียบร้อยแล้ว`);
+      await showSuccessAlert('ลบข้อมูลสำเร็จ', data.message || `ลบบัญชีผู้ใช้ "${u.name}" เรียบร้อยแล้ว`);
 
       if (data.softDeleted) {
         // Updated to INACTIVE
         setUsers((prev) =>
-          prev.map((item) => (item.id === userToDelete.id ? { ...item, status: 'INACTIVE' } : item))
+          prev.map((item) => (item.id === u.id ? { ...item, status: 'INACTIVE' } : item))
         );
       } else {
         // Hard deleted
-        setUsers((prev) => prev.filter((item) => item.id !== userToDelete.id));
+        setUsers((prev) => prev.filter((item) => item.id !== u.id));
       }
-      setUserToDelete(null);
     } catch (err: any) {
-      setDeleteError(err.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน');
-    } finally {
-      setDeleteSubmitting(false);
+      await showErrorAlert('เกิดข้อผิดพลาดในการลบผู้ใช้งาน', err.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน');
     }
+  };
+
+  // Confirm Delete User action from modal
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setUserToDelete(null);
   };
 
   return (
