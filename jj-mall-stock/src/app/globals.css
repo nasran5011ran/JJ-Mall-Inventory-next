@@ -434,54 +434,54 @@ body {
    SWEETALERT2 THAI CUSTOM STYLES (MATCH USER'S REFERENCE)
    ======================================================== */
 .swal2-thai-popup {
-  width: 350px !important;
-  max-width: 90vw !important;
+  width: 410px !important;
+  max-width: 92vw !important;
   border-radius: 14px !important;
-  padding: 20px 18px 20px !important;
+  padding: 24px 22px 22px !important;
   font-family: var(--font-sans) !important;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.25) !important;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Compact SweetAlert2 Icon */
+/* SweetAlert2 Icon - Medium Size */
 .swal2-thai-popup .swal2-icon {
-  width: 3.2em !important;
-  height: 3.2em !important;
-  margin: 0.4em auto 0.4em !important;
-  border-width: 0.2em !important;
+  width: 3.8em !important;
+  height: 3.8em !important;
+  margin: 0.5em auto 0.5em !important;
+  border-width: 0.22em !important;
 }
 
 .swal2-thai-popup .swal2-icon .swal2-icon-content {
-  font-size: 2.2em !important;
+  font-size: 2.6em !important;
 }
 
 .swal2-thai-title {
-  font-size: 1.25rem !important;
+  font-size: 1.45rem !important;
   font-weight: 700 !important;
   color: #262626 !important;
-  margin-top: 10px !important;
-  margin-bottom: 4px !important;
+  margin-top: 12px !important;
+  margin-bottom: 6px !important;
 }
 
 .swal2-thai-text {
-  font-size: 0.875rem !important;
+  font-size: 0.95rem !important;
   color: #64748b !important;
-  margin-top: 2px !important;
-  line-height: 1.45 !important;
+  margin-top: 4px !important;
+  line-height: 1.5 !important;
 }
 
 .swal2-thai-actions {
-  margin-top: 18px !important;
-  gap: 10px !important;
+  margin-top: 22px !important;
+  gap: 12px !important;
 }
 
 .swal2-thai-confirm {
   background-color: #f27474 !important;
   color: #ffffff !important;
-  border-radius: 6px !important;
-  font-size: 0.85rem !important;
+  border-radius: 7px !important;
+  font-size: 0.92rem !important;
   font-weight: 600 !important;
-  padding: 8px 22px !important;
-  box-shadow: 0 2px 4px -1px rgba(242, 116, 116, 0.25) !important;
+  padding: 9px 26px !important;
+  box-shadow: 0 3px 6px -1px rgba(242, 116, 116, 0.25) !important;
   transition: all 0.15s ease !important;
 }
 .swal2-thai-confirm:hover {
@@ -491,11 +491,11 @@ body {
 .swal2-thai-cancel {
   background-color: #7a7a7a !important;
   color: #ffffff !important;
-  border-radius: 6px !important;
-  font-size: 0.85rem !important;
+  border-radius: 7px !important;
+  font-size: 0.92rem !important;
   font-weight: 600 !important;
-  padding: 8px 22px !important;
-  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1) !important;
+  padding: 9px 26px !important;
+  box-shadow: 0 3px 6px -1px rgba(0, 0, 0, 0.1) !important;
   transition: all 0.15s ease !important;
 }
 .swal2-thai-cancel:hover {
