@@ -47,7 +47,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       } catch (e) {}
     };
     fetchAlerts();
-    const interval = setInterval(fetchAlerts, 30000);
+    const interval = setInterval(fetchAlerts, 8000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 

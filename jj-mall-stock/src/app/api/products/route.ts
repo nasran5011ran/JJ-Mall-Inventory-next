@@ -162,6 +162,29 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // แจ้งเตือนแอดมินเมื่อพนักงานประจำร้านค้าทำการเพิ่มเมนูใหม่
+    if (session.role === 'STAFF') {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'MENU',
+            type: 'MENU_CREATE',
+            severity: 'INFO',
+            title: `ร้านค้า "${session.name}" ได้เพิ่มเมนูใหม่: ${product.name}`,
+            description: `รหัสสินค้า ${product.code} ราคาขาย ฿${product.price} หมวดหมู่ ${product.category} (หน่วย: ${product.unit})`,
+            actionUrl: `/admin/products?search=${encodeURIComponent(product.code)}`,
+            actionLabel: 'ตรวจสอบเมนูสินค้า',
+            storeId: session.id,
+            storeName: session.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to log system notification:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'เพิ่มสินค้าใหม่เรียบร้อยแล้ว',

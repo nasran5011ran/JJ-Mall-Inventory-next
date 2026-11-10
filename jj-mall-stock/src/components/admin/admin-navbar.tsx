@@ -52,18 +52,18 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
   const [currentDate, setCurrentDate] = useState<string>('');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationsTab, setNotificationsTab] = useState<'ALL' | 'STOCK' | 'APPROVAL'>('ALL');
+  const [notificationsTab, setNotificationsTab] = useState<'ALL' | 'STOCK' | 'APPROVAL' | 'MENU'>('ALL');
   const [readIds, setReadIds] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('เมื่อสักครู่');
   const notificationsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch real-time notifications
+  // Fetch real-time notifications with instant auto-poll
   const { data: notifData, isValidating: isNotifValidating, mutate: mutateNotif } = useSWR(
     '/api/notifications',
     (url: string) => fetch(url).then((res) => res.json()),
-    { refreshInterval: 25000, revalidateOnFocus: true }
+    { refreshInterval: 6000, revalidateOnFocus: true }
   );
 
   const notificationsList = notifData?.data?.notifications || [];
@@ -144,6 +144,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
   const filteredNotifications = notificationsList.filter((n: any) => {
     if (notificationsTab === 'STOCK') return n.category === 'STOCK';
     if (notificationsTab === 'APPROVAL') return n.category === 'APPROVAL';
+    if (notificationsTab === 'MENU') return n.category === 'MENU';
     return true;
   });
 
@@ -440,6 +441,18 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
                   <span>รออนุมัติ ({kpis?.pendingAdjustmentsCount || 0})</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setNotificationsTab('MENU')}
+                  className={`px-3 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 ${
+                    notificationsTab === 'MENU'
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  <span>เมนูหน้าร้าน ({kpis?.staffMenuActivityCount || 0})</span>
+                </button>
               </div>
 
               {/* List */}
@@ -457,6 +470,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                     const isRead = readIds.includes(item.id);
                     const isCritical = item.severity === 'CRITICAL';
                     const isApproval = item.category === 'APPROVAL';
+                    const isMenu = item.category === 'MENU';
                     const isWarning = item.severity === 'WARNING';
 
                     return (
@@ -473,6 +487,8 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                               ? 'bg-red-50 text-red-600 border-red-200'
                               : isApproval
                               ? 'bg-blue-50 text-blue-600 border-blue-200'
+                              : isMenu
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
                               : isWarning
                               ? 'bg-amber-50 text-amber-700 border-amber-200'
                               : 'bg-slate-100 text-slate-600 border-slate-200'
@@ -482,6 +498,8 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                             <AlertOctagon className="w-4 h-4" />
                           ) : isApproval ? (
                             <FileClock className="w-4 h-4" />
+                          ) : isMenu ? (
+                            <Store className="w-4 h-4" />
                           ) : (
                             <AlertTriangle className="w-4 h-4" />
                           )}
@@ -495,10 +513,18 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
                                   ? 'bg-red-100 text-red-700'
                                   : isApproval
                                   ? 'bg-blue-100 text-blue-700'
+                                  : isMenu
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
                                   : 'bg-amber-100 text-amber-800'
                               }`}
                             >
-                              {isCritical ? 'หมดสต็อก' : isApproval ? 'รออนุมัติ' : 'ใกล้หมด'}
+                              {isCritical
+                                ? 'หมดสต็อก'
+                                : isApproval
+                                ? 'รออนุมัติ'
+                                : isMenu
+                                ? (item.type === 'MENU_CREATE' ? '🏪 เพิ่มเมนูใหม่' : item.type === 'MENU_UPDATE' ? '🏪 แก้ไขเมนู' : '🏪 ลบ/ระงับเมนู')
+                                : 'ใกล้หมด'}
                             </span>
                             <span className="text-[10px] text-slate-400 font-medium">
                               {formatTime(item.timestamp)}

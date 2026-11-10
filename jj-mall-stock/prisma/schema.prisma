@@ -234,3 +234,23 @@ model StockAdjustmentItem {
 
   @@map("stock_adjustment_items")
 }
+
+
+model SystemNotification {
+  id          Int      @id @default(autoincrement())
+  category    String   @default("MENU")
+  type        String
+  severity    String   @default("INFO")
+  title       String
+  description String   @db.Text
+  actionUrl   String?
+  actionLabel String?
+  storeId     Int?
+  storeName   String?
+  actorId     Int?
+  actorName   String?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("system_notifications")
+}

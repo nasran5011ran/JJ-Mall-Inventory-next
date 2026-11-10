@@ -91,6 +91,12 @@ export async function GET() {
       take: 15,
     });
 
+    // 5. Fetch Recent Staff Menu Activities / System Notifications
+    const systemNotifs = await prisma.systemNotification.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    });
+
     // Structure Notifications List
     const notifications: any[] = [];
     let outOfStockCount = 0;
@@ -241,6 +247,28 @@ export async function GET() {
       });
     });
 
+    // Process Staff Menu Activities
+    let staffMenuActivityCount = 0;
+    systemNotifs.forEach((sn) => {
+      if (sn.category === 'MENU') staffMenuActivityCount++;
+      notifications.push({
+        id: `sys-notif-${sn.id}`,
+        category: sn.category,
+        type: sn.type,
+        severity: sn.severity,
+        title: sn.title,
+        description: sn.description,
+        timestamp: sn.createdAt,
+        actionUrl: sn.actionUrl || '/admin/products',
+        actionLabel: sn.actionLabel || 'ดูเมนูสินค้า',
+        metadata: {
+          storeId: sn.storeId,
+          storeName: sn.storeName,
+          actorName: sn.actorName,
+        },
+      });
+    });
+
     // Sort by priority (CRITICAL -> ACTION_REQUIRED -> WARNING -> INFO) then by date descending
     const severityRank: Record<string, number> = {
       CRITICAL: 1,
@@ -268,6 +296,7 @@ export async function GET() {
           pendingAdjustmentsCount: pendingAdjustments.length,
           discrepancyCount: discrepancyItemCount,
           recentActivityCount: recentTransactions.length,
+          staffMenuActivityCount,
         },
         notifications,
       },

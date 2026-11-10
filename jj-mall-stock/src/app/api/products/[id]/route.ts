@@ -136,6 +136,29 @@ export async function PUT(
       },
     });
 
+    // แจ้งเตือนแอดมินเมื่อพนักงานประจำร้านค้าทำการแก้ไขเมนู
+    if (session.role === 'STAFF') {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'MENU',
+            type: 'MENU_UPDATE',
+            severity: 'INFO',
+            title: `ร้านค้า "${session.name}" ได้แก้ไขข้อมูลเมนู: ${updated.name}`,
+            description: `อัปเดตข้อมูลเมนู รหัส ${updated.code} ราคาขาย ฿${updated.price} สถานะ: ${updated.status === 'ACTIVE' ? 'เปิดจำหน่าย' : 'ระงับการขาย'}`,
+            actionUrl: `/admin/products?search=${encodeURIComponent(updated.code)}`,
+            actionLabel: 'ดูรายละเอียดเมนู',
+            storeId: session.id,
+            storeName: session.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to log system notification:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'อัปเดตข้อมูลสินค้าเรียบร้อยแล้ว',
@@ -187,6 +210,29 @@ export async function DELETE(
         data: { status: 'INACTIVE' },
       });
 
+      // แจ้งเตือนแอดมินเมื่อพนักงานประจำร้านระงับการขายเมนู
+      if (session.role === 'STAFF') {
+        try {
+          await prisma.systemNotification.create({
+            data: {
+              category: 'MENU',
+              type: 'MENU_DELETE',
+              severity: 'WARNING',
+              title: `ร้านค้า "${session.name}" ได้ระงับการขายเมนู: ${currentProduct.name}`,
+              description: `เมนูรหัส ${currentProduct.code} มีประวัติการขายในระบบ จึงถูกเปลี่ยนสถานะเป็นระงับการขาย`,
+              actionUrl: `/admin/products?search=${encodeURIComponent(currentProduct.code)}`,
+              actionLabel: 'ดูรายการสินค้า',
+              storeId: session.id,
+              storeName: session.name,
+              actorId: session.id,
+              actorName: session.name,
+            },
+          });
+        } catch (e) {
+          console.error('Failed to log system notification:', e);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: 'สินค้านี้มีประวัติการขายในระบบแล้ว จึงได้เปลี่ยนสถานะเป็น "ระงับการขาย" (Inactive) เพื่อรักษาประวัติการขาย',
@@ -197,6 +243,29 @@ export async function DELETE(
     await prisma.product.delete({
       where: { id: productId },
     });
+
+    // แจ้งเตือนแอดมินเมื่อพนักงานประจำร้านลบเมนู
+    if (session.role === 'STAFF') {
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'MENU',
+            type: 'MENU_DELETE',
+            severity: 'WARNING',
+            title: `ร้านค้า "${session.name}" ได้ลบเมนู: ${currentProduct.name}`,
+            description: `เมนูรหัส ${currentProduct.code} ถูกลบออกจากระบบของร้านค้าแล้ว`,
+            actionUrl: `/admin/products`,
+            actionLabel: 'ดูรายการสินค้า',
+            storeId: session.id,
+            storeName: session.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (e) {
+        console.error('Failed to log system notification:', e);
+      }
+    }
 
     return NextResponse.json({
       success: true,
