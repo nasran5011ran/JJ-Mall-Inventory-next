@@ -199,6 +199,9 @@ model StockCountItem {
   actualQuantity Decimal    @db.Decimal(12, 3)
   diffQuantity   Decimal    @db.Decimal(12, 3)
   status         String     // MATCH, SHORTAGE, SURPLUS
+  openingQuantity Decimal?  @default(0) @db.Decimal(12, 3)
+  inboundQuantity Decimal?  @default(0) @db.Decimal(12, 3)
+  salesQuantity   Decimal?  @default(0) @db.Decimal(12, 3)
 
   @@map("stock_count_items")
 }

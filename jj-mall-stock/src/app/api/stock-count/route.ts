@@ -3,6 +3,105 @@ import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { TransactionType } from '@prisma/client';
 
+// Helper: Calculate store reconciliation (Opening + Inbound - Sales = Expected in-store)
+async function calculateStoreReconciliation(storeId: number) {
+  const targetStore = await prisma.user.findUnique({
+    where: { id: storeId },
+    select: { id: true, name: true, username: true },
+  });
+  if (!targetStore) return [];
+
+  // Find the most recent completed stock count for this store
+  const lastCount = await prisma.stockCount.findFirst({
+    where: {
+      location: 'STORE',
+      storeId: targetStore.id,
+      status: 'COMPLETED',
+    },
+    orderBy: { createdAt: 'desc' },
+    include: { items: true },
+  });
+
+  const sinceDate = lastCount ? lastCount.createdAt : new Date(0);
+
+  // Active ingredients
+  const ingredients = await prisma.ingredient.findMany({
+    where: { status: 'ACTIVE' },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      category: true,
+      unit: true,
+      costPerUnit: true,
+      currentStock: true,
+    },
+    orderBy: [{ category: 'asc' }, { name: 'asc' }],
+  });
+
+  // Inbound transfers from warehouse to this store since last count
+  const transferTxs = await prisma.stockTransaction.findMany({
+    where: {
+      type: TransactionType.TRANSFER_OUT,
+      createdAt: { gt: sinceDate },
+      OR: [
+        { note: { contains: `@${targetStore.username}` } },
+        { note: { contains: targetStore.name } },
+        { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+      ],
+    },
+  });
+
+  const inboundMap = new Map<number, number>();
+  for (const tx of transferTxs) {
+    const prev = inboundMap.get(tx.ingredientId) || 0;
+    inboundMap.set(tx.ingredientId, prev + Number(tx.quantityOut));
+  }
+
+  // Sales usage from POS transactions by this store since last count
+  const saleDeductTxs = await prisma.stockTransaction.findMany({
+    where: {
+      type: TransactionType.SALE_DEDUCT,
+      createdById: targetStore.id,
+      createdAt: { gt: sinceDate },
+    },
+  });
+
+  const salesMap = new Map<number, number>();
+  for (const tx of saleDeductTxs) {
+    const prev = salesMap.get(tx.ingredientId) || 0;
+    salesMap.set(tx.ingredientId, prev + Number(tx.quantityOut));
+  }
+
+  const lastCountItemsMap = new Map<number, number>();
+  if (lastCount && lastCount.items) {
+    for (const item of lastCount.items) {
+      lastCountItemsMap.set(item.ingredientId, Number(item.actualQuantity));
+    }
+  }
+
+  return ingredients.map((ing) => {
+    const opening = lastCountItemsMap.get(ing.id) ?? 0;
+    const inbound = inboundMap.get(ing.id) ?? 0;
+    const sales = salesMap.get(ing.id) ?? 0;
+    const expected = Math.max(0, opening + inbound - sales);
+
+    return {
+      ingredientId: ing.id,
+      code: ing.code,
+      name: ing.name,
+      category: ing.category,
+      unit: ing.unit,
+      costPerUnit: Number(ing.costPerUnit || 0),
+      warehouseStock: Number(ing.currentStock),
+      openingQuantity: opening,
+      inboundQuantity: inbound,
+      salesQuantity: sales,
+      expectedStock: expected,
+    };
+  });
+}
+
 // GET: Fetch Stock Count history and Active Ingredients
 export async function GET(req: NextRequest) {
   try {
@@ -52,7 +151,13 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
-    // 3. Fetch Stock Count records with items
+    // 3. Pre-calculate store balances for each staff store for instant UI selection
+    const storeBalances: Record<number, any[]> = {};
+    for (const store of staffStores) {
+      storeBalances[store.id] = await calculateStoreReconciliation(store.id);
+    }
+
+    // 4. Fetch Stock Count records with items
     const rawStockCounts = await prisma.stockCount.findMany({
       where: whereClause,
       include: {
@@ -71,7 +176,7 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    // 4. Pre-calculate transaction breakdown per ingredient for report columns (Brought Forward, Inbound, Sales, Waste, DoH)
+    // 5. Transaction breakdown for warehouse reporting
     const txSummary = await prisma.stockTransaction.groupBy({
       by: ['ingredientId', 'type'],
       _sum: { quantityIn: true, quantityOut: true },
@@ -84,24 +189,52 @@ export async function GET(req: NextRequest) {
     });
 
     const stockCounts = rawStockCounts.map((sc) => {
+      const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
+
       const enrichedItems = sc.items.map((item) => {
         const ingId = item.ingredientId;
-        const inboundQty = (txMap.get(`${ingId}_PURCHASE_IN_IN`) || 0) + (txMap.get(`${ingId}_ADJUST_ADD_IN`) || 0);
-        const salesQty = txMap.get(`${ingId}_SALE_DEDUCT_OUT`) || 0;
-        const wasteQty = (txMap.get(`${ingId}_ADJUST_SUB_OUT`) || 0) + (txMap.get(`${ingId}_DAMAGE_OUT_OUT`) || 0);
         const sysQty = Number(item.systemQuantity);
-        const openingQty = Math.max(0, sysQty - inboundQty + salesQty + wasteQty);
-        const dailyRate = salesQty > 0 ? salesQty / 7 : 0;
-        const doh = dailyRate > 0 ? parseFloat((sysQty / dailyRate).toFixed(1)) : 0;
 
-        return {
-          ...item,
-          openingQuantity: openingQty,
-          inboundQuantity: inboundQty,
-          salesQuantity: salesQty,
-          wasteQuantity: wasteQty,
-          doh,
-        };
+        if (isStore) {
+          // For Store count records, use stored breakdown or fallback
+          const openingQty = item.openingQuantity !== null && item.openingQuantity !== undefined
+            ? Number(item.openingQuantity)
+            : 0;
+          const inboundQty = item.inboundQuantity !== null && item.inboundQuantity !== undefined
+            ? Number(item.inboundQuantity)
+            : 0;
+          const salesQty = item.salesQuantity !== null && item.salesQuantity !== undefined
+            ? Number(item.salesQuantity)
+            : 0;
+
+          return {
+            ...item,
+            openingQuantity: openingQty,
+            inboundQuantity: inboundQty,
+            salesQuantity: salesQty,
+            wasteQuantity: 0,
+            doh: 0,
+          };
+        } else {
+          // For Central Warehouse count records
+          const inboundQty = (txMap.get(`${ingId}_PURCHASE_IN_IN`) || 0) + (txMap.get(`${ingId}_ADJUST_ADD_IN`) || 0);
+          const salesQty = txMap.get(`${ingId}_SALE_DEDUCT_OUT`) || 0;
+          const wasteQty = (txMap.get(`${ingId}_ADJUST_SUB_OUT`) || 0) + (txMap.get(`${ingId}_DAMAGE_OUT_OUT`) || 0);
+          const openingQty = item.openingQuantity !== null && item.openingQuantity !== undefined
+            ? Number(item.openingQuantity)
+            : Math.max(0, sysQty - inboundQty + salesQty + wasteQty);
+          const dailyRate = salesQty > 0 ? salesQty / 7 : 0;
+          const doh = dailyRate > 0 ? parseFloat((sysQty / dailyRate).toFixed(1)) : 0;
+
+          return {
+            ...item,
+            openingQuantity: openingQty,
+            inboundQuantity: inboundQty,
+            salesQuantity: salesQty,
+            wasteQuantity: wasteQty,
+            doh,
+          };
+        }
       });
 
       return {
@@ -115,6 +248,7 @@ export async function GET(req: NextRequest) {
       stockCounts,
       ingredients,
       staffStores,
+      storeBalances,
     });
   } catch (error: any) {
     console.error('Error fetching stock counts:', error);
@@ -142,7 +276,7 @@ export async function POST(req: NextRequest) {
       location = 'WAREHOUSE', // 'WAREHOUSE' | 'STORE'
       storeId = null,
       note,
-      syncStock = false,
+      syncStock = true,
       items, // Array of { ingredientId: number, actualQuantity: number }
     } = body;
 
@@ -156,6 +290,8 @@ export async function POST(req: NextRequest) {
     // Resolve store name
     let storeName = 'คลังสินค้าส่วนกลาง JJ Mall';
     let targetStore: any = null;
+    let storeReconciliationMap = new Map<number, any>();
+
     if (location === 'STORE') {
       if (!storeId) {
         return NextResponse.json(
@@ -170,6 +306,10 @@ export async function POST(req: NextRequest) {
       if (targetStore) {
         storeName = `${targetStore.name} (@${targetStore.username})`;
       }
+
+      // Calculate the store's current reconciliation balance
+      const storeBalances = await calculateStoreReconciliation(Number(storeId));
+      storeBalances.forEach((b) => storeReconciliationMap.set(b.ingredientId, b));
     }
 
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -180,7 +320,7 @@ export async function POST(req: NextRequest) {
 
     // Execute atomic transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Fetch current ingredients to compare system stock
+      // 1. Fetch current ingredients
       const ingredientIds = items.map((i: any) => Number(i.ingredientId));
       const dbIngredients = await tx.ingredient.findMany({
         where: { id: { in: ingredientIds } },
@@ -200,7 +340,24 @@ export async function POST(req: NextRequest) {
         const dbIng = ingMap.get(ingId);
         if (!dbIng) continue;
 
-        const systemQty = parseFloat(String(dbIng.currentStock));
+        let systemQty = 0;
+        let openingQty = 0;
+        let inboundQty = 0;
+        let salesQty = 0;
+
+        if (location === 'STORE') {
+          // For store count: Expected in-store balance
+          const bal = storeReconciliationMap.get(ingId);
+          openingQty = bal ? bal.openingQuantity : 0;
+          inboundQty = bal ? bal.inboundQuantity : 0;
+          salesQty = bal ? bal.salesQuantity : 0;
+          systemQty = bal ? bal.expectedStock : 0;
+        } else {
+          // For warehouse count: Current stock in Central Warehouse
+          systemQty = parseFloat(String(dbIng.currentStock));
+          openingQty = systemQty;
+        }
+
         const diffQty = actualQty - systemQty;
 
         let status = 'MATCH';
@@ -216,9 +373,13 @@ export async function POST(req: NextRequest) {
           actualQuantity: actualQty,
           diffQuantity: diffQty,
           status,
+          openingQuantity: openingQty,
+          inboundQuantity: inboundQty,
+          salesQuantity: salesQty,
         });
 
-        if (syncStock && diffQty !== 0) {
+        if (syncStock && diffQty !== 0 && location === 'WAREHOUSE') {
+          // Only central warehouse count updates Ingredient.currentStock!
           stockUpdates.push({
             id: ingId,
             newStock: actualQty,
@@ -259,8 +420,8 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 4. If syncStock is true, update ingredient currentStock and record stockTransaction
-      if (syncStock && stockUpdates.length > 0) {
+      // 4. Warehouse Count Sync: update ingredient currentStock and record stockTransaction
+      if (location === 'WAREHOUSE' && syncStock && stockUpdates.length > 0) {
         for (const update of stockUpdates) {
           await tx.ingredient.update({
             where: { id: update.id },
@@ -279,12 +440,38 @@ export async function POST(req: NextRequest) {
               quantityIn: qtyIn,
               quantityOut: qtyOut,
               balanceAfter: update.newStock,
-              refType: location === 'STORE' ? 'STORE_COUNT' : 'WAREHOUSE_COUNT',
+              refType: 'WAREHOUSE_COUNT',
               refId: finalCountNumber,
-              note: `ตรวจนับ [${storeName}] #${finalCountNumber}: ${isSurplus ? 'สต็อกเกิน' : 'สต็อกขาด'} ${Math.abs(update.diff)} ${update.ing.unit}`,
-              createdById: location === 'STORE' && targetStore ? targetStore.id : session.id,
+              note: `ตรวจนับคลังกลาง #${finalCountNumber}: ${isSurplus ? 'สต็อกเกิน' : 'สต็อกขาด'} ${Math.abs(update.diff)} ${update.ing.unit}`,
+              createdById: session.id,
             },
           });
+        }
+      }
+
+      // 5. Store Count Audit Log (without modifying Central Warehouse Ingredient.currentStock)
+      if (location === 'STORE' && syncStock) {
+        for (const item of countItemsData) {
+          if (item.diffQuantity !== 0) {
+            const isSurplus = item.diffQuantity > 0;
+            const dbIng = ingMap.get(item.ingredientId);
+            const currWarehouseStock = dbIng ? Number(dbIng.currentStock) : 0;
+
+            await tx.stockTransaction.create({
+              data: {
+                transactionNumber: `TX-STORE-COUNT-${finalCountNumber}-${dbIng?.code || item.ingredientId}-${Date.now().toString().slice(-4)}`,
+                ingredientId: item.ingredientId,
+                type: TransactionType.PHYSICAL_COUNT,
+                quantityIn: isSurplus ? Math.abs(item.diffQuantity) : 0,
+                quantityOut: !isSurplus ? Math.abs(item.diffQuantity) : 0,
+                balanceAfter: currWarehouseStock, // Central warehouse stock remains untouched
+                refType: 'STORE_COUNT',
+                refId: finalCountNumber,
+                note: `ตรวจนับสต็อก [${storeName}] #${finalCountNumber}: ${isSurplus ? 'สต็อกเกิน' : 'สต็อกขาด'} ${Math.abs(item.diffQuantity)} ${dbIng?.unit || ''} (ในร้านควรมี ${item.systemQuantity}, นับจริง ${item.actualQuantity})`,
+                createdById: targetStore?.id || session.id,
+              },
+            });
+          }
         }
       }
 

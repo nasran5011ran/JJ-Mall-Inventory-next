@@ -87,7 +87,10 @@ interface StockCountRecord {
 }
 
 export default function AdminStockCountPage() {
-  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/stock-count');
+  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/stock-count', {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+  });
 
   const stockCounts: StockCountRecord[] = useMemo(() => {
     return swrData?.success && Array.isArray(swrData.stockCounts) ? swrData.stockCounts : [];
@@ -99,6 +102,10 @@ export default function AdminStockCountPage() {
 
   const staffStores: StaffStore[] = useMemo(() => {
     return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
+  }, [swrData]);
+
+  const storeBalances: Record<number, any[]> = useMemo(() => {
+    return swrData?.success && swrData.storeBalances ? swrData.storeBalances : {};
   }, [swrData]);
 
   const loading = isLoading && stockCounts.length === 0;
@@ -149,6 +156,15 @@ export default function AdminStockCountPage() {
     return Array.from(set);
   }, [ingredients]);
 
+  // Current Store Balance Map for currently selected store
+  const currentStoreBalances = useMemo(() => {
+    if (targetLocation !== 'STORE' || !targetStoreId) return null;
+    const list = storeBalances[Number(targetStoreId)] || [];
+    const map = new Map<number, any>();
+    list.forEach((item) => map.set(item.ingredientId, item));
+    return map;
+  }, [targetLocation, targetStoreId, storeBalances]);
+
   // Open New Stock Count Modal
   const openNewStockCount = () => {
     const initialInputs: Record<number, string> = {};
@@ -157,7 +173,8 @@ export default function AdminStockCountPage() {
     });
     setCountInputs(initialInputs);
     setTargetLocation('WAREHOUSE');
-    setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
+    const firstStoreId = staffStores[0]?.id ? String(staffStores[0].id) : '';
+    setTargetStoreId(firstStoreId);
     setCountNote('ตรวจนับสินค้าจริงประจำรอบ');
     setSyncStock(true);
     setSelectedCategory('ALL');
@@ -166,11 +183,51 @@ export default function AdminStockCountPage() {
     setModalOpen(true);
   };
 
+  // Switch location in modal
+  const handleLocationChange = (loc: 'WAREHOUSE' | 'STORE') => {
+    setTargetLocation(loc);
+    const updated: Record<number, string> = {};
+    if (loc === 'WAREHOUSE') {
+      ingredients.forEach((ing) => {
+        updated[ing.id] = String(Number(ing.currentStock));
+      });
+    } else {
+      const activeStoreId = targetStoreId || (staffStores[0]?.id ? String(staffStores[0].id) : '');
+      const list = storeBalances[Number(activeStoreId)] || [];
+      const map = new Map<number, any>();
+      list.forEach((item) => map.set(item.ingredientId, item));
+      ingredients.forEach((ing) => {
+        const b = map.get(ing.id);
+        updated[ing.id] = String(b ? b.expectedStock : 0);
+      });
+    }
+    setCountInputs(updated);
+  };
+
+  // Switch store in modal
+  const handleStoreSelectChange = (newStoreId: string) => {
+    setTargetStoreId(newStoreId);
+    const list = storeBalances[Number(newStoreId)] || [];
+    const map = new Map<number, any>();
+    list.forEach((item) => map.set(item.ingredientId, item));
+    const updated: Record<number, string> = {};
+    ingredients.forEach((ing) => {
+      const b = map.get(ing.id);
+      updated[ing.id] = String(b ? b.expectedStock : 0);
+    });
+    setCountInputs(updated);
+  };
+
   // Quick fill all inputs with current system stock
   const handleFillAllCurrent = () => {
     const updated: Record<number, string> = {};
     ingredients.forEach((ing) => {
-      updated[ing.id] = String(Number(ing.currentStock));
+      if (targetLocation === 'STORE' && currentStoreBalances) {
+        const b = currentStoreBalances.get(ing.id);
+        updated[ing.id] = String(b ? b.expectedStock : 0);
+      } else {
+        updated[ing.id] = String(Number(ing.currentStock));
+      }
     });
     setCountInputs(updated);
   };
@@ -213,7 +270,11 @@ export default function AdminStockCountPage() {
         const actual = parseFloat(val);
         if (!isNaN(actual)) {
           totalItemsCounted++;
-          const system = Number(ing.currentStock);
+          let system = Number(ing.currentStock);
+          if (targetLocation === 'STORE' && currentStoreBalances) {
+            const b = currentStoreBalances.get(ing.id);
+            system = b ? b.expectedStock : 0;
+          }
           const diff = actual - system;
           const cost = Number(ing.costPerUnit || 0);
 
@@ -237,7 +298,7 @@ export default function AdminStockCountPage() {
       surplusCount,
       netVarianceValue,
     };
-  }, [ingredients, countInputs]);
+  }, [ingredients, countInputs, targetLocation, currentStoreBalances]);
 
   // Filtered Items in Detail Modal
   const filteredDetailItems = useMemo(() => {
@@ -355,285 +416,297 @@ export default function AdminStockCountPage() {
         </div>
       )}
 
-      {/* Normal Screen UI (Hidden during print so it occupies 0px and avoids blank/shifted pages) */}
+      {/* Normal Screen UI (Hidden during print) */}
       <div className="print:hidden space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <p className="text-xs text-slate-500">
-            ระบบตรวจนับสินค้าจริงในคลังและประจำแต่ละจุดขายหน้าร้าน (Physical Stock Count & Store Audit)
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5 ml-auto">
-          <button
-            onClick={() => mutate()}
-            disabled={isValidating}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
-            title="รีเฟรชข้อมูล"
-          >
-            <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">รีเฟรช</span>
-          </button>
-
-          <button
-            onClick={openNewStockCount}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ ทำรายการตรวจนับสต็อกจริงใหม่</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 4 KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Total Audits */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-              รอบตรวจนับทั้งหมด
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-              <ClipboardCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-800 mt-1 font-mono">
-            {stats.totalAudits} <span className="text-xs font-semibold text-slate-500">ครั้ง</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">รวม {stats.totalItemsAudited} รายการที่นับ</p>
-        </div>
-
-        {/* Card 2: Matched Items */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
-              สต็อกตรงกัน 100%
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-700 mt-1 font-mono">
-            {stats.totalMatches} <span className="text-xs font-semibold text-slate-500">รายการ</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">ยอดนับตรงกับระบบ</p>
-        </div>
-
-        {/* Card 3: Shortage Items */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">
-              สต็อกขาดหาย (Shortage)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
-              <TrendingDown className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-red-600 mt-1 font-mono">
-            {stats.totalShortages} <span className="text-xs font-semibold text-slate-500">รายการ</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">ยอดจริงน้อยกว่าระบบ</p>
-        </div>
-
-        {/* Card 4: Surplus Items */}
-        <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
-              สต็อกเกิน (Surplus)
-            </span>
-            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-blue-600 mt-1 font-mono">
-            {stats.totalSurplus} <span className="text-xs font-semibold text-slate-500">รายการ</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">ยอดจริงมากกว่าระบบ</p>
-        </div>
-      </div>
-
-      {/* Search & Location Filter Bar */}
-      <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="ค้นหาเลขที่ตรวจนับ, สาขา/ร้านค้า, ผู้ตรวจ..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-slate-50/50"
-          />
-        </div>
-
-        {/* Location Dropdown Filter */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <label className="text-xs font-bold text-slate-600 shrink-0">จุดตรวจนับ:</label>
-          <select
-            value={locationFilter}
-            onChange={(e) => setLocationFilter(e.target.value)}
-            className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 font-bold focus:outline-none cursor-pointer w-full md:w-auto"
-          >
-            <option value="ALL">📦 ทุกจุดตรวจนับ (All Locations)</option>
-            <option value="WAREHOUSE">🏢 คลังสินค้าส่วนกลาง JJ Mall</option>
-            {staffStores.map((st) => (
-              <option key={st.id} value={st.id}>
-                🏪 {st.name} (@{st.username})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Audit History Table */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
-        {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center gap-2">
-            <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-slate-400">กำลังโหลดประวัติการตรวจนับสต็อก...</span>
-          </div>
-        ) : filteredCounts.length === 0 ? (
-          <div className="py-20 text-center text-slate-400 text-xs flex flex-col items-center gap-3">
-            <ClipboardCheck className="w-12 h-12 text-slate-300" />
-            <div className="font-bold text-slate-600 text-sm">ไม่พบรายการตรวจนับสต็อกจริงที่ตรงกับเงื่อนไข</div>
-            <p className="max-w-md text-slate-400">
-              กดปุ่ม <span className="text-emerald-700 font-bold">&quot;+ ทำรายการตรวจนับสต็อกจริงใหม่&quot;</span> ด้านบน เพื่อเริ่มนับสต็อกของแต่ละร้านค้าหรือคลังกลาง
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              <ClipboardCheck className="w-6 h-6 text-emerald-700" />
+              <span>ตรวจนับสต็อกจริง (Physical Stock Count)</span>
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              ระบบตรวจนับสินค้าจริงแยกอิสระระหว่าง <strong>คลังสินค้าส่วนกลาง</strong> และ <strong>จุดขายหน้าร้าน</strong> (กระทบยอด: ยกมา + เบิกเข้า - ขายไป)
             </p>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-2.5 px-3 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap">จุดตรวจนับ / ร้านค้า</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap">ผู้ตรวจนับ</th>
-                  <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนรายการสินค้า</th>
-                  <th className="py-2.5 px-3 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
-                  <th className="py-2.5 px-3">หมายเหตุ</th>
-                  <th className="py-2.5 px-3 text-right whitespace-nowrap">การจัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredCounts.map((sc) => {
-                  const matchCount = sc.items.filter((i) => i.status === 'MATCH').length;
-                  const shortageCount = sc.items.filter((i) => i.status === 'SHORTAGE').length;
-                  const surplusCount = sc.items.filter((i) => i.status === 'SURPLUS').length;
-                  const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
 
-                  return (
-                    <tr
-                      key={sc.id}
-                      onClick={() => setSelectedCount(sc)}
-                      className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                    >
-                      {/* Count Number */}
-                      <td className="py-2.5 px-3 font-mono font-bold text-emerald-700 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 group-hover:underline">
-                          <FileText className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{sc.countNumber}</span>
-                        </div>
-                      </td>
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              onClick={() => mutate()}
+              disabled={isValidating}
+              className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+              title="รีเฟรชข้อมูล"
+            >
+              <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">รีเฟรช</span>
+            </button>
 
-                      {/* Date & Time */}
-                      <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
-                        <div className="font-bold text-slate-700">
-                          {new Date(sc.countDate || sc.createdAt).toLocaleDateString('th-TH')}
-                        </div>
-                        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(sc.countDate || sc.createdAt).toLocaleTimeString('th-TH')} น.
-                        </div>
-                      </td>
-
-                      {/* Store / Location Badge */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        {isStore ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                            <Store className="w-3.5 h-3.5 text-amber-700" />
-                            <span>จุดขาย: {sc.storeName || 'หน้าร้าน'}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <Warehouse className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>คลังสินค้าส่วนกลาง</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Created By */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{sc.createdBy?.name || 'Admin'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          @{sc.createdBy?.username} ({sc.createdBy?.role})
-                        </div>
-                      </td>
-
-                      {/* Total Items */}
-                      <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
-                        {sc.items.length} รายการ
-                      </td>
-
-                      {/* Variance Badges */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {matchCount > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <Check className="w-3 h-3" /> ตรง {matchCount}
-                            </span>
-                          )}
-                          {shortageCount > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                              <TrendingDown className="w-3 h-3" /> ขาด {shortageCount}
-                            </span>
-                          )}
-                          {surplusCount > 0 && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                              <TrendingUp className="w-3 h-3" /> เกิน {surplusCount}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Note */}
-                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                        {sc.note || '-'}
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPrintReport(sc)}
-                            className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200 flex items-center gap-1"
-                            title="พิมพ์รายงานผลต่างตามแบบฟอร์มทางการ"
-                          >
-                            <Printer className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>พิมพ์รายงาน</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCount(sc)}
-                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                          >
-                            ดูรายละเอียด
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <button
+              onClick={openNewStockCount}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ ทำรายการตรวจนับสต็อกจริงใหม่</span>
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Total Audits */}
+          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                รอบตรวจนับทั้งหมด
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                <ClipboardCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-slate-800 mt-1 font-mono">
+              {stats.totalAudits} <span className="text-xs font-semibold text-slate-500">ครั้ง</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">รวม {stats.totalItemsAudited} รายการที่นับ</p>
+          </div>
+
+          {/* Card 2: Matched Items */}
+          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">
+                สต็อกตรงกัน 100%
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-emerald-700 mt-1 font-mono">
+              {stats.totalMatches} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">ยอดนับตรงกับระบบ</p>
+          </div>
+
+          {/* Card 3: Shortage Items */}
+          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-red-600 uppercase tracking-wider">
+                สต็อกขาดหาย (Shortage)
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                <TrendingDown className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-red-600 mt-1 font-mono">
+              {stats.totalShortages} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">ยอดจริงน้อยกว่าระบบ</p>
+          </div>
+
+          {/* Card 4: Surplus Items */}
+          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
+                สต็อกเกิน (Surplus)
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-blue-600 mt-1 font-mono">
+              {stats.totalSurplus} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">ยอดจริงมากกว่าระบบ</p>
+          </div>
+        </div>
+
+        {/* History Audit Table Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+          {/* Table Header Filter & Search */}
+          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-emerald-700" />
+              <h2 className="font-bold text-sm text-slate-800">
+                ประวัติการตรวจนับสต็อก ({filteredCounts.length} รอบ)
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Location Filter Dropdown */}
+              <div className="relative">
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
+                >
+                  <option value="ALL">🏢 ทุกจุดตรวจนับ</option>
+                  <option value="WAREHOUSE">📦 คลังสินค้าส่วนกลาง</option>
+                  {staffStores.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      🏪 {st.name} (@{st.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="ค้นหาเลขที่ใบนับ, ชื่อร้าน, ผู้ตรวจ..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
+                />
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="p-12 text-center text-slate-400 space-y-2">
+              <RefreshCw className="w-8 h-8 animate-spin mx-auto text-emerald-600" />
+              <p className="text-xs font-medium">กำลังโหลดประวัติการตรวจนับสต็อก...</p>
+            </div>
+          ) : filteredCounts.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 space-y-3">
+              <ClipboardCheck className="w-12 h-12 mx-auto text-slate-300" />
+              <p className="text-sm font-bold text-slate-600">ยังไม่มีประวัติการตรวจนับสต็อกที่ตรงกับเงื่อนไข</p>
+              <p className="max-w-md mx-auto text-xs text-slate-400">
+                กดปุ่ม <span className="text-emerald-700 font-bold">&quot;+ ทำรายการตรวจนับสต็อกจริงใหม่&quot;</span> ด้านบน เพื่อเริ่มตรวจนับของคลังกลางหรือหน้าร้านค้า
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-2.5 px-3 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">จุดตรวจนับ / ร้านค้า</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">ผู้ตรวจนับ</th>
+                    <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนรายการ</th>
+                    <th className="py-2.5 px-3 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
+                    <th className="py-2.5 px-3">หมายเหตุ</th>
+                    <th className="py-2.5 px-3 text-right whitespace-nowrap">การจัดการ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {filteredCounts.map((sc) => {
+                    const matchCount = sc.items.filter((i) => i.status === 'MATCH').length;
+                    const shortageCount = sc.items.filter((i) => i.status === 'SHORTAGE').length;
+                    const surplusCount = sc.items.filter((i) => i.status === 'SURPLUS').length;
+                    const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
+
+                    return (
+                      <tr
+                        key={sc.id}
+                        onClick={() => setSelectedCount(sc)}
+                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      >
+                        {/* Count Number */}
+                        <td className="py-2.5 px-3 font-mono font-bold text-emerald-700 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 group-hover:underline">
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{sc.countNumber}</span>
+                          </div>
+                        </td>
+
+                        {/* Date & Time */}
+                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
+                          <div className="font-bold text-slate-700">
+                            {new Date(sc.countDate || sc.createdAt).toLocaleDateString('th-TH')}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(sc.countDate || sc.createdAt).toLocaleTimeString('th-TH')} น.
+                          </div>
+                        </td>
+
+                        {/* Store / Location Badge */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {isStore ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                              <Store className="w-3.5 h-3.5 text-amber-700" />
+                              <span>จุดขาย: {sc.storeName || 'หน้าร้าน'}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <Warehouse className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>คลังสินค้าส่วนกลาง</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Created By */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{sc.createdBy?.name || 'Admin'}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            @{sc.createdBy?.username} ({sc.createdBy?.role})
+                          </div>
+                        </td>
+
+                        {/* Total Items */}
+                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
+                          {sc.items.length} รายการ
+                        </td>
+
+                        {/* Variance Badges */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {matchCount > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Check className="w-3 h-3" /> ตรง {matchCount}
+                              </span>
+                            )}
+                            {shortageCount > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                                <TrendingDown className="w-3 h-3" /> ขาด {shortageCount}
+                              </span>
+                            )}
+                            {surplusCount > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                <TrendingUp className="w-3 h-3" /> เกิน {surplusCount}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Note */}
+                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                          {sc.note || '-'}
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPrintReport(sc)}
+                              className="px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors cursor-pointer border border-emerald-200 flex items-center gap-1"
+                              title="พิมพ์รายงานผลต่างตามแบบฟอร์มทางการ"
+                            >
+                              <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>พิมพ์รายงาน</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedCount(sc)}
+                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                            >
+                              ดูรายละเอียด
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Modal 1: Create New Physical Stock Count */}
@@ -651,7 +724,7 @@ export default function AdminStockCountPage() {
                     บันทึกผลการตรวจนับสต็อกจริง (Physical Stock Count)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    เลือกร้านค้า/คลังที่ทำการนับ และกรอกจำนวนที่นับได้จริงของแต่ละรายการ
+                    เลือกระหว่าง <strong>คลังสินค้าส่วนกลาง</strong> หรือ <strong>จุดขายหน้าร้าน</strong> เพื่อคำนวณยอดที่ควรมีและตัดยอดผลต่างอย่างถูกต้อง
                   </p>
                 </div>
               </div>
@@ -671,13 +744,27 @@ export default function AdminStockCountPage() {
             )}
 
             {/* Store / Location Radio Selector */}
-            <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700">
-                เลือกจุดตรวจนับสต็อก (Location / Store) <span className="text-red-500">*</span>
-              </label>
+            <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-slate-700">
+                  เลือกจุดตรวจนับสต็อก (Location / Store) <span className="text-red-500">*</span>
+                </label>
+                {targetLocation === 'STORE' && (
+                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
+                    🏪 โหมดตรวจนับสต็อกหน้าร้าน
+                  </span>
+                )}
+                {targetLocation === 'WAREHOUSE' && (
+                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                    📦 โหมดตรวจนับคลังสินค้าส่วนกลาง
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label
-                  className={`p-2 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
+                  onClick={() => handleLocationChange('WAREHOUSE')}
+                  className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
                     targetLocation === 'WAREHOUSE'
                       ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -687,20 +774,21 @@ export default function AdminStockCountPage() {
                     type="radio"
                     name="targetLocation"
                     checked={targetLocation === 'WAREHOUSE'}
-                    onChange={() => setTargetLocation('WAREHOUSE')}
+                    onChange={() => handleLocationChange('WAREHOUSE')}
                     className="sr-only"
                   />
-                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Warehouse className="w-3.5 h-3.5" />
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Warehouse className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="font-bold text-xs">คลังสินค้าส่วนกลาง JJ Mall</div>
-                    <div className="text-[10px] text-slate-400">Warehouse Center</div>
+                    <div className="text-[10px] text-slate-500">ตรวจนับสต็อกใหญ่ในคลังกลาง (Current Stock)</div>
                   </div>
                 </label>
 
                 <label
-                  className={`p-2 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
+                  onClick={() => handleLocationChange('STORE')}
+                  className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
                     targetLocation === 'STORE'
                       ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
                       : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -710,32 +798,38 @@ export default function AdminStockCountPage() {
                     type="radio"
                     name="targetLocation"
                     checked={targetLocation === 'STORE'}
-                    onChange={() => setTargetLocation('STORE')}
+                    onChange={() => handleLocationChange('STORE')}
                     className="sr-only"
                   />
-                  <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Store className="w-3.5 h-3.5" />
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Store className="w-4 h-4" />
                   </div>
                   <div>
                     <div className="font-bold text-xs">จุดขายหน้าร้าน (Store / Kiosk)</div>
-                    <div className="text-[10px] text-slate-400">ระบุเคาน์เตอร์ขายประจำร้าน</div>
+                    <div className="text-[10px] text-slate-500">กระทบยอด: [ยกมา] + [เบิกเข้า] - [ขายไป]</div>
                   </div>
                 </label>
               </div>
 
               {/* If Store Selected, pick specific staff shop */}
               {targetLocation === 'STORE' && (
-                <div className="pt-1 animate-in fade-in duration-150">
-                  <label className="block text-xs font-bold text-amber-900 mb-1 flex items-center gap-1.5">
-                    <Store className="w-3.5 h-3.5 text-amber-700" />
-                    <span>เลือกร้านค้า / จุดขายที่ทำการตรวจนับ:</span>
-                    <span className="text-red-500">*</span>
-                  </label>
+                <div className="pt-1.5 border-t border-amber-200/60 animate-in fade-in duration-150 space-y-1.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                      <Store className="w-3.5 h-3.5 text-amber-700" />
+                      <span>เลือกร้านค้า / จุดขายที่ทำการตรวจนับ:</span>
+                      <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-amber-700 font-medium">
+                      📌 สต็อกที่ควรมีในร้านคำนวณแยกอิสระจากคลังกลาง
+                    </span>
+                  </div>
+
                   <select
                     value={targetStoreId}
-                    onChange={(e) => setTargetStoreId(e.target.value)}
+                    onChange={(e) => handleStoreSelectChange(e.target.value)}
                     required
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-amber-400 bg-amber-50/50 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-amber-400 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-2xs"
                   >
                     {staffStores.map((st) => (
                       <option key={st.id} value={st.id}>
@@ -743,6 +837,13 @@ export default function AdminStockCountPage() {
                       </option>
                     ))}
                   </select>
+
+                  <div className="p-2 rounded-xl bg-amber-100/60 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    <span>
+                      <strong>สูตรกระทบยอดหน้าร้าน:</strong> [ยอดยกมา] + [เบิกเข้าเพิ่ม] - [ขายไปตามสูตร] = <strong>[สต็อกที่ควรมีในร้าน]</strong> (การตรวจนับหน้าร้านจะไม่แก้ไขยอดคงเหลือคลังสินค้าส่วนกลาง)
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -794,9 +895,9 @@ export default function AdminStockCountPage() {
                   type="button"
                   onClick={handleFillAllCurrent}
                   className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shrink-0"
-                  title="ใส่ค่ายอดคงเหลือในระบบลงทุกช่อง"
+                  title="ใส่ค่ายอดที่ควรมีลงทุกช่อง"
                 >
-                  ใส่ยอดระบบทั้งหมด
+                  {targetLocation === 'STORE' ? 'ใส่ยอดที่ควรมีในร้านทั้งหมด' : 'ใส่ยอดในระบบทั้งหมด'}
                 </button>
                 <button
                   type="button"
@@ -813,23 +914,44 @@ export default function AdminStockCountPage() {
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
-                    <th className="py-3 px-4">รายการสินค้า / วัตถุดิบ</th>
-                    <th className="py-3 px-4 text-right">สต็อกในระบบ</th>
-                    <th className="py-3 px-4 text-center w-40">ยอดนับได้จริง *</th>
-                    <th className="py-3 px-4 text-right">ผลต่าง (Variance)</th>
-                    <th className="py-3 px-4 text-center">สถานะ</th>
+                    <th className="py-2.5 px-3">รายการสินค้า / วัตถุดิบ</th>
+                    {targetLocation === 'STORE' ? (
+                      <>
+                        <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
+                        <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
+                      </>
+                    ) : (
+                      <th className="py-2.5 px-3 text-right">สต็อกในระบบ (คลังกลาง)</th>
+                    )}
+                    <th className="py-2.5 px-3 text-center w-36">ยอดนับได้จริง *</th>
+                    <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
+                    <th className="py-2.5 px-3 text-center">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredModalIngredients.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-400">
+                      <td colSpan={targetLocation === 'STORE' ? 8 : 5} className="py-12 text-center text-slate-400">
                         ไม่พบรายการสินค้าหรือวัตถุดิบที่ตรงกับการค้นหา
                       </td>
                     </tr>
                   ) : (
                     filteredModalIngredients.map((ing) => {
-                      const systemQty = Number(ing.currentStock);
+                      let systemQty = Number(ing.currentStock);
+                      let openingQty = 0;
+                      let inboundQty = 0;
+                      let salesQty = 0;
+
+                      if (targetLocation === 'STORE' && currentStoreBalances) {
+                        const b = currentStoreBalances.get(ing.id);
+                        openingQty = b ? b.openingQuantity : 0;
+                        inboundQty = b ? b.inboundQuantity : 0;
+                        salesQty = b ? b.salesQuantity : 0;
+                        systemQty = b ? b.expectedStock : 0;
+                      }
+
                       const inputValue = countInputs[ing.id] ?? '';
                       const actualQty = parseFloat(inputValue);
                       const hasInput = inputValue.trim() !== '' && !isNaN(actualQty);
@@ -863,31 +985,48 @@ export default function AdminStockCountPage() {
                       return (
                         <tr key={ing.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
                           {/* Name & Details */}
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                          <td className="py-2.5 px-3">
+                            <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
                               <span>{ing.name}</span>
                               {ing.category && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                   {ing.category}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-slate-400 font-mono mt-0.5">
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                               รหัส: {ing.code}
                             </div>
                           </td>
 
-                          {/* System Stock */}
-                          <td className="py-3 px-4 text-right">
-                            <span className="font-mono font-black text-sm sm:text-base text-slate-800">
-                              {systemQty.toLocaleString()}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-500 ml-1.5">{ing.unit}</span>
-                          </td>
+                          {/* Location Specific Columns */}
+                          {targetLocation === 'STORE' ? (
+                            <>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-600">
+                                {openingQty.toLocaleString()} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-emerald-700 font-bold">
+                                {inboundQty > 0 ? `+${inboundQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
+                                {salesQty > 0 ? `-${salesQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
+                                {systemQty.toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{ing.unit}</span>
+                              </td>
+                            </>
+                          ) : (
+                            <td className="py-2.5 px-3 text-right">
+                              <span className="font-mono font-black text-xs sm:text-sm text-slate-800">
+                                {systemQty.toLocaleString()}
+                              </span>
+                              <span className="text-xs font-semibold text-slate-500 ml-1.5">{ing.unit}</span>
+                            </td>
+                          )}
 
                           {/* Actual Input */}
-                          <td className="py-3 px-4 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
                               <input
                                 type="number"
                                 min="0"
@@ -900,14 +1039,14 @@ export default function AdminStockCountPage() {
                                   }))
                                 }
                                 placeholder={String(systemQty)}
-                                className="w-28 sm:w-32 px-3 py-1.5 text-sm sm:text-base text-right font-mono font-black rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white shadow-2xs"
+                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white shadow-2xs"
                               />
-                              <span className="text-xs font-bold text-slate-600 w-10 text-left truncate">{ing.unit}</span>
+                              <span className="text-[11px] font-bold text-slate-600 w-8 text-left truncate">{ing.unit}</span>
                             </div>
                           </td>
 
                           {/* Diff */}
-                          <td className="py-3 px-4 text-right font-mono font-bold text-sm">
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-xs sm:text-sm">
                             {hasInput ? (
                               diff === 0 ? (
                                 <span className="text-emerald-600 font-black">0</span>
@@ -926,7 +1065,7 @@ export default function AdminStockCountPage() {
                           </td>
 
                           {/* Status Badge */}
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-2.5 px-3 text-center">
                             {statusBadge}
                           </td>
                         </tr>
@@ -988,7 +1127,9 @@ export default function AdminStockCountPage() {
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
                     <span className="text-xs font-bold text-slate-800">
-                      🔄 อัปเดตยอดคงเหลือในระบบทันที (Auto-sync)
+                      {targetLocation === 'WAREHOUSE'
+                        ? '🔄 อัปเดตยอดคงเหลือในคลังกลางทันที (Auto-sync)'
+                        : '🔄 บันทึกผลการตรวจนับสต็อกหน้าร้าน (ไม่กระทบสต็อกคลังกลาง)'}
                     </span>
                   </label>
                 </div>
@@ -1055,98 +1196,137 @@ export default function AdminStockCountPage() {
               </div>
             </div>
 
-            {/* Meta Info */}
-            <div className="mt-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs shrink-0">
+            {/* Info Ribbon */}
+            <div className="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs shrink-0">
               <div>
-                <span className="text-slate-400">จุดตรวจนับ / ร้านค้า:</span>
-                <div className="font-extrabold text-sm text-emerald-800 mt-0.5">
+                <span className="text-slate-400">จุดตรวจนับ:</span>
+                <div className="font-bold text-slate-800 mt-0.5">
                   {selectedCount.location === 'STORE' || selectedCount.storeId
-                    ? `🏪 ${selectedCount.storeName || 'จุดขายหน้าร้าน'}`
-                    : '🏢 คลังสินค้าส่วนกลาง JJ Mall'}
+                    ? `🏪 จุดขาย: ${selectedCount.storeName}`
+                    : '📦 คลังสินค้าส่วนกลาง JJ Mall'}
                 </div>
               </div>
               <div>
-                <span className="text-slate-400">ผู้ทำการตรวจนับ:</span>
+                <span className="text-slate-400">ผู้ตรวจนับ:</span>
                 <div className="font-bold text-slate-800 mt-0.5">
                   {selectedCount.createdBy?.name} (@{selectedCount.createdBy?.username})
                 </div>
               </div>
               <div>
+                <span className="text-slate-400">จำนวนที่นับ:</span>
+                <div className="font-bold text-slate-800 mt-0.5">
+                  {selectedCount.items.length} รายการ
+                </div>
+              </div>
+              <div>
                 <span className="text-slate-400">หมายเหตุ:</span>
-                <div className="font-medium text-slate-700 mt-0.5 truncate">{selectedCount.note || '-'}</div>
+                <div className="font-bold text-slate-800 mt-0.5 truncate">
+                  {selectedCount.note || '-'}
+                </div>
               </div>
             </div>
 
-            {/* Search Box in Detail Modal */}
-            <div className="mt-3 flex items-center justify-between gap-3 shrink-0">
-              <div className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <span>รายการสินค้าและวัตถุดิบที่ตรวจนับ:</span>
-                <span className="px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700 font-mono text-[11px]">
-                  {selectedCount.items.length} รายการ
-                </span>
+            {/* Search Filter inside Detail Modal */}
+            <div className="mt-2.5 flex items-center justify-between gap-2 shrink-0">
+              <div className="text-xs font-bold text-slate-700">
+                รายการวัตถุดิบทั้งหมด ({selectedCount.items.length} รายการ)
               </div>
-              <div className="relative w-full sm:w-64">
+              <div className="relative w-56">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="ค้นหาชื่อรายการ..."
+                  placeholder="ค้นหาในรายการที่นับ..."
                   value={detailSearch}
                   onChange={(e) => setDetailSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
+                  className="w-full pl-8 pr-3 py-1 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium"
                 />
               </div>
             </div>
 
-            {/* Itemized Detail Table (Flex-1 with min-h-0 so it fits inside the card without overflowing) */}
+            {/* Itemized Detail Table */}
             <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto border-2 border-slate-200 rounded-2xl scrollbar-thin shadow-2xs bg-white">
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
-                    <th className="py-3 px-4">รหัส / รายการสินค้า-วัตถุดิบ</th>
-                    <th className="py-3 px-4 text-right">ยอดในระบบ</th>
-                    <th className="py-3 px-4 text-right">ยอดนับจริง</th>
-                    <th className="py-3 px-4 text-right">ผลต่าง (Variance)</th>
-                    <th className="py-3 px-4 text-center">สถานะ</th>
+                    <th className="py-2.5 px-3">รหัส / รายการสินค้า-วัตถุดิบ</th>
+                    {selectedCount.location === 'STORE' || selectedCount.storeId ? (
+                      <>
+                        <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
+                        <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
+                      </>
+                    ) : (
+                      <th className="py-2.5 px-3 text-right">ยอดในคลังกลาง</th>
+                    )}
+                    <th className="py-2.5 px-3 text-right">ยอดนับจริง</th>
+                    <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
+                    <th className="py-2.5 px-3 text-center">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredDetailItems.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-400">
+                      <td colSpan={selectedCount.location === 'STORE' || selectedCount.storeId ? 8 : 5} className="py-12 text-center text-slate-400">
                         ไม่พบรายการที่ตรงกับการค้นหา
                       </td>
                     </tr>
                   ) : (
                     filteredDetailItems.map((item) => {
                       const diff = Number(item.diffQuantity);
+                      const isStoreCount = selectedCount.location === 'STORE' || Boolean(selectedCount.storeId);
+                      const openQty = Number(item.openingQuantity ?? 0);
+                      const inQty = Number(item.inboundQuantity ?? 0);
+                      const saleQty = Number(item.salesQuantity ?? 0);
+
                       return (
                         <tr key={item.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
-                          <td className="py-3 px-4">
-                            <div className="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                          <td className="py-2.5 px-3">
+                            <div className="font-extrabold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
                               <span>{item.ingredient?.name}</span>
                               {item.ingredient?.category && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                                   {item.ingredient.category}
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-slate-400 font-mono mt-0.5">
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">
                               รหัส: {item.ingredient?.code}
                             </div>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className="font-mono font-bold text-sm text-slate-700">
-                              {Number(item.systemQuantity).toLocaleString()}
-                            </span>
-                            <span className="text-xs text-slate-500 ml-1.5">{item.ingredient?.unit}</span>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <span className="font-mono font-black text-sm sm:text-base text-slate-900">
+
+                          {isStoreCount ? (
+                            <>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-600">
+                                {openQty.toLocaleString()} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-emerald-700 font-bold">
+                                {inQty > 0 ? `+${inQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
+                                {saleQty > 0 ? `-${saleQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
+                                {Number(item.systemQuantity).toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{item.ingredient?.unit}</span>
+                              </td>
+                            </>
+                          ) : (
+                            <td className="py-2.5 px-3 text-right">
+                              <span className="font-mono font-bold text-xs sm:text-sm text-slate-700">
+                                {Number(item.systemQuantity).toLocaleString()}
+                              </span>
+                              <span className="text-[11px] text-slate-500 ml-1">{item.ingredient?.unit}</span>
+                            </td>
+                          )}
+
+                          <td className="py-2.5 px-3 text-right">
+                            <span className="font-mono font-black text-xs sm:text-sm text-slate-900">
                               {Number(item.actualQuantity).toLocaleString()}
                             </span>
-                            <span className="text-xs font-bold text-slate-600 ml-1.5">{item.ingredient?.unit}</span>
+                            <span className="text-[11px] font-bold text-slate-600 ml-1">{item.ingredient?.unit}</span>
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-sm sm:text-base">
+
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-xs sm:text-sm">
                             {diff === 0 ? (
                               <span className="text-emerald-600 font-black">0</span>
                             ) : diff < 0 ? (
@@ -1159,7 +1339,8 @@ export default function AdminStockCountPage() {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-center">
+
+                          <td className="py-2.5 px-3 text-center">
                             {item.status === 'MATCH' ? (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 <Check className="w-3.5 h-3.5" /> สต็อกตรง
@@ -1318,7 +1499,9 @@ export default function AdminStockCountPage() {
 
                   {/* Sub Header Columns */}
                   <tr className="border-b border-black text-black font-bold text-center bg-white">
-                    <th className="py-0.5 px-1 border-r border-black text-right w-16 bg-white">ปรับปรุงเพิ่ม</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right w-16 bg-white">
+                      {printRecord.location === 'STORE' || printRecord.storeId ? 'เบิกเข้า' : 'รับเข้า'}
+                    </th>
                     <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">ขาย</th>
                     <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">จ่ายทำลาย</th>
                   </tr>
@@ -1362,12 +1545,12 @@ export default function AdminStockCountPage() {
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
 
-                        {/* ปรับปรุงเพิ่ม / รับเข้า */}
+                        {/* รับเข้า / เบิกเข้า */}
                         <td className="py-0.5 px-1 border-r border-black text-right text-black">
                           {inQty > 0 ? inQty.toFixed(2) : '-'}
                         </td>
 
-                        {/* ขาย (Sales) -> Formatted with parenthesis as deduction */}
+                        {/* ขาย (Sales) */}
                         <td className="py-0.5 px-1 border-r border-black text-right text-black">
                           {saleQty > 0 ? `(${saleQty.toFixed(2)})` : '-'}
                         </td>
@@ -1411,7 +1594,7 @@ export default function AdminStockCountPage() {
               </div>
             )}
 
-            {/* Bottom 3 Signature Blocks (Matching User Photo) */}
+            {/* Bottom 3 Signature Blocks (Matching User Form) */}
             <div className="print-signature-section mt-4 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
               <div className="space-y-1">
                 <div className="text-black font-mono text-[10px]">___________________________________</div>
