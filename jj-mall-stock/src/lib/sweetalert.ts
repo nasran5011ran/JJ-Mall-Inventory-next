@@ -52,21 +52,27 @@ export const confirmDeleteAlert = async (options?: {
 
 /**
  * Success Alert
+ * - Same size as delete modal (width: 410px)
+ * - Animated green checkmark
+ * - Stays visible with confirm button "ตกลง" and comfortable timer
  */
-export const showSuccessAlert = async (title: string, text?: string, timer = 1600) => {
+export const showSuccessAlert = async (title: string, text?: string, timer = 3000) => {
   return Swal.fire({
     icon: 'success',
     title,
     text,
-    width: 380,
+    width: 410,
     timer,
-    showConfirmButton: timer ? false : true,
+    timerProgressBar: true,
+    showConfirmButton: true,
     confirmButtonColor: '#10b981',
     confirmButtonText: 'ตกลง',
     customClass: {
       popup: 'swal2-thai-popup',
       title: 'swal2-thai-title',
       htmlContainer: 'swal2-thai-text',
+      confirmButton: 'swal2-thai-confirm-success',
+      actions: 'swal2-thai-actions',
     },
   });
 };
@@ -79,13 +85,15 @@ export const showErrorAlert = async (title: string, text?: string) => {
     icon: 'error',
     title,
     text,
-    width: 380,
+    width: 410,
     confirmButtonColor: '#ef4444',
     confirmButtonText: 'ตกลง',
     customClass: {
       popup: 'swal2-thai-popup',
       title: 'swal2-thai-title',
       htmlContainer: 'swal2-thai-text',
+      confirmButton: 'swal2-thai-confirm',
+      actions: 'swal2-thai-actions',
     },
   });
 };
