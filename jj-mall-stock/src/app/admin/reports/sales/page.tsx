@@ -911,12 +911,12 @@ export default function AdminSalesReportPage() {
       {printDailyModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
-          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-3xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-slate-800">
-                  ตัวอย่างพิมพ์รายงานสรุปยอดขายประจำวัน (A4 แนวนอน)
+                  ตัวอย่างพิมพ์รายงานสรุปยอดขายประจำวัน (ขนาดกะทัดรัด พอดีเอกสาร)
                 </h3>
                 <p className="text-[11px] text-slate-500">
                   รายงานสรุปยอดขาย ช่องทางชำระเงิน อันดับสินค้า และบิลประจำวัน (สีขาว-ดำ ทางการ)
@@ -947,10 +947,10 @@ export default function AdminSalesReportPage() {
             </div>
           </div>
 
-          {/* Printable Document Sheet (A4 Landscape Style, Standard Official Monochrome Black & White) */}
+          {/* Printable Document Sheet (Compact Standard Official Monochrome Black & White) */}
           <div
             id="official-sales-print-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
+            className="w-full max-w-3xl mx-auto bg-white text-black p-6 sm:p-7 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
           >
             {/* Top Right Reference Meta */}
             <div className="absolute top-4 right-6 text-right text-[10px] text-black font-mono leading-tight">
