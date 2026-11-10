@@ -199,20 +199,19 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // B. Deduct ingredients & create stock transactions for audit trail
+      // B. Record store ingredient usage in StockTransaction (Without deducting Central Warehouse currentStock)
+      // การขายหน้าร้านของสาขา จะตัดสต็อกของ "ร้านค้านั้น" ผ่าน StockTransaction (SALE_DEDUCT)
+      // จะไม่ตัดสต็อกคลังกลาง (Ingredient.currentStock) เพราะคลังกลางจะตัดเฉพาะตอนโอนย้าย (TRANSFER_OUT)
       const deductions: any[] = [];
 
       for (const [_, reqIng] of requiredIngredientsMap.entries()) {
-        const updatedIng = await tx.ingredient.update({
+        const dbIng = await tx.ingredient.findUnique({
           where: { id: reqIng.ingredientId },
-          data: {
-            currentStock: {
-              decrement: reqIng.requiredQty,
-            },
-          },
         });
 
-        // Record stock transaction in real-time
+        const currWarehouseStock = dbIng ? Number(dbIng.currentStock) : 0;
+
+        // Record stock transaction for store audit trail & store reconciliation
         await tx.stockTransaction.create({
           data: {
             transactionNumber: `TX-SALE-${saleNumber}-${reqIng.code}`,
@@ -220,10 +219,10 @@ export async function POST(req: NextRequest) {
             type: 'SALE_DEDUCT',
             quantityIn: 0,
             quantityOut: reqIng.requiredQty,
-            balanceAfter: updatedIng.currentStock,
+            balanceAfter: currWarehouseStock,
             refType: 'SALE',
             refId: saleNumber,
-            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber}`,
+            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber} (ร้าน: ${session.name})`,
             createdById: session.id,
           },
         });
@@ -232,7 +231,7 @@ export async function POST(req: NextRequest) {
           name: reqIng.name,
           quantityOut: reqIng.requiredQty,
           unit: reqIng.unit,
-          remainingStock: updatedIng.currentStock,
+          remainingStock: currWarehouseStock,
         });
       }
 
