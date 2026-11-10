@@ -38,6 +38,7 @@ interface ProductItem {
   price: number;
   cost: number | null;
   status: string;
+  storeId?: number | null;
   recipe?: {
     id: number;
     items: Array<{
@@ -113,8 +114,10 @@ export default function SalesPage() {
   const { data: swrData, isLoading } = useSWR('/api/products');
   const products: ProductItem[] = useMemo(() => {
     if (!swrData?.success || !Array.isArray(swrData.products)) return [];
-    return swrData.products.filter((p: ProductItem) => p.status === 'ACTIVE');
-  }, [swrData]);
+    return swrData.products
+      .filter((p: ProductItem) => p.status === 'ACTIVE')
+      .filter((p: ProductItem) => !p.storeId || p.storeId === user?.id);
+  }, [swrData, user?.id]);
 
   const loading = isLoading && products.length === 0;
   const [search, setSearch] = useState('');

@@ -16,28 +16,48 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || '';
     const storeIdParam = searchParams.get('storeId') || '';
 
-    const where: any = {};
+    const andConditions: any[] = [];
 
+    // 1. Store filtering:
+    if (session.role === 'STAFF') {
+      // พนักงานร้านค้า จะเห็นเฉพาะเมนูของสาขาตัวเอง หรือเมนูส่วนกลาง (storeId = null) เท่านั้น
+      // จะไม่เห็นเมนูของร้านสาขาอื่นเด็ดขาด
+      andConditions.push({
+        OR: [
+          { storeId: session.id },
+          { storeId: null },
+        ],
+      });
+    } else {
+      // ผู้ดูแลระบบ (Admin) สามารถดูทั้งหมด หรือเลือกกรองตามร้านค้าได้
+      if (storeIdParam === 'CENTRAL') {
+        andConditions.push({ storeId: null });
+      } else if (storeIdParam && storeIdParam !== 'ALL') {
+        andConditions.push({ storeId: Number(storeIdParam) });
+      }
+    }
+
+    // 2. Search condition:
     if (search) {
-      where.OR = [
-        { code: { contains: search } },
-        { name: { contains: search } },
-      ];
+      andConditions.push({
+        OR: [
+          { code: { contains: search } },
+          { name: { contains: search } },
+        ],
+      });
     }
 
+    // 3. Category condition:
     if (category && category !== 'ALL') {
-      where.category = category;
+      andConditions.push({ category });
     }
 
+    // 4. Status condition:
     if (status && status !== 'ALL') {
-      where.status = status;
+      andConditions.push({ status });
     }
 
-    if (storeIdParam === 'CENTRAL') {
-      where.storeId = null;
-    } else if (storeIdParam && storeIdParam !== 'ALL') {
-      where.storeId = Number(storeIdParam);
-    }
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
 
     const products = await prisma.product.findMany({
       where,

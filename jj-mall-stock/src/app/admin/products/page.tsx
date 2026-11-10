@@ -169,7 +169,7 @@ export default function ProductsPage() {
       cost: '',
       minStock: '10',
       status: 'ACTIVE',
-      storeId: selectedStore !== 'ALL' && selectedStore !== 'CENTRAL' ? selectedStore : (staffStores[0]?.id ? String(staffStores[0].id) : ''),
+      storeId: selectedStore !== 'ALL' && selectedStore !== 'CENTRAL' ? selectedStore : '',
     });
     setFormError(null);
     setModalOpen(true);
@@ -351,6 +351,55 @@ export default function ProductsPage() {
               {missingRecipeCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
             </div>
           </div>
+        </div>
+
+        {/* Store Tabs Bar */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setSelectedStore('ALL')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              selectedStore === 'ALL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Store className="w-3.5 h-3.5" />
+            ร้านค้าทั้งหมด ({products.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedStore('CENTRAL')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              selectedStore === 'CENTRAL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Warehouse className="w-3.5 h-3.5" />
+            เมนูส่วนกลาง ({products.filter((p) => !p.storeId).length})
+          </button>
+
+          {staffStores.map((st) => {
+            const count = products.filter((p) => p.storeId === st.id).length;
+            const isSelected = selectedStore === String(st.id);
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setSelectedStore(String(st.id))}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                {st.name} ({count})
+              </button>
+            );
+          })}
         </div>
 
         {/* Search & Filter Controls (Instant Client-side) */}
