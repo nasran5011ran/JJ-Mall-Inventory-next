@@ -442,16 +442,11 @@ body {
   box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.25) !important;
 }
 
-/* SweetAlert2 Icon - Medium Size */
+/* SweetAlert2 Icon - Clean Proportional Scale (Fix distorted checkmark) */
 .swal2-thai-popup .swal2-icon {
-  width: 3.8em !important;
-  height: 3.8em !important;
-  margin: 0.5em auto 0.5em !important;
-  border-width: 0.22em !important;
-}
-
-.swal2-thai-popup .swal2-icon .swal2-icon-content {
-  font-size: 2.6em !important;
+  transform: scale(0.8) !important;
+  transform-origin: center center !important;
+  margin: 0.8em auto 0.2em !important;
 }
 
 .swal2-thai-title {
