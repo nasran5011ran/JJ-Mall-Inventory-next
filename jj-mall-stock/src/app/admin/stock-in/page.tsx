@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   ArrowDownToLine,
   Search,
@@ -281,6 +282,20 @@ export default function AdminStockInPage() {
     });
   }, [transactions, destinationFilter, search, dateFilter]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, destinationFilter, dateFilter]);
+
+  // Paginated transactions (10 items per page)
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
+
   // Executive Metrics
   const todayStr = new Date().toISOString().split('T')[0];
   const todayTransactions = transactions.filter((t) => t.createdAt.startsWith(todayStr));
@@ -472,7 +487,7 @@ export default function AdminStockInPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredTransactions.map((tx) => {
+                {paginatedTransactions.map((tx) => {
                   const isStoreAllocate = tx.refType === 'STORE_ALLOCATE';
 
                   return (
@@ -555,6 +570,14 @@ export default function AdminStockInPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredTransactions.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

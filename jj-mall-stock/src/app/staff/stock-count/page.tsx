@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   ClipboardCheck,
   Search,
@@ -296,6 +297,18 @@ export default function StaffStockCountPage() {
     });
   }, [stockCounts, search]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const paginatedCounts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredCounts.slice(start, start + pageSize);
+  }, [filteredCounts, currentPage, pageSize]);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -390,7 +403,7 @@ export default function StaffStockCountPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredCounts.map((sc) => {
+                  {paginatedCounts.map((sc) => {
                     const matchCount = sc.items.filter((i) => i.status === 'MATCH').length;
                     const shortageCount = sc.items.filter((i) => i.status === 'SHORTAGE').length;
                     const surplusCount = sc.items.filter((i) => i.status === 'SURPLUS').length;
@@ -485,6 +498,14 @@ export default function StaffStockCountPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination (10 items per page) */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredCounts.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
+import Pagination from '@/components/Pagination';
 import {
   Layers,
   Search,
@@ -236,6 +237,20 @@ export default function IngredientsPage() {
       return matchSearch && matchCategory && matchStock;
     });
   }, [ingredients, search, selectedCategory, selectedStockStatus, isCentral, selectedStoreBalancesMap]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory, selectedStockStatus, selectedStoreId]);
+
+  // Paginated items (10 items per page)
+  const paginatedIngredients = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredIngredients.slice(start, start + pageSize);
+  }, [filteredIngredients, currentPage, pageSize]);
 
   const openAddModal = () => {
     setEditingIngredient(null);
@@ -654,7 +669,7 @@ export default function IngredientsPage() {
                   )}
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredIngredients.map((ing) => {
+                  {paginatedIngredients.map((ing) => {
                     const isHighlighted = highlightId === ing.id;
                     const b = selectedStoreBalancesMap.get(ing.id);
                     const stock = isCentral ? Number(ing.currentStock) : (b ? Number(b.expectedStock) : 0);
@@ -884,6 +899,14 @@ export default function IngredientsPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination (10 items per page) */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredIngredients.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>

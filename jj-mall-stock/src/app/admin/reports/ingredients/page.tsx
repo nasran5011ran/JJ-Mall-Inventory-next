@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Pagination from '@/components/Pagination';
 import useSWR from 'swr';
 import Link from 'next/link';
 import {
@@ -93,6 +94,19 @@ export default function AdminIngredientsReportPage() {
         item.category.toLowerCase().includes(q)
     );
   }, [reportItems, search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, period]);
+
+  // Paginated items (10 items per page for screen view)
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
 
   // Period label for headers & printouts
   const periodLabel = useMemo(() => {
@@ -547,7 +561,7 @@ export default function AdminIngredientsReportPage() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item, idx) => (
+                paginatedItems.map((item, idx) => (
                   <tr
                     key={item.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
@@ -685,6 +699,14 @@ export default function AdminIngredientsReportPage() {
               </tfoot>
             )}
           </table>
+
+          {/* Pagination (10 items per page) */}
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredItems.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
       </div>

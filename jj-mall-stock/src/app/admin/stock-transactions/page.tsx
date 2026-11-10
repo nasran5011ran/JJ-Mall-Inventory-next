@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   History,
   Search,
@@ -121,6 +122,20 @@ export default function AdminStockTransactionsPage() {
       return true;
     });
   }, [transactions, search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, typeFilter, ingredientFilter, dateFilter]);
+
+  // Paginated transactions (10 items per page for screen view)
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
 
   // All filtered transactions for Print Report (naturally flows to page 2, 3... if not fitting)
   const printTransactions = filteredTransactions;
@@ -549,7 +564,7 @@ export default function AdminStockTransactionsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredTransactions.map((tx) => {
+                {paginatedTransactions.map((tx) => {
                   const badge = getTypeBadge(tx.type);
                   const BadgeIcon = badge.icon;
                   const qtyIn = Number(tx.quantityIn);
@@ -650,6 +665,14 @@ export default function AdminStockTransactionsPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredTransactions.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

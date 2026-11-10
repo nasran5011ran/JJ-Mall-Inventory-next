@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
+import Pagination from '@/components/Pagination';
 import {
   Package,
   Search,
@@ -158,6 +159,20 @@ export default function ProductsPage() {
       return matchSearch && matchCategory && matchStatus && matchStore;
     });
   }, [products, search, selectedCategory, selectedStatus, selectedStore]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory, selectedStatus, selectedStore]);
+
+  // Paginated products (10 items per page)
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -500,7 +515,7 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredProducts.map((p) => {
+                  {paginatedProducts.map((p) => {
                     const isHighlighted = highlightId === p.id;
                     const hasRecipe = p.recipe && p.recipe.items && p.recipe.items.length > 0;
                     const bomCost = hasRecipe
@@ -668,6 +683,14 @@ export default function ProductsPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination (10 items per page) */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredProducts.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>

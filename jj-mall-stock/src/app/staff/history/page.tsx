@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShoppingBag, Search, Clock, Calendar, DollarSign, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import Pagination from '@/components/Pagination';
 
 export default function StaffSalesHistoryPage() {
   const { user } = useAuth();
@@ -19,6 +20,10 @@ export default function StaffSalesHistoryPage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+  const paginatedSales = sales.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const totalCups = sales.reduce((sum, s) => sum + s.totalItems, 0);
   const totalMoney = sales.reduce((sum, s) => sum + Number(s.totalAmount), 0);
@@ -82,7 +87,7 @@ export default function StaffSalesHistoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {sales.map((sale) => (
+                {paginatedSales.map((sale) => (
                   <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
                       {sale.saleNumber}

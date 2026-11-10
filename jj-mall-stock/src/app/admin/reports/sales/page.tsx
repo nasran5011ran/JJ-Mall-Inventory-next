@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   TrendingUp,
   Search,
@@ -226,6 +227,20 @@ export default function AdminSalesReportPage() {
       return true;
     });
   }, [sales, search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, storeId, paymentMethod, period, selectedDate]);
+
+  // Paginated sales (10 items per page for screen view)
+  const paginatedSales = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredSales.slice(start, start + pageSize);
+  }, [filteredSales, currentPage, pageSize]);
 
   // Max revenue in hourly chart for percentage calculation
   const maxHourlyRevenue = useMemo(() => {
@@ -729,7 +744,7 @@ export default function AdminSalesReportPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredSales.map((s) => {
+                {paginatedSales.map((s) => {
                   const isCash = (s.paymentMethod || 'CASH').toUpperCase() === 'CASH';
 
                   return (
@@ -809,6 +824,14 @@ export default function AdminSalesReportPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredSales.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

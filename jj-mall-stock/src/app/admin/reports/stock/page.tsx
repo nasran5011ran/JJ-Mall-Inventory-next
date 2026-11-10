@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
+import Pagination from '@/components/Pagination';
 import {
   FileSpreadsheet,
   Search,
@@ -94,6 +95,19 @@ export default function AdminStockReportPage() {
       return true;
     });
   }, [items, search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, categoryFilter, statusFilter]);
+
+  // Paginated items (10 items per page for screen view)
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
 
   // Export CSV
   const handleExportCSV = () => {

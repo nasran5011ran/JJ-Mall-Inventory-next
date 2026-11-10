@@ -17,6 +17,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import Pagination from '@/components/Pagination';
 
 interface ProductItem {
   id: number;
@@ -97,6 +98,18 @@ export default function StaffProductsPage() {
       return matchSearch && matchCategory;
     });
   }, [products, search, selectedCategory, user?.id]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage, pageSize]);
 
   const openAddModal = () => {
     setEditingProduct(null);
@@ -271,7 +284,7 @@ export default function StaffProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredProducts.map((p) => {
+                {paginatedProducts.map((p) => {
                   const isMyMenu = p.storeId === user?.id;
 
                   return (

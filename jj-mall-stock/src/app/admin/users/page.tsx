@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
+import Pagination from '@/components/Pagination';
 
 interface UserData {
   id: number;
@@ -126,6 +127,20 @@ export default function AdminUsersPage() {
       return matchSearch && matchRole && matchStatus;
     });
   }, [users, search, roleFilter, statusFilter]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter, statusFilter]);
+
+  // Paginated users (10 items per page)
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, currentPage, pageSize]);
 
   // Stats
   const totalCount = users.length;
@@ -503,7 +518,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredUsers.map((u) => {
+                {paginatedUsers.map((u) => {
                   const isCurrent = u.id === currentUser?.id;
                   const isHighlighted = highlightId === u.id;
                   const isAdminRole = u.role === 'ADMIN';
@@ -627,6 +642,14 @@ export default function AdminUsersPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredUsers.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

@@ -26,6 +26,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import Pagination from '@/components/Pagination';
 
 interface Ingredient {
   id: number;
@@ -329,6 +330,20 @@ export default function AdminStockAdjustmentsPage() {
     });
   }, [adjustments, activeTab, search]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeTab]);
+
+  // Paginated adjustments (10 items per page for screen view)
+  const paginatedAdjustments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAdjustments.slice(start, start + pageSize);
+  }, [filteredAdjustments, currentPage, pageSize]);
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -576,7 +591,7 @@ export default function AdminStockAdjustmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredAdjustments.map((adj) => {
+                {paginatedAdjustments.map((adj) => {
                   const isPending = adj.status === 'PENDING';
                   const isApproved = adj.status === 'APPROVED';
                   const isRejected = adj.status === 'REJECTED';
@@ -714,6 +729,14 @@ export default function AdminStockAdjustmentsPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredAdjustments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

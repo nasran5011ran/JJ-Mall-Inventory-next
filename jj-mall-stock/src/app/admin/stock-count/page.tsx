@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   ClipboardCheck,
   Search,
@@ -386,6 +387,20 @@ export default function AdminStockCountPage() {
     });
   }, [stockCounts, locationFilter, search]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, locationFilter]);
+
+  // Paginated counts (10 items per page for screen view)
+  const paginatedCounts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredCounts.slice(start, start + pageSize);
+  }, [filteredCounts, currentPage, pageSize]);
+
   // Overall Statistics across history
   const stats = useMemo(() => {
     let totalAudits = stockCounts.length;
@@ -578,7 +593,7 @@ export default function AdminStockCountPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredCounts.map((sc) => {
+                  {paginatedCounts.map((sc) => {
                     const matchCount = sc.items.filter((i) => i.status === 'MATCH').length;
                     const shortageCount = sc.items.filter((i) => i.status === 'SHORTAGE').length;
                     const surplusCount = sc.items.filter((i) => i.status === 'SURPLUS').length;
@@ -692,6 +707,14 @@ export default function AdminStockCountPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination (10 items per page) */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredCounts.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>

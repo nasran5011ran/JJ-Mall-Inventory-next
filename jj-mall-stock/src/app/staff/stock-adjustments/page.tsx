@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import {
   FileEdit,
@@ -28,6 +28,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import Pagination from '@/components/Pagination';
 
 interface Ingredient {
   id: number;
@@ -289,6 +290,18 @@ export default function StaffStockAdjustmentsPage() {
     });
   }, [adjustments, activeTab, search]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, activeTab]);
+
+  const paginatedAdjustments = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAdjustments.slice(start, start + pageSize);
+  }, [filteredAdjustments, currentPage, pageSize]);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Toast Notification */}
@@ -498,7 +511,7 @@ export default function StaffStockAdjustmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-                {filteredAdjustments.map((adj) => {
+                {paginatedAdjustments.map((adj) => {
                   const isPending = adj.status === 'PENDING';
                   const isApproved = adj.status === 'APPROVED';
                   const isRejected = adj.status === 'REJECTED';

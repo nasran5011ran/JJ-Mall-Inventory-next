@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
+import Pagination from '@/components/Pagination';
 import {
   ChefHat,
   Search,
@@ -143,6 +144,20 @@ export default function RecipesPage() {
       return matchProduct || matchIngredient;
     });
   }, [recipes, search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  // Paginated recipes (10 items per page)
+  const paginatedRecipes = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredRecipes.slice(start, start + pageSize);
+  }, [filteredRecipes, currentPage, pageSize]);
 
   // Open Add Modal
   const openAddModal = (defaultProdId?: number) => {
@@ -375,8 +390,9 @@ export default function RecipesPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {filteredRecipes.map((recipe) => {
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {paginatedRecipes.map((recipe) => {
               const isHighlighted = highlightId === recipe.id;
               const isReady = recipe.maxCupsAvailable > 0;
 
@@ -544,6 +560,17 @@ export default function RecipesPage() {
                 </div>
               );
             })}
+            </div>
+
+            {/* Pagination (10 items per page) */}
+            <div className="rounded-2xl overflow-hidden border border-slate-200">
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredRecipes.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
+            </div>
           </div>
         )}
 

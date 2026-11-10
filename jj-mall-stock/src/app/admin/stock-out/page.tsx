@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
+import Pagination from '@/components/Pagination';
 import {
   ArrowUpFromLine,
   Search,
@@ -336,6 +337,20 @@ export default function AdminStockOutPage() {
     });
   }, [transactions, storeFilter, search, dateFilter, staffStores]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset page when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, storeFilter, dateFilter]);
+
+  // Paginated transactions (10 items per page for screen view)
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
+
   // Grouped by Requisition Slip
   const requisitionSlips = useMemo(() => {
     const map = new Map<string, RequisitionSlipGroup>();
@@ -591,7 +606,7 @@ export default function AdminStockOutPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {filteredTransactions.map((tx) => {
+                  {paginatedTransactions.map((tx) => {
                     const qtyOut = Number(tx.quantityOut);
                     const balAfter = Number(tx.balanceAfter);
 
@@ -703,6 +718,14 @@ export default function AdminStockOutPage() {
                   })}
                 </tbody>
               </table>
+
+              {/* Pagination (10 items per page) */}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={filteredTransactions.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
