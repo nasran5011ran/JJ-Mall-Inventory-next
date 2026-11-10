@@ -1021,29 +1021,29 @@ export default function AdminStockOutPage() {
 
       {/* Modal 3: Official Printable Store Requisition Slip (Single Slip / Voucher) */}
       {printSlipOpen && printSlipMeta && (
-        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
-          <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
-                  ตัวอย่างก่อนพิมพ์: ใบเบิกจ่ายสินค้าจากคลังไปหน้าร้าน
+                  ตัวอย่างพิมพ์: ใบเบิกจ่ายสินค้าจากคลังไปหน้าร้าน (A4 แนวนอน)
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  เลขที่เอกสาร: {printSlipMeta.refId} • ร้านค้าผู้เบิก: {printSlipMeta.storeName}
+                  เลขที่เอกสาร: <span className="font-mono font-bold text-slate-800">{printSlipMeta.refId}</span> • จุดรับ: <span className="font-semibold text-slate-800">{printSlipMeta.storeName}</span>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
               >
                 <Printer className="w-4 h-4" />
-                <span>🖨️ สั่งพิมพ์เอกสาร</span>
+                <span>พิมพ์เอกสาร</span>
               </button>
               <button
                 type="button"
@@ -1055,19 +1055,19 @@ export default function AdminStockOutPage() {
             </div>
           </div>
 
-          {/* Printable Document Sheet (A4 Landscape Style) */}
+          {/* Printable Document Sheet (A4 Landscape Style, Standard Official Monochrome Black & White) */}
           <div
             id="official-stock-out-slip"
-            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
           >
+            {/* Top Right Reference Meta */}
+            <div className="absolute top-4 right-6 text-right text-[10px] text-black font-mono leading-tight">
+              <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+              <div>RTTR060ATHA.QRP</div>
+            </div>
+
             {/* Document Header */}
             <div className="relative pb-1 mb-2 border-b border-black">
-              {/* Top Right Reference Meta */}
-              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
-                <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
-                <div>RTTR060ATHA.QRP</div>
-              </div>
-
               {/* Company & Document Title */}
               <div className="text-center space-y-0.5">
                 <h2 className="text-sm sm:text-base font-bold text-black tracking-tight uppercase">
@@ -1078,34 +1078,44 @@ export default function AdminStockOutPage() {
                 </h3>
               </div>
 
-              {/* Sub-Header: Meta Grid */}
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px] pt-1">
-                <div>
-                  <span className="font-bold">เลขที่เอกสาร: </span>
-                  <span className="font-mono font-bold">{printSlipMeta.refId}</span>
+              {/* Sub-Header: Meta Info Row */}
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-t border-black pt-1.5 text-black">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="font-bold">เลขที่เอกสาร: </span>
+                    <span className="font-mono font-bold">{printSlipMeta.refId}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold">วันที่เบิกจ่าย: </span>
+                    <span className="font-mono">
+                      {new Date(printSlipMeta.createdAt).toLocaleDateString('th-TH')}{' '}
+                      {new Date(printSlipMeta.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold">จุดรับสินค้า: </span>
+                    <span className="font-bold">{printSlipMeta.storeName}</span>
+                  </div>
+                  <div>
+                    <span className="font-bold">คลังผู้จ่าย: </span>
+                    <span>คลังส่วนกลาง JJ Mall</span>
+                  </div>
                 </div>
                 <div>
-                  <span className="font-bold">วันที่เบิกจ่าย: </span>
+                  <span className="font-bold">พิมพ์เมื่อ: </span>
                   <span className="font-mono">
-                    {new Date(printSlipMeta.createdAt).toLocaleDateString('th-TH')}{' '}
-                    {new Date(printSlipMeta.createdAt).toLocaleTimeString('th-TH')} น.
+                    {new Date().toLocaleDateString('th-TH')}{' '}
+                    {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                   </span>
                 </div>
-                <div>
-                  <span className="font-bold">จุดรับสินค้า (ร้านค้า): </span>
-                  <span className="font-bold">{printSlipMeta.storeName}</span>
-                </div>
-                <div>
-                  <span className="font-bold">คลังผู้จ่าย: </span>
-                  <span>คลังสินค้าส่วนกลาง JJ Mall</span>
-                </div>
-                {printSlipMeta.note && (
-                  <div className="sm:col-span-4 border-t border-black pt-1 mt-0.5">
-                    <span className="font-bold">หมายเหตุการเบิกจ่าย: </span>
-                    <span>{printSlipMeta.note}</span>
-                  </div>
-                )}
               </div>
+
+              {printSlipMeta.note && (
+                <div className="border-t border-black pt-1 mt-1 text-[10.5px]">
+                  <span className="font-bold">หมายเหตุการเบิกจ่าย: </span>
+                  <span>{printSlipMeta.note}</span>
+                </div>
+              )}
             </div>
 
             {/* Requisition Items Table */}
@@ -1202,27 +1212,32 @@ export default function AdminStockOutPage() {
       {printAllModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Toolbar (Hidden when printing) */}
-          <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          {/* Top Control Toolbar (Hidden when printing) */}
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
               <Printer className="w-5 h-5 text-emerald-700" />
               <div>
                 <h4 className="font-bold text-xs sm:text-sm text-slate-800">
-                  ตัวอย่างก่อนพิมพ์: รายงานการเบิกจ่ายสินค้าไปหน้าร้านทั้งหมด (พิมพ์รวมทุกรายการ)
+                  ตัวอย่างพิมพ์: รายงานสรุปการเบิกจ่ายสินค้าไปหน้าร้านทั้งหมด (A4 แนวนอน)
                 </h4>
                 <p className="text-[11px] text-slate-500">
-                  พิมพ์รายการเบิกจ่ายทั้งหมดตามตัวกรอง ({filteredTransactions.length} รายการ)
+                  รายงานสรุปการเบิกจ่ายวัตถุดิบและพัสดุตามเงื่อนไขตัวกรอง
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-slate-600 font-medium bg-slate-100 px-3 py-1.5 rounded-xl">
+                รวมทั้งหมด <span className="font-bold font-mono text-slate-900">{filteredTransactions.length}</span> รายการ
+              </div>
+
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer transition-all"
               >
                 <Printer className="w-4 h-4" />
-                <span>🖨️ สั่งพิมพ์เอกสารทั้งหมด</span>
+                <span>พิมพ์เอกสาร</span>
               </button>
               <button
                 type="button"
@@ -1234,14 +1249,14 @@ export default function AdminStockOutPage() {
             </div>
           </div>
 
-          {/* Printable Document Sheet (A4 Landscape Style) */}
+          {/* Printable Document Sheet (A4 Landscape Style, Standard Official Monochrome Black & White) */}
           <div
             id="official-stock-out-report"
-            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none print:p-0 space-y-3.5"
           >
             {/* Document Header */}
             <div className="relative pb-1 mb-2 border-b border-black">
-              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
+              <div className="absolute top-4 right-6 text-right text-[10px] text-black font-mono leading-tight">
                 <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
                 <div>RTTR060ATHA.QRP</div>
               </div>
@@ -1255,37 +1270,39 @@ export default function AdminStockOutPage() {
                 </h3>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10.5px] pt-1">
-                <div>
-                  <span className="font-bold">ร้านค้าปลายทาง: </span>
-                  <span>
-                    {storeFilter === 'ALL'
-                      ? 'ทุกร้านค้าปลายทาง'
-                      : staffStores.find((s) => String(s.id) === storeFilter)?.name || storeFilter}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold">ช่วงเวลา: </span>
-                  <span>
-                    {dateFilter === 'ALL'
-                      ? 'ทั้งหมด'
-                      : dateFilter === 'TODAY'
-                      ? 'วันนี้'
-                      : dateFilter === 'WEEK'
-                      ? '7 วันล่าสุด'
-                      : '30 วันล่าสุด'}
-                  </span>
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-t border-black pt-1.5 text-black">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="font-bold">ร้านค้าปลายทาง: </span>
+                    <span className="font-bold">
+                      {storeFilter === 'ALL'
+                        ? 'ทุกร้านค้าปลายทาง'
+                        : staffStores.find((s) => String(s.id) === storeFilter)?.name || storeFilter}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold">ช่วงเวลา: </span>
+                    <span className="font-bold">
+                      {dateFilter === 'ALL'
+                        ? 'ทั้งหมด'
+                        : dateFilter === 'TODAY'
+                        ? 'วันนี้'
+                        : dateFilter === 'WEEK'
+                        ? '7 วันล่าสุด'
+                        : '30 วันล่าสุด'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-bold">คลังสินค้า: </span>
+                    <span>คลังส่วนกลาง JJ Mall</span>
+                  </div>
                 </div>
                 <div>
                   <span className="font-bold">พิมพ์เมื่อ: </span>
                   <span className="font-mono">
                     {new Date().toLocaleDateString('th-TH')}{' '}
-                    {new Date().toLocaleTimeString('th-TH')} น.
+                    {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                   </span>
-                </div>
-                <div>
-                  <span className="font-bold">คลังสินค้า: </span>
-                  <span>คลังสินค้าส่วนกลาง JJ Mall</span>
                 </div>
               </div>
             </div>
