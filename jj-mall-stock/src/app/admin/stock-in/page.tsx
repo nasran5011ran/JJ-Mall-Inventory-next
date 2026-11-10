@@ -72,8 +72,12 @@ interface InboundItemForm {
 export default function AdminStockInPage() {
   const { user } = useAuth();
 
-  // Instant SWR Cache for Inbound Stock Data
-  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/stock-in');
+  // Instant SWR Cache for Inbound Stock Data with Real-time Auto-refresh
+  const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/stock-in', {
+    refreshInterval: 5000,
+    revalidateOnFocus: true,
+    dedupingInterval: 2000,
+  });
 
   const transactions: InboundTransaction[] = useMemo(() => {
     return swrData?.success && Array.isArray(swrData.transactions) ? swrData.transactions : [];
@@ -128,7 +132,7 @@ export default function AdminStockInPage() {
     setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
     setSupplier('แม็คโคร (Makro)');
     setNote('');
-    setFormItems([{ ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '100', costPerUnit: String(ingredients[0]?.costPerUnit || '0') }]);
+    setFormItems([{ ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '', costPerUnit: String(ingredients[0]?.costPerUnit || '0') }]);
     setFormError(null);
     setModalOpen(true);
   };
@@ -803,76 +807,109 @@ export default function AdminStockInPage() {
                   <div className="space-y-2">
                     {formItems.map((item, idx) => {
                       const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
-                      const rowSubtotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.costPerUnit) || 0);
+                      const currentStock = Number(selectedIng?.currentStock || 0);
+                      const inboundQty = parseFloat(item.quantity) || 0;
+                      const newBalance = currentStock + inboundQty;
+                      const rowSubtotal = inboundQty * (parseFloat(item.costPerUnit) || 0);
 
                       return (
                         <div
                           key={idx}
-                          className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-2 text-xs"
+                          className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5 transition-all hover:border-slate-300"
                         >
-                          {/* Ingredient Select */}
-                          <div className="flex-1 w-full">
-                            <select
-                              value={item.ingredientId}
-                              onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
-                              required
-                              className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none"
+                          <div className="flex flex-col sm:flex-row items-center gap-2">
+                            {/* Ingredient Select */}
+                            <div className="flex-1 w-full">
+                              <select
+                                value={item.ingredientId}
+                                onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
+                                required
+                                className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                              >
+                                <option value="">-- เลือกวัตถุดิบ --</option>
+                                {ingredients.map((ing) => (
+                                  <option key={ing.id} value={ing.id}>
+                                    {ing.name} (คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Quantity In */}
+                            <div className="w-full sm:w-36 flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0.001"
+                                step="any"
+                                required
+                                placeholder="ระบุจำนวน"
+                                value={item.quantity}
+                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                                className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold"
+                              />
+                              <span className="text-[11px] text-slate-500 font-mono w-12 truncate text-right">
+                                {selectedIng?.unit || 'หน่วย'}
+                              </span>
+                            </div>
+
+                            {/* Cost Per Unit */}
+                            <div className="w-full sm:w-28 flex items-center gap-1">
+                              <span className="text-slate-400 text-[11px]">฿</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                placeholder="ต้นทุน"
+                                value={item.costPerUnit}
+                                onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
+                                className="w-full px-2 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
+                              />
+                            </div>
+
+                            {/* Subtotal Preview */}
+                            <div className="w-24 text-right font-mono font-bold text-slate-700 hidden sm:block">
+                              ฿{rowSubtotal.toFixed(2)}
+                            </div>
+
+                            {/* Delete Row */}
+                            <button
+                              type="button"
+                              onClick={() => removeItemRow(idx)}
+                              disabled={formItems.length === 1}
+                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-30 cursor-pointer transition-colors"
+                              title="ลบแถวนี้"
                             >
-                              <option value="">-- เลือกวัตถุดิบ --</option>
-                              {ingredients.map((ing) => (
-                                <option key={ing.id} value={ing.id}>
-                                  {ing.name} (คงเหลือ: {Number(ing.currentStock)} {ing.unit})
-                                </option>
-                              ))}
-                            </select>
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
 
-                          {/* Quantity In */}
-                          <div className="w-full sm:w-32 flex items-center gap-1">
-                            <input
-                              type="number"
-                              min="0.1"
-                              step="any"
-                              required
-                              placeholder="จำนวน"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none font-bold"
-                            />
-                            <span className="text-[11px] text-slate-400 font-mono w-10 truncate">
-                              {selectedIng?.unit || 'หน่วย'}
-                            </span>
-                          </div>
+                          {/* Real-time Stock Calculation: [Current Stock] + [Quantity In] = [New Balance] */}
+                          {selectedIng && (
+                            <div className="pt-2 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                              <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
+                                <span>คงเหลือเดิมในคลัง:</span>
+                                <span className="font-mono font-bold text-slate-700">
+                                  {currentStock.toLocaleString()} {selectedIng.unit}
+                                </span>
+                                {inboundQty > 0 && (
+                                  <>
+                                    <span className="text-emerald-600 font-black">+</span>
+                                    <span>รับเข้า:</span>
+                                    <span className="font-mono font-bold text-emerald-700">
+                                      {inboundQty.toLocaleString()} {selectedIng.unit}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
 
-                          {/* Cost Per Unit */}
-                          <div className="w-full sm:w-28 flex items-center gap-1">
-                            <span className="text-slate-400 text-[11px]">฿</span>
-                            <input
-                              type="number"
-                              min="0"
-                              step="any"
-                              placeholder="ต้นทุน"
-                              value={item.costPerUnit}
-                              onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
-                              className="w-full px-2 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
-                            />
-                          </div>
-
-                          {/* Subtotal Preview */}
-                          <div className="w-24 text-right font-mono font-bold text-slate-700 hidden sm:block">
-                            ฿{rowSubtotal.toFixed(2)}
-                          </div>
-
-                          {/* Delete Row */}
-                          <button
-                            type="button"
-                            onClick={() => removeItemRow(idx)}
-                            disabled={formItems.length === 1}
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-30 cursor-pointer transition-colors"
-                            title="ลบแถวนี้"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800">
+                                <span className="text-[10px] text-emerald-600 font-semibold">ยอดคงเหลือใหม่หลังรับเข้า:</span>
+                                <span className="font-mono font-black text-xs text-emerald-700">
+                                  {newBalance.toLocaleString()} {selectedIng.unit}
+                                </span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
