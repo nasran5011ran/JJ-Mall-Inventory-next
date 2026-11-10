@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     if (!password || !password.trim()) {
       return NextResponse.json(
-        { success: false, message: 'กรุณากำหนดรหัสผ่าน (สามารถใช้รหัสจำง่าย เช่น 1234 ได้)' },
+        { success: false, message: 'กรุณากำหนดรหัสผ่านสำหรับผู้ใช้งานนี้' },
         { status: 400 }
       );
     }
