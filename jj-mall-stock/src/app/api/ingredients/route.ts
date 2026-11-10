@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET /api/ingredients - List all ingredients with search and filters
 export async function GET(req: NextRequest) {
@@ -55,10 +56,25 @@ export async function GET(req: NextRequest) {
     });
     const categories = all.map((i) => i.category).filter(Boolean);
 
+    // Fetch active staff stores for store-level stock selection
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, name: true, username: true },
+      orderBy: { id: 'asc' },
+    });
+
+    // Compute store balances for each store
+    const storeBalances: Record<number, any[]> = {};
+    for (const store of staffStores) {
+      storeBalances[store.id] = await calculateStoreReconciliation(store.id);
+    }
+
     return NextResponse.json({
       success: true,
       ingredients,
       categories,
+      staffStores,
+      storeBalances,
     });
   } catch (error: any) {
     console.error('Error fetching ingredients:', error);

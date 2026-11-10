@@ -21,7 +21,30 @@ import {
   Eye,
   TrendingDown,
   DollarSign,
+  Store,
+  Warehouse,
+  ArrowUpFromLine,
 } from 'lucide-react';
+
+interface StaffStore {
+  id: number;
+  name: string;
+  username: string;
+}
+
+interface StoreIngredientBalance {
+  ingredientId: number;
+  code: string;
+  name: string;
+  category: string | null;
+  unit: string;
+  costPerUnit: number;
+  warehouseStock: number;
+  openingQuantity: number;
+  inboundQuantity: number;
+  salesQuantity: number;
+  expectedStock: number;
+}
 
 interface IngredientItem {
   id: number;
@@ -89,6 +112,31 @@ export default function IngredientsPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedStockStatus, setSelectedStockStatus] = useState('ALL');
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('CENTRAL');
+
+  const staffStores: StaffStore[] = useMemo(() => {
+    return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
+  }, [swrData]);
+
+  const storeBalances: Record<number, StoreIngredientBalance[]> = useMemo(() => {
+    return swrData?.success && swrData.storeBalances ? swrData.storeBalances : {};
+  }, [swrData]);
+
+  const isCentral = selectedStoreId === 'CENTRAL';
+
+  const selectedStoreBalancesMap = useMemo(() => {
+    if (selectedStoreId === 'CENTRAL') return new Map<number, StoreIngredientBalance>();
+    const storeIdNum = Number(selectedStoreId);
+    const list = storeBalances[storeIdNum] || [];
+    const map = new Map<number, StoreIngredientBalance>();
+    list.forEach((item) => map.set(item.ingredientId, item));
+    return map;
+  }, [selectedStoreId, storeBalances]);
+
+  const currentSelectedStore = useMemo(() => {
+    if (selectedStoreId === 'CENTRAL') return null;
+    return staffStores.find((s) => s.id === Number(selectedStoreId)) || null;
+  }, [selectedStoreId, staffStores]);
 
   // Highlight updated or newly added row
   const [highlightId, setHighlightId] = useState<number | null>(null);
@@ -168,7 +216,11 @@ export default function IngredientsPage() {
 
       const matchCategory = selectedCategory === 'ALL' || ing.category === selectedCategory;
 
-      const stock = Number(ing.currentStock);
+      let stock = Number(ing.currentStock);
+      if (!isCentral) {
+        const b = selectedStoreBalancesMap.get(ing.id);
+        stock = b ? Number(b.expectedStock) : 0;
+      }
       const min = Number(ing.minStock);
 
       let matchStock = true;
@@ -182,7 +234,7 @@ export default function IngredientsPage() {
 
       return matchSearch && matchCategory && matchStock;
     });
-  }, [ingredients, search, selectedCategory, selectedStockStatus]);
+  }, [ingredients, search, selectedCategory, selectedStockStatus, isCentral, selectedStoreBalancesMap]);
 
   const openAddModal = () => {
     setEditingIngredient(null);
@@ -318,7 +370,11 @@ export default function IngredientsPage() {
   let totalValue = 0;
 
   ingredients.forEach((ing) => {
-    const s = Number(ing.currentStock);
+    let s = Number(ing.currentStock);
+    if (!isCentral) {
+      const b = selectedStoreBalancesMap.get(ing.id);
+      s = b ? Number(b.expectedStock) : 0;
+    }
     const m = Number(ing.minStock);
     const cost = Number(ing.costPerUnit || 0);
     totalValue += s * cost;
@@ -376,6 +432,61 @@ export default function IngredientsPage() {
           </div>
         </div>
 
+        {/* Store Selection Tabs */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+          <button
+            type="button"
+            onClick={() => setSelectedStoreId('CENTRAL')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              selectedStoreId === 'CENTRAL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Warehouse className="w-4 h-4" />
+            <span>คลังสินค้าส่วนกลาง (Central Warehouse)</span>
+          </button>
+
+          {staffStores.map((st) => {
+            const isSelected = selectedStoreId === String(st.id);
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => setSelectedStoreId(String(st.id))}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                  isSelected
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200/80'
+                }`}
+              >
+                <Store className="w-4 h-4 text-amber-700" />
+                <span>🏪 สต็อกร้าน: {st.name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Store Context Banner (when a store is selected) */}
+        {!isCentral && currentSelectedStore && (
+          <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-amber-900 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <Store className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                กำลังดูสต็อกหน้าร้าน: <strong>{currentSelectedStore.name}</strong> (@{currentSelectedStore.username}) —
+                คำนวณจากสูตร: <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono font-bold">ยอดยกมา + รับเข้าจากคลัง - ตัดขาย POS</code>
+              </span>
+            </div>
+            <Link
+              href="/admin/stock-out"
+              className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+            >
+              <ArrowUpFromLine className="w-3.5 h-3.5" />
+              <span>+ โอนของให้ร้านนี้</span>
+            </Link>
+          </div>
+        )}
+
         {/* Staff Read-only Banner */}
         {!isAdmin && currentUser && (
           <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-semibold flex items-center justify-between">
@@ -420,7 +531,9 @@ export default function IngredientsPage() {
           </div>
 
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
-            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">มูลค่าสต็อกในคลัง</div>
+            <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
+              {isCentral ? 'มูลค่าสต็อกในคลังกลาง' : `มูลค่าสต็อกร้าน: ${currentSelectedStore?.name || ''}`}
+            </div>
             <div className="text-2xl font-black text-blue-700 mt-1">
               ฿{totalValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
@@ -442,7 +555,21 @@ export default function IngredientsPage() {
           </div>
 
           {/* Filters */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            {/* Store Dropdown Filter */}
+            <select
+              value={selectedStoreId}
+              onChange={(e) => setSelectedStoreId(e.target.value)}
+              className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-amber-50/70 text-amber-950 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
+            >
+              <option value="CENTRAL">🏬 คลังสินค้าส่วนกลาง</option>
+              {staffStores.map((st) => (
+                <option key={st.id} value={st.id}>
+                  🏪 ร้าน: {st.name}
+                </option>
+              ))}
+            </select>
+
             {/* Category Filter */}
             <select
               value={selectedCategory}
@@ -493,23 +620,40 @@ export default function IngredientsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="py-3.5 px-4">รหัสวัตถุดิบ</th>
-                    <th className="py-3.5 px-4">ชื่อวัตถุดิบ</th>
-                    <th className="py-3.5 px-4">หมวดหมู่</th>
-                    <th className="py-3.5 px-4 text-right">คงเหลือในคลัง</th>
-                    <th className="py-3.5 px-4 text-right">สต็อกขั้นต่ำ (Min)</th>
-                    <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
-                    <th className="py-3.5 px-4 text-right">มูลค่ารวม</th>
-                    <th className="py-3.5 px-4 text-center">สถานะสต็อก</th>
-                    <th className="py-3.5 px-4 text-center">ใช้ในเมนู</th>
-                    <th className="py-3.5 px-4 text-center">จัดการ</th>
-                  </tr>
+                  {isCentral ? (
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-4">รหัสวัตถุดิบ</th>
+                      <th className="py-3.5 px-4">ชื่อวัตถุดิบ</th>
+                      <th className="py-3.5 px-4">หมวดหมู่</th>
+                      <th className="py-3.5 px-4 text-right">คงเหลือคลังกลาง</th>
+                      <th className="py-3.5 px-4 text-right">สต็อกขั้นต่ำ (Min)</th>
+                      <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
+                      <th className="py-3.5 px-4 text-right">มูลค่ารวม</th>
+                      <th className="py-3.5 px-4 text-center">สถานะสต็อก</th>
+                      <th className="py-3.5 px-4 text-center">ใช้ในเมนู</th>
+                      <th className="py-3.5 px-4 text-center">จัดการ</th>
+                    </tr>
+                  ) : (
+                    <tr className="bg-amber-50/80 border-b border-amber-200 text-amber-900 font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-4">รหัส/ชื่อวัตถุดิบ</th>
+                      <th className="py-3.5 px-4">หมวดหมู่</th>
+                      <th className="py-3.5 px-3 text-right">ยอดยกมา</th>
+                      <th className="py-3.5 px-3 text-right text-emerald-700">รับเข้า (+)</th>
+                      <th className="py-3.5 px-3 text-right text-red-700">ขาย POS (-)</th>
+                      <th className="py-3.5 px-4 text-right bg-amber-100/70 font-black text-amber-950">คงเหลือในร้าน</th>
+                      <th className="py-3.5 px-4 text-right">ขั้นต่ำ (Min)</th>
+                      <th className="py-3.5 px-4 text-right">ต้นทุน/หน่วย</th>
+                      <th className="py-3.5 px-4 text-right">มูลค่าในร้าน</th>
+                      <th className="py-3.5 px-4 text-center">สถานะ</th>
+                      <th className="py-3.5 px-4 text-center">จัดการ</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredIngredients.map((ing) => {
                     const isHighlighted = highlightId === ing.id;
-                    const stock = Number(ing.currentStock);
+                    const b = selectedStoreBalancesMap.get(ing.id);
+                    const stock = isCentral ? Number(ing.currentStock) : (b ? Number(b.expectedStock) : 0);
                     const min = Number(ing.minStock);
                     const cost = Number(ing.costPerUnit || 0);
                     const totalIngValue = stock * cost;
@@ -523,125 +667,216 @@ export default function IngredientsPage() {
                         className={`transition-colors duration-500 ${
                           isHighlighted
                             ? 'bg-emerald-50 ring-2 ring-emerald-500/50'
+                            : !isCentral
+                            ? 'hover:bg-amber-50/40'
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
-                        {/* Code */}
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
-                          {ing.code}
-                        </td>
+                        {isCentral ? (
+                          <>
+                            {/* Code */}
+                            <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
+                              {ing.code}
+                            </td>
 
-                        {/* Name */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800 text-sm">{ing.name}</div>
-                          <div className="text-[11px] text-slate-400">หน่วย: {ing.unit}</div>
-                        </td>
+                            {/* Name */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-800 text-sm">{ing.name}</div>
+                              <div className="text-[11px] text-slate-400">หน่วย: {ing.unit}</div>
+                            </td>
 
-                        {/* Category */}
-                        <td className="py-3.5 px-4">
-                          <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
-                            {ing.category}
-                          </span>
-                        </td>
+                            {/* Category */}
+                            <td className="py-3.5 px-4">
+                              <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                                {ing.category}
+                              </span>
+                            </td>
 
-                        {/* Current Stock */}
-                        <td className="py-3.5 px-4 text-right font-black text-sm">
-                          <span
-                            className={
-                              isOutOfStock
-                                ? 'text-red-600'
-                                : isLowStock
-                                ? 'text-amber-600'
-                                : 'text-slate-900'
-                            }
-                          >
-                            {stock.toLocaleString()}
-                          </span>{' '}
-                          <span className="text-xs font-normal text-slate-500">{ing.unit}</span>
-                        </td>
+                            {/* Current Stock */}
+                            <td className="py-3.5 px-4 text-right font-black text-sm">
+                              <span
+                                className={
+                                  isOutOfStock
+                                    ? 'text-red-600'
+                                    : isLowStock
+                                    ? 'text-amber-600'
+                                    : 'text-slate-900'
+                                }
+                              >
+                                {stock.toLocaleString()}
+                              </span>{' '}
+                              <span className="text-xs font-normal text-slate-500">{ing.unit}</span>
+                            </td>
 
-                        {/* Min Stock */}
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-500">
-                          {min.toLocaleString()} {ing.unit}
-                        </td>
+                            {/* Min Stock */}
+                            <td className="py-3.5 px-4 text-right font-mono text-slate-500">
+                              {min.toLocaleString()} {ing.unit}
+                            </td>
 
-                        {/* Cost Per Unit */}
-                        <td className="py-3.5 px-4 text-right font-mono text-slate-600">
-                          ฿{cost.toFixed(2)}/{ing.unit}
-                        </td>
+                            {/* Cost Per Unit */}
+                            <td className="py-3.5 px-4 text-right font-mono text-slate-600">
+                              ฿{cost.toFixed(2)}/{ing.unit}
+                            </td>
 
-                        {/* Total Value */}
-                        <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
-                          ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
+                            {/* Total Value */}
+                            <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
+                              ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
 
-                        {/* Stock Status Pill */}
-                        <td className="py-3.5 px-4 text-center">
-                          {isOutOfStock ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-800 border border-red-200">
-                              <XCircle className="w-3 h-3 text-red-600" />
-                              หมดสต็อก
-                            </span>
-                          ) : isLowStock ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
-                              <AlertTriangle className="w-3 h-3 text-amber-600" />
-                              ใกล้หมด
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              สต็อกเพียงพอ
-                            </span>
-                          )}
-                        </td>
+                            {/* Stock Status Pill */}
+                            <td className="py-3.5 px-4 text-center">
+                              {isOutOfStock ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-800 border border-red-200">
+                                  <XCircle className="w-3 h-3 text-red-600" />
+                                  หมดสต็อก
+                                </span>
+                              ) : isLowStock ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                  ใกล้หมด
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  สต็อกเพียงพอ
+                                </span>
+                              )}
+                            </td>
 
-                        {/* Used in Recipes */}
-                        <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => viewIngredientDetails(ing.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/60 transition-colors cursor-pointer"
-                            title="ดูเมนูที่ใช้วัตถุดิบนี้"
-                          >
-                            <ChefHat className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{ing._count?.recipeItems || 0} เมนู</span>
-                          </button>
-                        </td>
+                            {/* Used in Recipes */}
+                            <td className="py-3.5 px-4 text-center">
+                              <button
+                                onClick={() => viewIngredientDetails(ing.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/60 transition-colors cursor-pointer"
+                                title="ดูเมนูที่ใช้วัตถุดิบนี้"
+                              >
+                                <ChefHat className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>{ing._count?.recipeItems || 0} เมนู</span>
+                              </button>
+                            </td>
 
-                        {/* Actions */}
-                        <td className="py-3.5 px-4 text-center">
-                          {isAdmin ? (
-                            <div className="flex items-center justify-center gap-1.5">
-                              {/* Stock-in quick link */}
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-center">
+                              {isAdmin ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  {/* Stock-in quick link */}
+                                  <Link
+                                    href={`/admin/stock-in?code=${ing.code}`}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1"
+                                    title="รับเข้าสต็อก"
+                                  >
+                                    <ArrowDownToLine className="w-3 h-3" />
+                                    <span>รับเข้า</span>
+                                  </Link>
+
+                                  <button
+                                    onClick={() => openEditModal(ing)}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                    title="แก้ไขวัตถุดิบ"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(ing.id, ing.name)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                    title="ลบหรือระงับวัตถุดิบ"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-400 font-semibold bg-slate-100 px-2.5 py-1 rounded-full">
+                                  ดูเท่านั้น
+                                </span>
+                              )}
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            {/* Store Mode: Name & Code */}
+                            <td className="py-3.5 px-4">
+                              <div className="font-bold text-slate-800 text-sm">{ing.name}</div>
+                              <div className="text-[11px] font-mono text-slate-400">{ing.code}</div>
+                            </td>
+
+                            {/* Category */}
+                            <td className="py-3.5 px-4">
+                              <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                                {ing.category}
+                              </span>
+                            </td>
+
+                            {/* Opening */}
+                            <td className="py-3.5 px-3 text-right font-mono text-slate-600 text-xs">
+                              {(b ? Number(b.openingQuantity) : 0).toLocaleString()} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                            </td>
+
+                            {/* Inbound */}
+                            <td className="py-3.5 px-3 text-right font-mono text-xs text-emerald-700 font-bold">
+                              {(b && Number(b.inboundQuantity) > 0) ? `+${Number(b.inboundQuantity).toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                            </td>
+
+                            {/* Sales */}
+                            <td className="py-3.5 px-3 text-right font-mono text-xs text-red-700 font-bold">
+                              {(b && Number(b.salesQuantity) > 0) ? `-${Number(b.salesQuantity).toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                            </td>
+
+                            {/* Expected In-Store Stock */}
+                            <td className="py-3.5 px-4 text-right bg-amber-50 font-black text-sm text-amber-950 font-mono">
+                              <span className={isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-slate-900'}>
+                                {stock.toLocaleString()}
+                              </span>{' '}
+                              <span className="text-xs font-semibold text-slate-500">{ing.unit}</span>
+                            </td>
+
+                            {/* Min Stock */}
+                            <td className="py-3.5 px-4 text-right font-mono text-slate-500">
+                              {min.toLocaleString()} {ing.unit}
+                            </td>
+
+                            {/* Cost */}
+                            <td className="py-3.5 px-4 text-right font-mono text-slate-600">
+                              ฿{cost.toFixed(2)}
+                            </td>
+
+                            {/* Total Value */}
+                            <td className="py-3.5 px-4 text-right font-mono font-bold text-slate-800">
+                              ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 text-center">
+                              {isOutOfStock ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-800 border border-red-200">
+                                  <XCircle className="w-3 h-3 text-red-600" />
+                                  ของหมด
+                                </span>
+                              ) : isLowStock ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200">
+                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
+                                  ใกล้หมด
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  พร้อมขาย
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Actions in Store Mode: Quick transfer button */}
+                            <td className="py-3.5 px-4 text-center">
                               <Link
-                                href={`/admin/stock-in?code=${ing.code}`}
-                                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1"
-                                title="รับเข้าสต็อก"
+                                href="/admin/stock-out"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-colors cursor-pointer"
+                                title="โอนวัตถุดิบไปให้ร้านนี้"
                               >
-                                <ArrowDownToLine className="w-3 h-3" />
-                                <span>รับเข้า</span>
+                                <ArrowUpFromLine className="w-3 h-3 text-amber-700" />
+                                <span>โอนของ</span>
                               </Link>
-
-                              <button
-                                onClick={() => openEditModal(ing)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                                title="แก้ไขวัตถุดิบ"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(ing.id, ing.name)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="ลบหรือระงับวัตถุดิบ"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-slate-400 font-semibold bg-slate-100 px-2.5 py-1 rounded-full">
-                              ดูเท่านั้น
-                            </span>
-                          )}
-                        </td>
+                            </td>
+                          </>
+                        )}
                       </tr>
                     );
                   })}
