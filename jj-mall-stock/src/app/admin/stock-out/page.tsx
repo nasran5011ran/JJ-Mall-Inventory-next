@@ -416,7 +416,7 @@ export default function AdminStockOutPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 ml-auto">
+          <div className="flex items-center gap-2.5 ml-auto shrink-0">
             <button
               onClick={() => mutate()}
               disabled={refreshing}
@@ -431,11 +431,11 @@ export default function AdminStockOutPage() {
             <button
               type="button"
               onClick={() => setPrintAllModalOpen(true)}
-              className="px-4 py-2.5 rounded-2xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-all"
+              className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
               title="พิมพ์รายงานสรุปการเบิกจ่ายสินค้าทั้งหมดทีเดียว"
             >
-              <Printer className="w-4 h-4 text-emerald-700" />
-              <span>🖨️ พิมพ์รายการเบิกจ่ายทั้งหมด ({filteredTransactions.length} รายการ)</span>
+              <Printer className="w-4 h-4 text-emerald-600" />
+              <span>พิมพ์รายงานเบิกจ่าย</span>
             </button>
 
             <button
