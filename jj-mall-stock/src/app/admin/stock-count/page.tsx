@@ -1477,11 +1477,11 @@ export default function AdminStockCountPage() {
                     <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white">ชื่อสินค้า</th>
                     <th rowSpan={2} className="py-1 px-1 border-r border-black w-12 text-center bg-white">หน่วยนับ</th>
                     <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-14 text-right bg-white">ยกมา</th>
-                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center">
-                      &lt;-- รายการรับ --&gt;
+                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
+                      &lt;------------ รายการรับ ------------&gt;
                     </th>
-                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center">
-                      &lt;-- รายการจ่าย --&gt;
+                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
+                      &lt;------------ รายการจ่าย ------------&gt;
                     </th>
                     <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
                       คงเหลือจาก<br />การคำนวณ
@@ -1496,8 +1496,8 @@ export default function AdminStockCountPage() {
 
                   {/* Sub Header Columns */}
                   <tr className="border-b border-black text-black font-bold text-center bg-white">
-                    <th className="py-0.5 px-1 border-r border-black text-right w-16 bg-white">
-                      {printRecord.location === 'STORE' || printRecord.storeId ? 'เบิกเข้า' : 'รับเข้า'}
+                    <th className="py-0.5 px-1 border-r border-black text-right w-18 bg-white">
+                      ปรับปรุงเพิ่ม
                     </th>
                     <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">ขาย</th>
                     <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">จ่ายทำลาย</th>
@@ -1542,19 +1542,19 @@ export default function AdminStockCountPage() {
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
 
-                        {/* รับเข้า / เบิกเข้า */}
+                        {/* ปรับปรุงเพิ่ม (รับเข้า) */}
                         <td className="py-0.5 px-1 border-r border-black text-right text-black">
-                          {inQty > 0 ? inQty.toFixed(2) : '-'}
+                          {inQty > 0 ? inQty.toFixed(2) : ''}
                         </td>
 
                         {/* ขาย (Sales) */}
                         <td className="py-0.5 px-1 border-r border-black text-right text-black">
-                          {saleQty > 0 ? `(${saleQty.toFixed(2)})` : '-'}
+                          {saleQty > 0 ? `(${saleQty.toFixed(2)})` : ''}
                         </td>
 
                         {/* จ่ายทำลาย (Waste) */}
                         <td className="py-0.5 px-1 border-r border-black text-right text-black">
-                          {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : '-'}
+                          {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : ''}
                         </td>
 
                         {/* คงเหลือจากการคำนวณ (System) */}
