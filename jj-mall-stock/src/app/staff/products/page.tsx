@@ -342,7 +342,7 @@ export default function StaffProductsPage() {
                             <img
                               src={p.image}
                               alt={p.name}
-                              className="w-full h-full object-contain p-0.5"
+                              className="w-full h-full object-cover"
                             />
                           </div>
                         ) : (

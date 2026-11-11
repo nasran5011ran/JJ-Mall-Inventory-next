@@ -599,11 +599,11 @@ export default function ProductsPage() {
                         {/* Product Image Thumbnail */}
                         <td className="py-2.5 px-4 text-center">
                           {p.image ? (
-                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center p-0.5">
+                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center">
                               <img
                                 src={p.image}
                                 alt={p.name}
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-cover"
                               />
                             </div>
                           ) : (
