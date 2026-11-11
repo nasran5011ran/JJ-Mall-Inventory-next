@@ -256,51 +256,6 @@ export default function SalesPage() {
     setShowConfirmModal(true);
   };
 
-  // Real-time Bank Payment Listener State
-  const [listeningPayment, setListeningPayment] = useState(false);
-  const [paymentDetected, setPaymentDetected] = useState<string | null>(null);
-
-  // Poll for bank payment while QR modal is active (Zero-Interaction Auto Confirm)
-  useEffect(() => {
-    if (!showConfirmModal || paymentMethod !== 'QR' || totalAmount <= 0) {
-      setListeningPayment(false);
-      setPaymentDetected(null);
-      return;
-    }
-
-    setListeningPayment(true);
-    let isCancelled = false;
-
-    const interval = setInterval(async () => {
-      if (isCancelled || processing) return;
-
-      try {
-        const res = await fetch(`/api/sales/check-payment?amount=${totalAmount}&storeId=${user?.id || ''}`);
-        const data = await res.json();
-
-        if (data.success && data.paid && !isCancelled) {
-          isCancelled = true;
-          clearInterval(interval);
-          setPaymentDetected(`✓ ได้รับเงิน ฿${totalAmount.toFixed(2)} เข้าบัญชีธนาคารเรียบร้อย!`);
-
-          // Auto-confirm sale immediately without cashier or customer pressing anything!
-          setTimeout(async () => {
-            await handleConfirmSale(`[BANK_AUTO_VERIFIED: ${data.signal?.txRef || 'PAID'} | ฿${totalAmount.toFixed(2)}]`);
-            setPaymentDetected(null);
-          }, 800);
-        }
-      } catch (e) {
-        // Silently continue polling
-      }
-    }, 1500);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-      setListeningPayment(false);
-    };
-  }, [showConfirmModal, paymentMethod, totalAmount, processing, user?.id]);
-
   // Step 2: Handle Checkout Submit (ชั้นที่ 2 กดยืนยันชำระเงินจริง)
   const handleConfirmSale = async (customNote?: string) => {
     if (cart.length === 0) return;
@@ -862,59 +817,6 @@ export default function SalesPage() {
                   <p className="text-[10px] text-slate-400">
                     💡 ลูกค้าเปิดแอปธนาคารใดก็ได้ สแกน QR ด้านบน ยอดเงินจะขึ้นพอดี ฿{totalAmount.toFixed(2)} ทันที
                   </p>
-
-                  {/* Real-time Bank Payment Listener (Zero-Interaction Auto Confirm) */}
-                  <div className="mt-3 pt-3 border-t border-slate-200 text-left space-y-2.5">
-                    {paymentDetected ? (
-                      <div className="p-3.5 bg-emerald-600 text-white rounded-2xl flex items-center gap-2.5 text-xs font-bold shadow-md animate-in zoom-in-95 duration-200">
-                        <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-200" />
-                        <span>{paymentDetected} กำลังบันทึกการขายและพิมพ์ใบเสร็จ...</span>
-                      </div>
-                    ) : (
-                      <div className="p-3.5 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
-                            <span className="relative flex h-3 w-3">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                            </span>
-                            <span>รอสัญญาณเงินเข้าบัญชีธนาคารแบบ Real-time</span>
-                          </div>
-                          <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            Auto-Detect
-                          </span>
-                        </div>
-
-                        <p className="text-[11px] text-emerald-800 leading-relaxed">
-                          เมื่อลูกค้าสแกนโอนเงินสำเร็จ <strong>ระบบจะตรวจจับยอดเงินและกดยืนยันการขายให้อัตโนมัติทันที 100%</strong> โดยลูกค้าไม่ต้องโชว์สลิป และพนักงานไม่ต้องกดปุ่มใดๆ
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Instant Trigger Simulation Button for testing */}
-                    <div className="text-center pt-0.5">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await fetch('/api/sales/check-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              amount: totalAmount,
-                              storeId: user?.id,
-                              txRef: `BANK_${Date.now()}`,
-                              bank: 'PROMPTPAY',
-                            }),
-                          });
-                        }}
-                        disabled={processing || !!paymentDetected}
-                        className="text-[11px] text-emerald-700 hover:text-emerald-900 hover:underline font-semibold cursor-pointer inline-flex items-center gap-1"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>⚡ ทดสอบจำลอง: ลูกค้าโอนเงินเข้าบัญชีแล้ว (ตรวจจับและยืนยันทันที)</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               )}
 
