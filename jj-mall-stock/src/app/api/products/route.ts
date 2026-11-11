@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status, storeId } = body;
+    const { code, name, category, unit, price, cost, minStock, status, storeId, image } = body;
 
     let targetStoreId: number | null = null;
     if (session.role === 'STAFF') {
@@ -159,6 +159,7 @@ export async function POST(req: NextRequest) {
         price: Number(price),
         cost: cost !== undefined && cost !== '' ? Number(cost) : null,
         minStock: minStock !== undefined && minStock !== '' ? Number(minStock) : 10,
+        image: image || null,
         status: status || 'ACTIVE',
         storeId: targetStoreId,
       },

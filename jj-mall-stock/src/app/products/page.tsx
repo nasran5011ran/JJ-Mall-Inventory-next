@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import DashboardLayout from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/context/auth-context';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 import {
   Package,
   Search,
@@ -220,13 +221,14 @@ export default function ProductsPage() {
 
   // Instant Delete / Deactivation
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`คุณต้องการลบหรือระงับการจำหน่ายสินค้า "${name}" ใช่หรือไม่?`)) return;
+    const isConfirmed = await confirmDeleteAlert({ itemName: name });
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.message || 'ไม่สามารถลบสินค้าได้');
+        await showErrorAlert('ไม่สามารถลบสินค้าได้', json.message);
         return;
       }
 
@@ -235,13 +237,13 @@ export default function ProductsPage() {
         setProducts((prev) =>
           prev.map((p) => (p.id === id ? { ...p, status: 'INACTIVE' } : p))
         );
-        showToast(`เปลี่ยนสถานะ "${name}" เป็นระงับการขายเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ระงับการขาย "${name}" เรียบร้อยแล้ว`);
       } else {
         setProducts((prev) => prev.filter((p) => p.id !== id));
-        showToast(`ลบสินค้า "${name}" ออกจากระบบเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบสินค้า "${name}" ออกจากระบบเรียบร้อยแล้ว`);
       }
     } catch (error: any) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+      await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);
     }
   };
 

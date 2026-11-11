@@ -275,10 +275,10 @@ export default function ProductsPage() {
         setProducts((prev) =>
           prev.map((p) => (p.id === id ? { ...p, status: 'INACTIVE' } : p))
         );
-        await showSuccessAlert('ระงับการขายสำเร็จ', `เปลี่ยนสถานะ "${name}" เป็นระงับการขายเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ระงับการขาย "${name}" เรียบร้อยแล้ว`);
       } else {
         setProducts((prev) => prev.filter((p) => p.id !== id));
-        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบสินค้า "${name}" ออกจากระบบเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบสินค้า "${name}" ออกจากระบบเรียบร้อยแล้ว`);
       }
     } catch (error: any) {
       await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);

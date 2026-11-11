@@ -15,9 +15,13 @@ import {
   Store,
   DollarSign,
   Tag,
+  Image as ImageIcon,
+  Upload,
+  Coffee,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import Pagination from '@/components/Pagination';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 
 interface ProductItem {
   id: number;
@@ -27,6 +31,7 @@ interface ProductItem {
   unit: string;
   price: number;
   cost: number | null;
+  image?: string | null;
   status: string;
   storeId?: number | null;
   store?: {
@@ -46,6 +51,7 @@ export default function StaffProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -57,6 +63,7 @@ export default function StaffProductsPage() {
     unit: 'แก้ว',
     price: '',
     cost: '',
+    image: '',
     status: 'ACTIVE',
   });
 
@@ -120,6 +127,7 @@ export default function StaffProductsPage() {
       unit: 'แก้ว',
       price: '',
       cost: '',
+      image: '',
       status: 'ACTIVE',
     });
     setFormError(null);
@@ -135,10 +143,51 @@ export default function StaffProductsPage() {
       unit: p.unit || 'แก้ว',
       price: String(p.price || ''),
       cost: p.cost ? String(p.cost) : '',
+      image: p.image || '',
       status: p.status,
     });
     setFormError(null);
     setModalOpen(true);
+  };
+
+  // Handle Image Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP, GIF)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    setFormError(null);
+
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'อัปโหลดรูปภาพไม่สำเร็จ');
+      }
+
+      setFormData((prev) => ({ ...prev, image: json.url }));
+    } catch (err: any) {
+      setFormError(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -173,19 +222,22 @@ export default function StaffProductsPage() {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`คุณต้องการลบหรือระงับการขายเมนู "${name}" ของร้านใช่หรือไม่?`)) return;
+    const isConfirmed = await confirmDeleteAlert({
+      itemName: name,
+    });
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.message || 'ไม่สามารถลบเมนูได้');
+        await showErrorAlert('ไม่สามารถลบเมนูได้', json.message);
         return;
       }
       await mutate();
-      showToast(`ลบหรือระงับเมนู "${name}" เรียบร้อยแล้ว`);
+      await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบเมนู "${name}" เรียบร้อยแล้ว`);
     } catch (error: any) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + error.message);
+      await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);
     }
   };
 
@@ -210,7 +262,7 @@ export default function StaffProductsPage() {
             รายการสินค้าและเมนูของร้าน
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            เพิ่ม แก้ไข และจัดการเมนูเครื่องดื่มของร้านค้า (ข้อมูลจะอัปเดตไปยังระบบ Admin แบบ Real-time)
+            เพิ่ม แก้ไข และจัดการรูปภาพเมนูเครื่องดื่มของร้านค้า (ข้อมูลจะอัปเดตไปยังระบบ POS และ Admin แบบ Real-time)
           </p>
         </div>
 
@@ -239,7 +291,7 @@ export default function StaffProductsPage() {
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-medium focus:outline-none cursor-pointer w-full sm:w-auto"
+          className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
         >
           <option value="ALL">ทุกหมวดหมู่ ({categories.length})</option>
           {categories.map((cat) => (
@@ -250,29 +302,23 @@ export default function StaffProductsPage() {
         </select>
       </div>
 
-      {/* Products Table */}
+      {/* Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
         {isLoading && products.length === 0 ? (
           <div className="py-20 flex flex-col items-center justify-center gap-2">
-            <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-slate-400">กำลังโหลดรายการเมนู...</span>
+            <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin" />
+            <span className="text-xs text-slate-400">กำลังโหลดรายการสินค้า...</span>
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="py-20 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
-            <Package className="w-10 h-10 text-slate-300" />
-            <span>ยังไม่มีรายการเมนูของร้าน หรือไม่พบเมนูที่ค้นหา</span>
-            <button
-              onClick={openAddModal}
-              className="mt-2 text-emerald-600 font-bold underline cursor-pointer"
-            >
-              + เพิ่มเมนูแรกของร้านทันที
-            </button>
+          <div className="py-20 text-center text-slate-400 text-xs">
+            ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-4 w-16 text-center">รูปภาพ</th>
                   <th className="py-3.5 px-4">รหัสสินค้า</th>
                   <th className="py-3.5 px-4">ชื่อเมนู</th>
                   <th className="py-3.5 px-4">หมวดหมู่</th>
@@ -289,6 +335,23 @@ export default function StaffProductsPage() {
 
                   return (
                     <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Product Image Thumbnail */}
+                      <td className="py-2.5 px-4 text-center">
+                        {p.image ? (
+                          <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center">
+                            <img
+                              src={p.image}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto">
+                            <Coffee className="w-5 h-5 text-slate-300" />
+                          </div>
+                        )}
+                      </td>
+
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
                         {p.code}
                       </td>
@@ -321,11 +384,11 @@ export default function StaffProductsPage() {
                       <td className="py-3.5 px-4 text-center">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                           p.status === 'ACTIVE'
-                            ? 'bg-emerald-100/70 text-emerald-800 border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : 'bg-slate-100 text-slate-500 border-slate-200'
                         }`}>
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          {p.status === 'ACTIVE' ? 'เปิดขาย' : 'ระงับการขาย'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${p.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                          {p.status === 'ACTIVE' ? 'พร้อมขาย' : 'ระงับการขาย'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
@@ -351,6 +414,14 @@ export default function StaffProductsPage() {
                 })}
               </tbody>
             </table>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredProducts.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
@@ -358,7 +429,7 @@ export default function StaffProductsPage() {
       {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -368,7 +439,7 @@ export default function StaffProductsPage() {
                   <h3 className="text-base font-bold text-slate-800">
                     {editingProduct ? 'แก้ไขเมนูของร้าน' : 'เพิ่มเมนูใหม่ของร้าน'}
                   </h3>
-                  <p className="text-[11px] text-slate-400">บันทึกข้อมูลเพื่อใช้ขายหน้าร้าน POS ทันที</p>
+                  <p className="text-[11px] text-slate-400">บันทึกข้อมูลและอัปโหลดรูปภาพเพื่อใช้ขายหน้าร้าน POS</p>
                 </div>
               </div>
               <button
@@ -386,7 +457,82 @@ export default function StaffProductsPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              {/* Image Upload Box */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                    รูปภาพสินค้า (Product Image)
+                  </span>
+                  {formData.image && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image: '' })}
+                      className="text-[11px] text-red-500 hover:text-red-700 font-semibold cursor-pointer flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> ลบรูปภาพออก
+                    </button>
+                  )}
+                </label>
+
+                {formData.image ? (
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 group flex items-center justify-center p-3">
+                    <img
+                      src={formData.image}
+                      alt="Preview"
+                      className="w-full h-44 object-contain rounded-xl"
+                    />
+                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-2xl">
+                      <label className="px-3.5 py-2 rounded-xl bg-white text-slate-800 text-xs font-bold shadow-md cursor-pointer hover:bg-slate-100 flex items-center gap-1.5 transition-colors">
+                        <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{uploadingImage ? 'กำลังอัปโหลด...' : 'เปลี่ยนรูปภาพ'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label
+                    className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${
+                      uploadingImage
+                        ? 'border-emerald-400 bg-emerald-50/50 cursor-wait'
+                        : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50/60'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                    {uploadingImage ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <div className="w-7 h-7 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs font-bold text-emerald-700">กำลังอัปโหลดรูปภาพ...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 py-1">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-800">คลิกเพื่ออัปโหลดรูปภาพสินค้า</span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">รองรับไฟล์ JPG, PNG, WEBP, GIF (สูงสุด 5MB)</p>
+                        </div>
+                      </div>
+                    )}
+                  </label>
+                )}
+              </div>
+
+              {/* Code & Unit */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -416,6 +562,7 @@ export default function StaffProductsPage() {
                 </div>
               </div>
 
+              {/* Name */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   ชื่อเมนูเครื่องดื่ม <span className="text-red-500">*</span>
@@ -425,11 +572,12 @@ export default function StaffProductsPage() {
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="เช่น ชาเขียวมัทฉะลาเต้"
+                  placeholder="เช่น ชาไทยเย็นพรีเมียม"
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                 />
               </div>
 
+              {/* Category & Price */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -460,6 +608,21 @@ export default function StaffProductsPage() {
                 </div>
               </div>
 
+              {/* Status */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  สถานะสินค้า
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30 font-medium"
+                >
+                  <option value="ACTIVE">พร้อมขาย (Active)</option>
+                  <option value="INACTIVE">ระงับการขายชั่วคราว (Inactive)</option>
+                </select>
+              </div>
+
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
@@ -470,8 +633,8 @@ export default function StaffProductsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer"
+                  disabled={submitting || uploadingImage}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer transition-all"
                 >
                   {submitting ? 'กำลังบันทึก...' : 'บันทึกเมนู'}
                 </button>

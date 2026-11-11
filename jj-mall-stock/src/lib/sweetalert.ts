@@ -18,9 +18,7 @@ export const confirmDeleteAlert = async (options?: {
 }): Promise<boolean> => {
   const {
     title = 'ลบรายการนี้หรือไม่?',
-    text = options?.itemName
-      ? `รายการ "${options.itemName}"\nเมื่อรายการนี้ถูกลบ คุณไม่สามารถกู้คืนได้!!`
-      : 'เมื่อรายการนี้ถูกลบ คุณไม่สามารถกู้คืนได้!!',
+    text = options?.text || 'เมื่อรายการนี้ถูกลบ คุณไม่สามารถกู้คืนได้!!',
     confirmButtonText = 'ตกลง',
     cancelButtonText = 'ยกเลิก',
   } = options || {};
@@ -52,26 +50,25 @@ export const confirmDeleteAlert = async (options?: {
 
 /**
  * Success Alert
- * - Same size as delete modal (width: 410px)
+ * - Matches Reference Image 2:
+ * - Width 410px (same as delete modal)
  * - Animated green checkmark
- * - Stays visible with confirm button "ตกลง" and comfortable timer
+ * - Clean popup without confirm button or progress bar
+ * - Displays for 2.2 seconds then auto-dismisses smoothly
  */
-export const showSuccessAlert = async (title: string, text?: string, timer = 3000) => {
+export const showSuccessAlert = async (title: string, text?: string, timer = 2200) => {
   return Swal.fire({
     icon: 'success',
     title,
     text,
     width: 410,
     timer,
-    timerProgressBar: true,
-    showConfirmButton: true,
-    confirmButtonColor: '#10b981',
-    confirmButtonText: 'ตกลง',
+    timerProgressBar: false,
+    showConfirmButton: false,
     customClass: {
       popup: 'swal2-thai-popup',
       title: 'swal2-thai-title',
       htmlContainer: 'swal2-thai-text',
-      confirmButton: 'swal2-thai-confirm-success',
       actions: 'swal2-thai-actions',
     },
   });

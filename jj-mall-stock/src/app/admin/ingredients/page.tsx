@@ -371,10 +371,10 @@ export default function IngredientsPage() {
         setIngredients((prev) =>
           prev.map((i) => (i.id === id ? { ...i, status: 'INACTIVE' } : i))
         );
-        await showSuccessAlert('ระงับการใช้งานสำเร็จ', `เปลี่ยนสถานะ "${name}" เป็นระงับการใช้งานเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ระงับการใช้งานวัตถุดิบ "${name}" เรียบร้อยแล้ว`);
       } else {
         setIngredients((prev) => prev.filter((i) => i.id !== id));
-        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบวัตถุดิบ "${name}" ออกจากระบบเรียบร้อย`);
+        await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบวัตถุดิบ "${name}" ออกจากระบบเรียบร้อยแล้ว`);
       }
     } catch (error: any) {
       await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);

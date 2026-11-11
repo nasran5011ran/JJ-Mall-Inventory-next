@@ -37,6 +37,7 @@ interface ProductItem {
   unit: string;
   price: number;
   cost: number | null;
+  image?: string | null;
   status: string;
   storeId?: number | null;
   recipe?: {
@@ -392,10 +393,21 @@ export default function SalesPage() {
                     >
                       {/* Badge if in cart */}
                       {inCart && (
-                        <span className="absolute top-2 right-2 w-6 h-6 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
+                        <span className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
                           {inCart.quantity}
                         </span>
                       )}
+
+                      {/* Product Image Thumbnail */}
+                      {prod.image ? (
+                        <div className="w-full h-24 mb-2.5 rounded-xl overflow-hidden bg-slate-100 border border-slate-100 flex items-center justify-center">
+                          <img
+                            src={prod.image}
+                            alt={prod.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        </div>
+                      ) : null}
 
                       <div>
                         <div className="text-[10px] font-mono font-bold text-slate-400">

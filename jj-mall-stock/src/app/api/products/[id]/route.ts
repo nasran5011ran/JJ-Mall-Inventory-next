@@ -62,7 +62,7 @@ export async function PUT(
     const { id } = await params;
     const productId = parseInt(id, 10);
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status, storeId } = body;
+    const { code, name, category, unit, price, cost, minStock, status, storeId, image } = body;
 
     // Check existing product and permission
     const currentProduct = await prisma.product.findUnique({
@@ -105,6 +105,7 @@ export async function PUT(
       ...(price !== undefined && { price: Number(price) }),
       ...(cost !== undefined && { cost: cost !== '' ? Number(cost) : null }),
       ...(minStock !== undefined && { minStock: Number(minStock) }),
+      ...(image !== undefined && { image: image || null }),
       ...(status && { status }),
     };
 
