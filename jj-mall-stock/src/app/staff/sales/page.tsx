@@ -398,13 +398,13 @@ export default function SalesPage() {
                         </span>
                       )}
 
-                      {/* Product Image Thumbnail */}
+                      {/* Product Image Thumbnail (Full View - No Crop) */}
                       {prod.image ? (
-                        <div className="w-full h-24 mb-2.5 rounded-xl overflow-hidden bg-slate-100 border border-slate-100 flex items-center justify-center">
+                        <div className="w-full h-32 sm:h-36 mb-2.5 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5">
                           <img
                             src={prod.image}
                             alt={prod.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
                           />
                         </div>
                       ) : null}

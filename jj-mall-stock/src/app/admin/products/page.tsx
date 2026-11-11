@@ -23,6 +23,9 @@ import {
   Sparkles,
   Store,
   Warehouse,
+  Upload,
+  Image as ImageIcon,
+  Coffee,
 } from 'lucide-react';
 
 interface StaffStore {
@@ -40,6 +43,7 @@ interface ProductItem {
   price: number;
   cost: number | null;
   minStock: number;
+  image?: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   storeId?: number | null;
   store?: {
@@ -100,6 +104,7 @@ export default function ProductsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -115,6 +120,7 @@ export default function ProductsPage() {
     price: '',
     cost: '',
     minStock: '10',
+    image: '',
     status: 'ACTIVE',
     storeId: '',
   });
@@ -127,6 +133,45 @@ export default function ProductsPage() {
   // Fetch products initially
   const loadProducts = async (_isBackground = false) => {
     await mutate();
+  };
+
+  // Handle Image Upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP, GIF)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'อัปโหลดรูปภาพไม่สำเร็จ');
+      }
+
+      setFormData((prev) => ({ ...prev, image: data.url }));
+    } catch (err: any) {
+      alert(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
   };
 
   // Compute distinct categories
@@ -184,6 +229,7 @@ export default function ProductsPage() {
       price: '',
       cost: '',
       minStock: '10',
+      image: '',
       status: 'ACTIVE',
       storeId: selectedStore !== 'ALL' && selectedStore !== 'CENTRAL' ? selectedStore : '',
     });
@@ -201,6 +247,7 @@ export default function ProductsPage() {
       price: p.price.toString(),
       cost: p.cost ? p.cost.toString() : '',
       minStock: p.minStock.toString(),
+      image: p.image || '',
       status: p.status,
       storeId: p.storeId ? String(p.storeId) : '',
     });
@@ -502,6 +549,7 @@ export default function ProductsPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3.5 px-4 text-center">รูปภาพ</th>
                     <th className="py-3.5 px-4">รหัสสินค้า</th>
                     <th className="py-3.5 px-4">ชื่อสินค้า</th>
                     <th className="py-3.5 px-4">ร้านค้า</th>
@@ -548,6 +596,23 @@ export default function ProductsPage() {
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
+                        {/* Product Image Thumbnail */}
+                        <td className="py-2.5 px-4 text-center">
+                          {p.image ? (
+                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center p-0.5">
+                              <img
+                                src={p.image}
+                                alt={p.name}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto">
+                              <Coffee className="w-5 h-5 text-slate-300" />
+                            </div>
+                          )}
+                        </td>
+
                         {/* Code */}
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
                           {p.code}
@@ -730,6 +795,78 @@ export default function ProductsPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              {/* Product Image Upload Dropzone */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>รูปภาพสินค้า / เมนู</span>
+                  </span>
+                  {formData.image && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image: '' })}
+                      className="text-[11px] text-red-500 hover:underline font-bold cursor-pointer"
+                    >
+                      ลบรูปภาพออก
+                    </button>
+                  )}
+                </label>
+
+                {formData.image ? (
+                  <div className="relative group w-full h-44 rounded-2xl overflow-hidden border-2 border-emerald-500/30 bg-slate-50 flex items-center justify-center">
+                    <img
+                      src={formData.image}
+                      alt="Product preview"
+                      className="w-full h-full object-contain p-2"
+                    />
+                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer text-white text-xs font-bold">
+                      <Upload className="w-4 h-4" />
+                      <span>เปลี่ยนรูปภาพ</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <label
+                    className={`w-full h-28 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all text-center cursor-pointer ${
+                      uploadingImage
+                        ? 'border-emerald-500 bg-emerald-50/50'
+                        : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50/60'
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                    />
+                    {uploadingImage ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <div className="w-7 h-7 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs font-bold text-emerald-700">กำลังอัปโหลดรูปภาพ...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 py-1">
+                        <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-800">คลิกเพื่ออัปโหลดรูปภาพสินค้า</span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">รองรับไฟล์ JPG, PNG, WEBP, GIF (สูงสุด 5MB)</p>
+                        </div>
+                      </div>
+                    )}
+                  </label>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 {/* Code */}
                 <div>
@@ -902,7 +1039,7 @@ export default function ProductsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || uploadingImage}
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer"
                 >
                   {submitting ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
