@@ -386,7 +386,7 @@ export default function SalesPage() {
                     <button
                       key={prod.id}
                       onClick={() => addToCart(prod)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between group relative cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-full group relative cursor-pointer ${
                         inCart
                           ? 'border-emerald-500 bg-emerald-50/40 shadow-xs ring-2 ring-emerald-500/20'
                           : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm'
@@ -399,31 +399,36 @@ export default function SalesPage() {
                         </span>
                       )}
 
-                      {/* Product Image Thumbnail (Full View - No Crop) */}
-                      {prod.image ? (
-                        <div className="w-full h-32 sm:h-36 mb-2.5 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5">
+                      {/* Product Image Thumbnail - Uniform Equal Size (aspect-square) */}
+                      <div className="w-full aspect-square mb-2.5 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center relative">
+                        {prod.image ? (
                           <img
                             src={prod.image}
                             alt={prod.name}
-                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                           />
-                        </div>
-                      ) : null}
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-300 bg-slate-50/80">
+                            <Coffee className="w-8 h-8 text-slate-300" />
+                            <span className="text-[10px] text-slate-400 font-medium">ไม่มีรูปภาพ</span>
+                          </div>
+                        )}
+                      </div>
 
-                      <div>
+                      <div className="flex-1 flex flex-col">
                         <div className="text-[10px] font-mono font-bold text-slate-400">
                           {prod.code}
                         </div>
-                        <div className="text-sm font-bold text-slate-800 mt-1 leading-snug group-hover:text-emerald-700 transition-colors">
+                        <div className="text-sm font-bold text-slate-800 mt-0.5 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
                           {prod.name}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5">
+                        <div className="text-[11px] text-slate-400 mt-auto pt-1">
                           {prod.category}
                         </div>
                       </div>
 
                       <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-base font-black text-emerald-700">
+                        <span className="text-base font-black text-emerald-700 font-mono">
                           ฿{Number(prod.price).toFixed(2)}
                         </span>
                         <span className="text-[10px] text-slate-400 font-semibold">
