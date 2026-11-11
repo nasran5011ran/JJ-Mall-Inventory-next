@@ -261,45 +261,8 @@ export default function AdminSalesReportPage() {
   const handleExportCSV = () => {
     if (filteredSales.length === 0) return;
 
-    // 1. Report Metadata & Header Rows
-    const periodText = selectedDate
-      ? `วันที่ ${selectedDate}`
-      : period === 'TODAY'
-      ? 'วันนี้'
-      : period === 'YESTERDAY'
-      ? 'เมื่อวาน'
-      : period === 'THIS_WEEK'
-      ? 'สัปดาห์นี้'
-      : period === 'THIS_MONTH'
-      ? 'เดือนนี้'
-      : 'ทั้งหมด (All Time)';
-
-    const paymentText =
-      paymentMethod === 'ALL'
-        ? 'ทุกช่องทาง'
-        : paymentMethod === 'CASH'
-        ? 'เงินสด'
-        : paymentMethod === 'QR'
-        ? 'สแกน QR'
-        : paymentMethod;
-
-    const exportTimeStr = new Date().toLocaleString('th-TH');
-
-    const totalBills = filteredSales.length;
     const totalCups = filteredSales.reduce((sum, s) => sum + (s.totalItems || 0), 0);
     const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
-
-    // Title and Info Section
-    const titleRows = [
-      ['"รายงานสรุปยอดขาย - JJ Mall Stock & Inventory Management"'],
-      [`"หัวข้อรายงาน:","รายงานการขายสินค้าและรายรับ (Sales & Financial Report)"`],
-      [`"ช่วงเวลาที่เลือก:","${periodText}"`],
-      [`"ร้านค้า / จุดขาย:","${selectedStoreName}"`],
-      [`"ช่องทางชำระเงิน:","${paymentText}"`],
-      [`"วันที่และเวลาที่ออกรายงาน:","${exportTimeStr} น."`],
-      [`"สรุปภาพรวม:","จำนวนบิลรวม ${totalBills.toLocaleString()} บิล","จำนวนแก้วรวม ${totalCups.toLocaleString()} แก้ว","ยอดขายรวมทั้งสิ้น ${totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท"`],
-      [''], // Blank row separator
-    ];
 
     // Table Headers (1 single clean column for Date & Time)
     const tableHeaders = [
@@ -325,7 +288,8 @@ export default function AdminSalesReportPage() {
       const min = isValid ? String(d.getMinutes()).padStart(2, '0') : '';
       const ss = isValid ? String(d.getSeconds()).padStart(2, '0') : '';
 
-      const dateTimeFormatted = isValid ? `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}` : '';
+      // Safe date-time text formula for Excel: prefixed with ="..." so Excel never parses it as a narrow date that turns into ###
+      const dateTimeFormula = isValid ? `="${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}"` : '""';
       const paymentDisplay =
         s.paymentMethod === 'CASH'
           ? 'เงินสด'
@@ -340,7 +304,7 @@ export default function AdminSalesReportPage() {
       return [
         idx + 1,
         `"${s.saleNumber}"`,
-        `"${dateTimeFormatted}"`,
+        dateTimeFormula,
         `"${s.createdBy?.name || '-'}"`,
         `"${paymentDisplay}"`,
         s.totalItems,
@@ -362,7 +326,6 @@ export default function AdminSalesReportPage() {
     ];
 
     const allRows = [
-      ...titleRows.map((r) => r.join(',')),
       tableHeaders.join(','),
       ...dataRows.map((r) => r.join(',')),
       footerRow.join(','),
