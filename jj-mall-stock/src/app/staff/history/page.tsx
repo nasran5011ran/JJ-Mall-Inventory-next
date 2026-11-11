@@ -11,7 +11,7 @@ export default function StaffSalesHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/sales?myOnly=true')
+    fetch('/api/sales?myOnly=true&limit=200')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.success) {
@@ -74,46 +74,55 @@ export default function StaffSalesHistoryPage() {
             ยังไม่มีประวัติการขายของคุณในระบบ
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4">เลขที่ใบเสร็จ</th>
-                  <th className="py-3.5 px-4">วันที่ / เวลา</th>
-                  <th className="py-3.5 px-4">รายการสินค้า</th>
-                  <th className="py-3.5 px-4 text-center">วิธีชำระ</th>
-                  <th className="py-3.5 px-4 text-center">จำนวน</th>
-                  <th className="py-3.5 px-4 text-right">ยอดรวม</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
-                      {sale.saleNumber}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500">
-                      {new Date(sale.createdAt).toLocaleString('th-TH')}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {sale.items?.map((it: any) => `${it.product?.name} (${it.quantity})`).join(', ')}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                        {sale.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                      {sale.totalItems} แก้ว
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-black font-mono text-slate-800 text-sm">
-                      ฿{Number(sale.totalAmount).toFixed(2)}
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3.5 px-4">เลขที่ใบเสร็จ</th>
+                    <th className="py-3.5 px-4">วันที่ / เวลา</th>
+                    <th className="py-3.5 px-4">รายการสินค้า</th>
+                    <th className="py-3.5 px-4 text-center">วิธีชำระ</th>
+                    <th className="py-3.5 px-4 text-center">จำนวน</th>
+                    <th className="py-3.5 px-4 text-right">ยอดรวม</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {paginatedSales.map((sale) => (
+                    <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
+                        {sale.saleNumber}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {new Date(sale.createdAt).toLocaleString('th-TH')}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-700">
+                        {sale.items?.map((it: any) => `${it.product?.name} (${it.quantity})`).join(', ')}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                          {sale.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center font-bold text-slate-800">
+                        {sale.totalItems} แก้ว
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-black font-mono text-slate-800 text-sm">
+                        ฿{Number(sale.totalAmount).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalItems={sales.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </div>
