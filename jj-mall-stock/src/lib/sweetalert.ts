@@ -50,25 +50,28 @@ export const confirmDeleteAlert = async (options?: {
 
 /**
  * Success Alert
- * - Matches Reference Image 2:
- * - Width 410px (same as delete modal)
+ * - Width 410px
  * - Animated green checkmark
- * - Clean popup without confirm button or progress bar
- * - Displays for 2.2 seconds then auto-dismisses smoothly
+ * - Displays "ตกลง" button
+ * - Countdown timer progress bar ("หลอดนับเวลา")
+ * - Auto-dismisses smoothly when timer ends or when user clicks "ตกลง"
  */
-export const showSuccessAlert = async (title: string, text?: string, timer = 2200) => {
+export const showSuccessAlert = async (title: string, text?: string, timer = 2500) => {
   return Swal.fire({
     icon: 'success',
     title,
     text,
     width: 410,
     timer,
-    timerProgressBar: false,
-    showConfirmButton: false,
+    timerProgressBar: true,
+    showConfirmButton: true,
+    confirmButtonText: 'ตกลง',
+    confirmButtonColor: '#10b981',
     customClass: {
       popup: 'swal2-thai-popup',
       title: 'swal2-thai-title',
       htmlContainer: 'swal2-thai-text',
+      confirmButton: 'swal2-thai-confirm-success',
       actions: 'swal2-thai-actions',
     },
   });
