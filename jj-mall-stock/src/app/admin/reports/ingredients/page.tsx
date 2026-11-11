@@ -124,11 +124,30 @@ export default function AdminIngredientsReportPage() {
     }
   }, [period]);
 
-  // Export to CSV
+  // Export to Excel (CSV UTF-8 with BOM)
   const handleExportCSV = () => {
     if (filteredItems.length === 0) return;
+
+    const exportTimeStr = new Date().toLocaleString('th-TH');
+    const safeDate = new Date().toISOString().slice(0, 10);
+
+    const totalUsedCost = filteredItems.reduce((sum, i) => sum + Number(i.usedCost || 0), 0);
+    const totalInventoryVal = filteredItems.reduce((sum, i) => sum + Number(i.inventoryValue || 0), 0);
+
+    // Title and Info Section
+    const titleRows = [
+      ['"รายงานการใช้วัตถุดิบและต้นทุน - JJ Mall Stock & Inventory Management"'],
+      [`"หัวข้อรายงาน:","รายงานวิเคราะห์การใช้วัตถุดิบ สต็อก และอัตราการสูญเสีย (Ingredient Usage & Waste Report)"`],
+      [`"รอบข้อมูล / วันที่:","${periodLabel}"`],
+      [`"หมวดหมู่ที่เลือก:","${categoryFilter === 'ALL' ? 'ทุกหมวดหมู่' : categoryFilter}"`],
+      [`"วันที่และเวลาที่ออกรายงาน:","${exportTimeStr} น."`],
+      [`"สรุปภาพรวม:","จำนวนวัตถุดิบทั้งหมด ${filteredItems.length} รายการ","มูลค่าที่ใช้จริง ฿${totalUsedCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท","มูลค่าสต็อกคงเหลือ ฿${totalInventoryVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท"`],
+      [''], // Blank separator
+    ];
+
     const headers = [
       'ลำดับ',
+      'รอบข้อมูล / วันที่',
       'รหัสวัตถุดิบ',
       'ชื่อวัตถุดิบ',
       'หมวดหมู่',
@@ -146,6 +165,7 @@ export default function AdminIngredientsReportPage() {
 
     const rows = filteredItems.map((item, idx) => [
       idx + 1,
+      `"${periodLabel}"`,
       `"${item.code}"`,
       `"${item.name}"`,
       `"${item.category}"`,
@@ -158,16 +178,41 @@ export default function AdminIngredientsReportPage() {
       item.costPerUnit.toFixed(2),
       item.usedCost.toFixed(2),
       item.inventoryValue.toFixed(2),
-      `${item.wastePercent}%`,
+      `"${item.wastePercent}%"`,
     ]);
 
-    const csvContent =
-      '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    // Summary footer row
+    const footerRow = [
+      '""',
+      '"รวมยอดทั้งสิ้น (TOTAL)"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalUsedCost.toFixed(2),
+      totalInventoryVal.toFixed(2),
+      '""',
+    ];
+
+    const allRows = [
+      ...titleRows.map((r) => r.join(',')),
+      headers.join(','),
+      ...rows.map((r) => r.join(',')),
+      footerRow.join(','),
+    ];
+
+    const csvContent = '\uFEFF' + allRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ingredient-usage-report-${period}-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `รายงานการใช้วัตถุดิบ_JJMall_${period}_${safeDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -214,7 +259,7 @@ export default function AdminIngredientsReportPage() {
             className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
           >
             <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>ส่งออก CSV</span>
+            <span>ส่งออก Excel</span>
           </button>
 
           <button
