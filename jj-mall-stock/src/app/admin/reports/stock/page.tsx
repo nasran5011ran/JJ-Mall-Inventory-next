@@ -418,8 +418,9 @@ export default function AdminStockReportPage() {
             <span>ไม่พบวัตถุดิบตามเงื่อนไขที่เลือก</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">รหัส / ชื่อวัตถุดิบ</th>
@@ -433,7 +434,7 @@ export default function AdminStockReportPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {filteredItems.map((item) => {
+                {paginatedItems.map((item) => {
                   const statusBadge = getStockStatusBadge(item);
                   const isCritical = item.healthStatus === 'CRITICAL' || item.healthStatus === 'OUT_OF_STOCK';
 
@@ -518,6 +519,15 @@ export default function AdminStockReportPage() {
               </tbody>
             </table>
           </div>
+
+            {/* Pagination (10 items per page) */}
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredItems.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
       </div>
