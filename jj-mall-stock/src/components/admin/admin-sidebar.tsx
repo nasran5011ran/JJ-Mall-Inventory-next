@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import useSWR from 'swr';
 import {
   LayoutDashboard,
   Bell,
@@ -34,6 +35,15 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+
+  // Fetch real-time pending adjustments and alerts count
+  const { data: notifData } = useSWR(
+    '/api/notifications',
+    (url: string) => fetch(url).then((res) => res.json()),
+    { refreshInterval: 5000, revalidateOnFocus: true }
+  );
+
+  const pendingAdjustmentsCount = Number(notifData?.data?.kpis?.pendingAdjustmentsCount || 0);
 
   const menuSections = [
     {
@@ -138,6 +148,8 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
+                const isAdjustment = item.href === '/admin/stock-adjustments';
+                const badgeCount = isAdjustment ? pendingAdjustmentsCount : 0;
 
                 return (
                   <Link
@@ -153,15 +165,26 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <Icon
-                        className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                        className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                           isActive ? 'text-amber-300' : 'text-slate-400 group-hover:text-emerald-700'
                         }`}
                       />
-                      <span>{item.label}</span>
+                      <span className="truncate">{item.label}</span>
                     </div>
-                    {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      {badgeCount > 0 && (
+                        <span
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse ring-2 ring-rose-300/40"
+                          title={`มีใบขอปรับปรุงสต็อกรออนุมัติ ${badgeCount} รายการ`}
+                        >
+                          {badgeCount > 99 ? '99+' : badgeCount}
+                        </span>
+                      )}
+                      {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
+                    </div>
                   </Link>
                 );
               })}

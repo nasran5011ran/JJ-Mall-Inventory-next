@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import {
   FileEdit,
   Search,
@@ -97,6 +97,7 @@ const PRESET_REASONS = [
 
 export default function StaffStockAdjustmentsPage() {
   const { user } = useAuth();
+  const { mutate: globalMutate } = useSWRConfig();
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [search, setSearch] = useState('');
 
@@ -258,6 +259,7 @@ export default function StaffStockAdjustmentsPage() {
       showToast(`ส่งใบขอปรับสต็อก #${data.adjustment.adjustmentNumber} เรียบร้อยแล้ว (รอ Admin อนุมัติ)`);
       setCreateModalOpen(false);
       mutate();
+      globalMutate('/api/notifications');
     } catch (err: any) {
       setFormError(err.message);
     } finally {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import {
   FileEdit,
   Search,
@@ -86,6 +86,7 @@ interface NewItemForm {
 
 export default function AdminStockAdjustmentsPage() {
   const { user } = useAuth();
+  const { mutate: globalMutate } = useSWRConfig();
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [search, setSearch] = useState('');
 
@@ -229,6 +230,7 @@ export default function AdminStockAdjustmentsPage() {
 
       showToast(data.message);
       await mutate();
+      globalMutate('/api/notifications');
       setCreateModalOpen(false);
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
@@ -260,6 +262,7 @@ export default function AdminStockAdjustmentsPage() {
 
       showToast(data.message);
       await mutate();
+      globalMutate('/api/notifications');
       if (selectedAdjustment?.id === adj.id) {
         setSelectedAdjustment(data.adjustment);
       }
@@ -297,6 +300,7 @@ export default function AdminStockAdjustmentsPage() {
 
       showToast(data.message);
       await mutate();
+      globalMutate('/api/notifications');
       setRejectModalOpen(false);
       setSelectedAdjForReject(null);
       if (selectedAdjustment?.id === selectedAdjForReject.id) {
@@ -389,7 +393,7 @@ export default function AdminStockAdjustmentsPage() {
             className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>+ สร้างใบขอปรับปรุงสต็อกใหม่</span>
+            <span>สร้างใบขอปรับปรุงสต็อกใหม่</span>
           </button>
         </div>
       </div>

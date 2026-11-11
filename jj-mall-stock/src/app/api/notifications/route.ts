@@ -28,24 +28,27 @@ export async function GET() {
       orderBy: { currentStock: 'asc' },
     });
 
-    // 2. Fetch Pending Stock Adjustments
-    const pendingAdjustments = await prisma.stockAdjustment.findMany({
-      where: { status: 'PENDING' },
-      include: {
-        requestedBy: {
-          select: { name: true, username: true, role: true },
-        },
-        items: {
-          include: {
-            ingredient: {
-              select: { name: true, code: true, unit: true },
+    // 2. Fetch Pending Stock Adjustments & Real Pending Count
+    const [pendingAdjustments, realPendingCount] = await Promise.all([
+      prisma.stockAdjustment.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          requestedBy: {
+            select: { name: true, username: true, role: true },
+          },
+          items: {
+            include: {
+              ingredient: {
+                select: { name: true, code: true, unit: true },
+              },
             },
           },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 20,
-    });
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      }),
+      prisma.stockAdjustment.count({ where: { status: 'PENDING' } }),
+    ]);
 
     // 3. Fetch Recent Stock Counts with Discrepancies
     const recentCounts = await prisma.stockCount.findMany({
@@ -283,7 +286,7 @@ export async function GET() {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
 
-    const totalActionable = outOfStockCount + lowStockCount + pendingAdjustments.length;
+    const totalActionable = outOfStockCount + lowStockCount + realPendingCount;
 
     return NextResponse.json({
       success: true,
@@ -293,7 +296,7 @@ export async function GET() {
           totalActionable,
           outOfStockCount,
           lowStockCount,
-          pendingAdjustmentsCount: pendingAdjustments.length,
+          pendingAdjustmentsCount: realPendingCount,
           discrepancyCount: discrepancyItemCount,
           recentActivityCount: recentTransactions.length,
           staffMenuActivityCount,
