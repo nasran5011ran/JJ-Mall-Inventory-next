@@ -257,16 +257,55 @@ export default function AdminSalesReportPage() {
     setPeriod(p);
   };
 
-  // Export CSV
+  // Export Excel (CSV UTF-8 with BOM)
   const handleExportCSV = () => {
     if (filteredSales.length === 0) return;
 
-    const headers = [
-      'เลขที่บิล (Sale Number)',
-      'วันที่ & เวลา (Date & Time)',
-      'วันที่ (Date)',
-      'เวลา (Time)',
-      'วันที่ (พ.ศ.)',
+    // 1. Report Metadata & Header Rows
+    const periodText = selectedDate
+      ? `วันที่ ${selectedDate}`
+      : period === 'TODAY'
+      ? 'วันนี้'
+      : period === 'YESTERDAY'
+      ? 'เมื่อวาน'
+      : period === 'THIS_WEEK'
+      ? 'สัปดาห์นี้'
+      : period === 'THIS_MONTH'
+      ? 'เดือนนี้'
+      : 'ทั้งหมด (All Time)';
+
+    const paymentText =
+      paymentMethod === 'ALL'
+        ? 'ทุกช่องทาง'
+        : paymentMethod === 'CASH'
+        ? 'เงินสด'
+        : paymentMethod === 'QR'
+        ? 'สแกน QR'
+        : paymentMethod;
+
+    const exportTimeStr = new Date().toLocaleString('th-TH');
+
+    const totalBills = filteredSales.length;
+    const totalCups = filteredSales.reduce((sum, s) => sum + (s.totalItems || 0), 0);
+    const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0);
+
+    // Title and Info Section
+    const titleRows = [
+      ['"รายงานสรุปยอดขาย - JJ Mall Stock & Inventory Management"'],
+      [`"หัวข้อรายงาน:","รายงานการขายสินค้าและรายรับ (Sales & Financial Report)"`],
+      [`"ช่วงเวลาที่เลือก:","${periodText}"`],
+      [`"ร้านค้า / จุดขาย:","${selectedStoreName}"`],
+      [`"ช่องทางชำระเงิน:","${paymentText}"`],
+      [`"วันที่และเวลาที่ออกรายงาน:","${exportTimeStr} น."`],
+      [`"สรุปภาพรวม:","จำนวนบิลรวม ${totalBills.toLocaleString()} บิล","จำนวนแก้วรวม ${totalCups.toLocaleString()} แก้ว","ยอดขายรวมทั้งสิ้น ${totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท"`],
+      [''], // Blank row separator
+    ];
+
+    // Table Headers (1 single clean column for Date & Time)
+    const tableHeaders = [
+      'ลำดับ',
+      'เลขที่บิล',
+      'วันที่และเวลา',
       'ร้านค้า / แคชเชียร์',
       'ช่องทางชำระเงิน',
       'จำนวนแก้ว',
@@ -274,7 +313,8 @@ export default function AdminSalesReportPage() {
       'รายการสินค้าในบิล',
     ];
 
-    const rows = filteredSales.map((s) => {
+    // Data Rows
+    const dataRows = filteredSales.map((s, idx) => {
       const d = new Date(s.createdAt);
       const isValid = !isNaN(d.getTime());
 
@@ -285,31 +325,56 @@ export default function AdminSalesReportPage() {
       const min = isValid ? String(d.getMinutes()).padStart(2, '0') : '';
       const ss = isValid ? String(d.getSeconds()).padStart(2, '0') : '';
 
-      const isoDateTime = isValid ? `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}` : '';
-      const dateOnly = isValid ? `${yyyy}-${mm}-${dd}` : '';
-      const timeOnly = isValid ? `${hh}:${min}:${ss}` : '';
-      const thaiDateTimeFormula = isValid ? `="${dd}/${mm}/${Number(yyyy) + 543} ${hh}:${min}:${ss}"` : '""';
+      const dateTimeFormatted = isValid ? `${dd}/${mm}/${yyyy} ${hh}:${min}:${ss}` : '';
+      const paymentDisplay =
+        s.paymentMethod === 'CASH'
+          ? 'เงินสด'
+          : s.paymentMethod === 'QR'
+          ? 'สแกน QR'
+          : s.paymentMethod || 'เงินสด';
+
+      const itemsSummary = s.items
+        ? s.items.map((i) => `${i.product?.name || 'สินค้า'} (${i.quantity})`).join(', ')
+        : '';
 
       return [
+        idx + 1,
         `"${s.saleNumber}"`,
-        `"${isoDateTime}"`,
-        `"${dateOnly}"`,
-        `"${timeOnly}"`,
-        thaiDateTimeFormula,
-        `"${s.createdBy?.name || ''}"`,
-        `"${s.paymentMethod || 'CASH'}"`,
+        `"${dateTimeFormatted}"`,
+        `"${s.createdBy?.name || '-'}"`,
+        `"${paymentDisplay}"`,
         s.totalItems,
-        s.totalAmount,
-        `"${s.items.map((i) => `${i.product?.name} x${i.quantity}`).join(', ')}"`,
+        Number(s.totalAmount).toFixed(2),
+        `"${itemsSummary.replace(/"/g, '""')}"`,
       ];
     });
 
-    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    // Summary footer row
+    const footerRow = [
+      '""',
+      '"รวมยอดทั้งสิ้น (TOTAL)"',
+      '""',
+      '""',
+      '""',
+      totalCups,
+      totalRevenue.toFixed(2),
+      '""',
+    ];
+
+    const allRows = [
+      ...titleRows.map((r) => r.join(',')),
+      tableHeaders.join(','),
+      ...dataRows.map((r) => r.join(',')),
+      footerRow.join(','),
+    ];
+
+    const csvContent = '\uFEFF' + allRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `JJ_Mall_Daily_Sales_${new Date().toISOString().slice(0, 10)}.csv`);
+    const safeDate = new Date().toISOString().slice(0, 10);
+    link.setAttribute('download', `รายงานยอดขาย_JJMall_${safeDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -352,7 +417,7 @@ export default function AdminSalesReportPage() {
             className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            <span>ส่งออก CSV</span>
+            <span>ส่งออก Excel</span>
           </button>
         </div>
       </div>
