@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import useSWR from 'swr';
 import QRCode from 'qrcode';
-import jsQR from 'jsqr';
 import { useAuth } from '@/context/auth-context';
 import {
   ShoppingCart,
@@ -28,9 +27,6 @@ import {
   RotateCcw,
   X,
   Settings,
-  Camera,
-  UploadCloud,
-  ShieldCheck,
 } from 'lucide-react';
 
 interface ProductItem {
@@ -260,183 +256,50 @@ export default function SalesPage() {
     setShowConfirmModal(true);
   };
 
-  // Camera & Slip Verification State
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [verifyingSlip, setVerifyingSlip] = useState(false);
-  const [slipVerifiedSuccess, setSlipVerifiedSuccess] = useState<string | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
+  // Real-time Bank Payment Listener State
+  const [listeningPayment, setListeningPayment] = useState(false);
+  const [paymentDetected, setPaymentDetected] = useState<string | null>(null);
 
-  // Stop camera stream safely
-  const stopCamera = () => {
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  };
-
-  // Start camera stream
-  const startCamera = async () => {
-    try {
-      setErrorMessage(null);
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true');
-        await videoRef.current.play();
-        setCameraActive(true);
-        requestAnimationFrame(tickScan);
-      }
-    } catch (err: any) {
-      setErrorMessage('ไม่สามารถเข้าถึงกล้องได้: ' + (err.message || 'กรุณาอนุญาตการเข้าถึงกล้องในเบราว์เซอร์'));
-    }
-  };
-
-  // Real-time frame scanner for camera
-  const tickScan = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.height = video.videoHeight;
-      canvas.width = video.videoWidth;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
-        if (code && code.data) {
-          // Found QR on slip!
-          stopCamera();
-          handleVerifySlip(code.data);
-          return;
-        }
-      }
-    }
-    animationFrameRef.current = requestAnimationFrame(tickScan);
-  };
-
-  // Process Slip File upload or paste
-  const handleImageSlipUpload = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setErrorMessage('กรุณาเลือกไฟล์รูปภาพสลิปเท่านั้น');
+  // Poll for bank payment while QR modal is active (Zero-Interaction Auto Confirm)
+  useEffect(() => {
+    if (!showConfirmModal || paymentMethod !== 'QR' || totalAmount <= 0) {
+      setListeningPayment(false);
+      setPaymentDetected(null);
       return;
     }
-    setVerifyingSlip(true);
-    setErrorMessage(null);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-          if (code && code.data) {
-            handleVerifySlip(code.data);
-            return;
-          }
+    setListeningPayment(true);
+    let isCancelled = false;
+
+    const interval = setInterval(async () => {
+      if (isCancelled || processing) return;
+
+      try {
+        const res = await fetch(`/api/sales/check-payment?amount=${totalAmount}&storeId=${user?.id || ''}`);
+        const data = await res.json();
+
+        if (data.success && data.paid && !isCancelled) {
+          isCancelled = true;
+          clearInterval(interval);
+          setPaymentDetected(`✓ ได้รับเงิน ฿${totalAmount.toFixed(2)} เข้าบัญชีธนาคารเรียบร้อย!`);
+
+          // Auto-confirm sale immediately without cashier or customer pressing anything!
+          setTimeout(async () => {
+            await handleConfirmSale(`[BANK_AUTO_VERIFIED: ${data.signal?.txRef || 'PAID'} | ฿${totalAmount.toFixed(2)}]`);
+            setPaymentDetected(null);
+          }, 800);
         }
-        // Fallback: Send imageBase64 directly to API
-        handleVerifySlip(undefined, dataUrl);
-      };
-      img.onerror = () => {
-        setVerifyingSlip(false);
-        setErrorMessage('ไม่สามารถอ่านไฟล์รูปภาพได้');
-      };
-      img.src = dataUrl;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Verify slip with Backend API and Auto-Confirm
-  const handleVerifySlip = async (qrData?: string, imageBase64?: string) => {
-    setVerifyingSlip(true);
-    setErrorMessage(null);
-    setSlipVerifiedSuccess('กำลังตรวจสอบสลิปกับระบบธนาคาร...');
-
-    try {
-      const res = await fetch('/api/sales/verify-slip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          qrData,
-          imageBase64,
-          expectedAmount: totalAmount,
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'สลิปไม่ถูกต้อง หรือไม่ผ่านการตรวจสอบ');
+      } catch (e) {
+        // Silently continue polling
       }
+    }, 1500);
 
-      const { transRef, amount, verifiedBy } = json.data;
-      setSlipVerifiedSuccess(`✓ เงินเข้าบัญชีจริงเรียบร้อย (฿${Number(amount).toFixed(2)})! กำลังยืนยันการขายอัตโนมัติ...`);
-
-      // Auto-confirm sale without cashier having to press anything!
-      setTimeout(async () => {
-        await handleConfirmSale(`[SLIP_VERIFIED:${transRef}|AMOUNT:${amount}|VIA:${verifiedBy}]`);
-        setSlipVerifiedSuccess(null);
-      }, 700);
-    } catch (err: any) {
-      setSlipVerifiedSuccess(null);
-      setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการตรวจสอบสลิป');
-    } finally {
-      setVerifyingSlip(false);
-    }
-  };
-
-  // Paste Event Listener for Ctrl + V
-  useEffect(() => {
-    if (!showConfirmModal || paymentMethod !== 'QR') return;
-
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const blob = items[i].getAsFile();
-          if (blob) {
-            handleImageSlipUpload(blob);
-            break;
-          }
-        }
-      }
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+      setListeningPayment(false);
     };
-
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [showConfirmModal, paymentMethod, totalAmount]);
-
-  // Clean up camera on modal close
-  useEffect(() => {
-    if (!showConfirmModal) {
-      stopCamera();
-      setSlipVerifiedSuccess(null);
-      setVerifyingSlip(false);
-    }
-  }, [showConfirmModal]);
+  }, [showConfirmModal, paymentMethod, totalAmount, processing, user?.id]);
 
   // Step 2: Handle Checkout Submit (ชั้นที่ 2 กดยืนยันชำระเงินจริง)
   const handleConfirmSale = async (customNote?: string) => {
@@ -476,7 +339,6 @@ export default function SalesPage() {
           ? receivedNum - totalAmount
           : null;
 
-      stopCamera();
       setShowConfirmModal(false);
       setCompletedSale({
         ...json.sale,
@@ -1001,103 +863,55 @@ export default function SalesPage() {
                     💡 ลูกค้าเปิดแอปธนาคารใดก็ได้ สแกน QR ด้านบน ยอดเงินจะขึ้นพอดี ฿{totalAmount.toFixed(2)} ทันที
                   </p>
 
-                  {/* Anti-Fraud Slip Verification Section */}
+                  {/* Real-time Bank Payment Listener (Zero-Interaction Auto Confirm) */}
                   <div className="mt-3 pt-3 border-t border-slate-200 text-left space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        <span>ระบบยืนยันสลิปอัตโนมัติ (ป้องกันสลิปปลอม)</span>
+                    {paymentDetected ? (
+                      <div className="p-3.5 bg-emerald-600 text-white rounded-2xl flex items-center gap-2.5 text-xs font-bold shadow-md animate-in zoom-in-95 duration-200">
+                        <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-200" />
+                        <span>{paymentDetected} กำลังบันทึกการขายและพิมพ์ใบเสร็จ...</span>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
-                        Auto-Confirm
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-500">
-                      เมื่อลูกค้าโอนเงินเสร็จ นำสลิปมาสแกนหน้ากล้อง หรือแนบรูปสลิป ระบบจะเช็คยอดเงินจริงกับธนาคารและ <strong>กดยืนยันการขายให้อัตโนมัติทันที</strong> โดยพนักงานไม่ต้องกดเอง
-                    </p>
-
-                    {/* Camera Viewfinder (when cameraActive) */}
-                    {cameraActive && (
-                      <div className="relative rounded-2xl overflow-hidden bg-black border-2 border-emerald-500 aspect-video flex items-center justify-center shadow-md">
-                        <video ref={videoRef} className="w-full h-full object-cover" />
-                        <canvas ref={canvasRef} className="hidden" />
-                        <div className="absolute inset-0 border-2 border-dashed border-emerald-400/80 m-6 rounded-xl pointer-events-none flex items-center justify-center">
-                          <span className="text-white text-[11px] font-bold bg-black/60 px-2.5 py-1 rounded-lg">
-                            เล็ง QR Code บนสลิปให้อยู่ในกรอบ
+                    ) : (
+                      <div className="p-3.5 bg-emerald-50/90 border border-emerald-200/80 rounded-2xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-emerald-900">
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span>รอสัญญาณเงินเข้าบัญชีธนาคารแบบ Real-time</span>
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                            Auto-Detect
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={stopCamera}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black/90 cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+
+                        <p className="text-[11px] text-emerald-800 leading-relaxed">
+                          เมื่อลูกค้าสแกนโอนเงินสำเร็จ <strong>ระบบจะตรวจจับยอดเงินและกดยืนยันการขายให้อัตโนมัติทันที 100%</strong> โดยลูกค้าไม่ต้องโชว์สลิป และพนักงานไม่ต้องกดปุ่มใดๆ
+                        </p>
                       </div>
                     )}
 
-                    {/* Verifying Spinner or Success Alert */}
-                    {verifyingSlip && (
-                      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2.5 text-xs font-bold text-emerald-800 animate-pulse">
-                        <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin shrink-0" />
-                        <span>{slipVerifiedSuccess || 'กำลังตรวจสอบสลิปโอนเงินกับระบบธนาคาร...'}</span>
-                      </div>
-                    )}
-
-                    {!verifyingSlip && slipVerifiedSuccess && (
-                      <div className="p-3 bg-emerald-600 text-white rounded-xl flex items-center gap-2 text-xs font-bold shadow-md animate-in fade-in">
-                        <CheckCircle2 className="w-5 h-5 shrink-0" />
-                        <span>{slipVerifiedSuccess}</span>
-                      </div>
-                    )}
-
-                    {/* Actions: Camera & Upload & Test Demo */}
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={cameraActive ? stopCamera : startCamera}
-                        disabled={verifyingSlip || processing}
-                        className={`py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border ${
-                          cameraActive
-                            ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
-                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-2xs'
-                        }`}
-                      >
-                        <Camera className="w-4 h-4 text-emerald-600" />
-                        <span>{cameraActive ? 'ปิดกล้องสแกน' : 'เปิดกล้องสแกนสลิป'}</span>
-                      </button>
-
-                      <label className="py-2 px-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-colors">
-                        <UploadCloud className="w-4 h-4 text-sky-600" />
-                        <span>แนบสลิป / Ctrl+V</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageSlipUpload(file);
-                            e.target.value = '';
-                          }}
-                          disabled={verifyingSlip || processing}
-                        />
-                      </label>
-                    </div>
-
-                    {/* Instant Demo Sandbox Button for testing */}
+                    {/* Instant Trigger Simulation Button for testing */}
                     <div className="text-center pt-0.5">
                       <button
                         type="button"
-                        onClick={() => {
-                          const mockRef = `DEMO${Date.now()}`;
-                          const mockQr = `00020101021229370016A000000677010111${mockRef}540${totalAmount.toFixed(2).length}${totalAmount.toFixed(2)}5802TH53037646304ABCD`;
-                          handleVerifySlip(mockQr);
+                        onClick={async () => {
+                          await fetch('/api/sales/check-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              amount: totalAmount,
+                              storeId: user?.id,
+                              txRef: `BANK_${Date.now()}`,
+                              bank: 'PROMPTPAY',
+                            }),
+                          });
                         }}
-                        disabled={verifyingSlip || processing}
+                        disabled={processing || !!paymentDetected}
                         className="text-[11px] text-emerald-700 hover:text-emerald-900 hover:underline font-semibold cursor-pointer inline-flex items-center gap-1"
                       >
-                        <span>⚡ ทดสอบจำลอง: ลูกค้าโอนเงินสำเร็จเข้าธนาคาร (Auto-Confirm)</span>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>⚡ ทดสอบจำลอง: ลูกค้าโอนเงินเข้าบัญชีแล้ว (ตรวจจับและยืนยันทันที)</span>
                       </button>
                     </div>
                   </div>
