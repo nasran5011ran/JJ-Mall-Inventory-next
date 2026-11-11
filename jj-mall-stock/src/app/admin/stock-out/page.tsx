@@ -105,7 +105,7 @@ export default function AdminStockOutPage() {
   const [requisitionNumber, setRequisitionNumber] = useState<string>('');
   const [note, setNote] = useState('');
   const [formItems, setFormItems] = useState<OutboundItemForm[]>([
-    { ingredientId: '', quantity: '1' },
+    { ingredientId: '', quantity: '' },
   ]);
 
   // Modal 2: View Detail
@@ -138,7 +138,7 @@ export default function AdminStockOutPage() {
     setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
     setNote('');
     setFormItems([
-      { ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '1' },
+      { ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '' },
     ]);
     setFormError(null);
     setModalOpen(true);
@@ -156,7 +156,7 @@ export default function AdminStockOutPage() {
   const addItemRow = () => {
     setFormItems((prev) => [
       ...prev,
-      { ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '1' },
+      { ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '' },
     ]);
   };
 
@@ -841,8 +841,9 @@ export default function AdminStockOutPage() {
                       const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                       const availableStock = selectedIng ? Number(selectedIng.currentStock) : 0;
                       const reqQty = parseFloat(item.quantity) || 0;
+                      const hasEnteredQty = item.quantity.trim() !== '' && !isNaN(parseFloat(item.quantity));
                       const balanceAfter = availableStock - reqQty;
-                      const isOverStock = reqQty > availableStock;
+                      const isOverStock = hasEnteredQty && reqQty > availableStock;
 
                       return (
                         <div
@@ -905,7 +906,7 @@ export default function AdminStockOutPage() {
                                 step="any"
                                 min="0.001"
                                 required
-                                placeholder="0"
+                                placeholder="ระบุจำนวน..."
                                 value={item.quantity}
                                 onChange={(e) =>
                                   handleItemChange(idx, 'quantity', e.target.value)
@@ -948,8 +949,14 @@ export default function AdminStockOutPage() {
                               <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-200 shadow-2xs">
                                 <div className="text-[10px] font-bold text-amber-800">จำนวนที่เบิก</div>
                                 <div className="font-mono font-bold text-amber-700 text-xs sm:text-sm mt-0.5">
-                                  -{reqQty.toLocaleString()}{' '}
-                                  <span className="text-[10px] font-normal text-amber-600">{selectedIng.unit}</span>
+                                  {hasEnteredQty && reqQty > 0 ? (
+                                    <>
+                                      -{reqQty.toLocaleString()}{' '}
+                                      <span className="text-[10px] font-normal text-amber-600">{selectedIng.unit}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-slate-400 text-xs font-normal">รอระบุจำนวน</span>
+                                  )}
                                 </div>
                               </div>
 
