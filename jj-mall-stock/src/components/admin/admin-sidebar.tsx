@@ -177,7 +177,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       {badgeCount > 0 && (
                         <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs animate-pulse ring-2 ring-rose-300/40"
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
                           title={`มีใบขอปรับปรุงสต็อกรออนุมัติ ${badgeCount} รายการ`}
                         >
                           {badgeCount > 99 ? '99+' : badgeCount}
