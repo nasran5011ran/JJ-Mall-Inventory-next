@@ -18,7 +18,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [notificationCount, setNotificationCount] = useState(0);
 
   // Check if current page is one of the wide tables requested by user
-  const isWidePage = pathname?.includes('/admin/stock-count') || pathname?.includes('/admin/stock-transactions');
+  const isWidePage =
+    pathname?.includes('/admin/stock-count') ||
+    pathname?.includes('/admin/stock-transactions') ||
+    pathname?.includes('/admin/ingredients') ||
+    pathname?.includes('/admin/products');
 
   // Route Guard: Strictly kick non-admins out, redirect to login if unauthenticated
   useEffect(() => {
