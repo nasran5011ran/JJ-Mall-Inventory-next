@@ -133,7 +133,7 @@ export default function StaffStockAdjustmentsPage() {
   const [formPresetReason, setFormPresetReason] = useState(PRESET_REASONS[0]);
   const [formCustomReason, setFormCustomReason] = useState('');
   const [formItems, setFormItems] = useState<NewItemForm[]>([
-    { ingredientId: '', inputMode: 'WASTE', inputValue: '1' },
+    { ingredientId: '', inputMode: 'WASTE', inputValue: '' },
   ]);
 
   const showToast = (msg: string) => {
@@ -150,7 +150,7 @@ export default function StaffStockAdjustmentsPage() {
       {
         ingredientId: firstIng ? String(firstIng.id) : '',
         inputMode: 'WASTE',
-        inputValue: '1',
+        inputValue: '',
       },
     ]);
     setFormError(null);
@@ -165,7 +165,7 @@ export default function StaffStockAdjustmentsPage() {
       {
         ingredientId: firstIng ? String(firstIng.id) : '',
         inputMode: 'WASTE',
-        inputValue: '1',
+        inputValue: '',
       },
     ]);
   };
@@ -785,7 +785,7 @@ export default function StaffStockAdjustmentsPage() {
                               min="0"
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
-                              placeholder="0"
+                              placeholder="ระบุจำนวน..."
                               className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
@@ -797,14 +797,21 @@ export default function StaffStockAdjustmentsPage() {
                             </label>
                             <div
                               className={`px-2 py-2 rounded-xl text-xs font-bold ${
-                                diff < 0
+                                item.inputValue.trim() === ''
+                                  ? 'bg-slate-100 text-slate-400'
+                                  : diff < 0
                                   ? 'bg-rose-100 text-rose-800'
                                   : diff > 0
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-slate-100 text-slate-700'
                               }`}
                             >
-                              {diff > 0 ? `+${diff}` : diff} {selectedIng?.unit || ''}
+                              {item.inputValue.trim() === ''
+                                ? '-'
+                                : diff > 0
+                                ? `+${diff}`
+                                : diff}{' '}
+                              {selectedIng?.unit || ''}
                             </div>
                           </div>
                         </div>
@@ -812,12 +819,18 @@ export default function StaffStockAdjustmentsPage() {
                         {/* Calculated Target Preview */}
                         {selectedIng && (
                           <div className="text-[11px] text-slate-500 flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-100">
-                            <span>
-                              สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → ยอดใหม่หลังอนุมัติ:{' '}
-                              <strong className="text-sky-700">{actualQty}</strong> {selectedIng.unit}
-                            </span>
+                            {item.inputValue.trim() === '' ? (
+                              <span className="text-slate-400 italic">
+                                สต็อกปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (รอระบุ{item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'})
+                              </span>
+                            ) : (
+                              <span>
+                                สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → ยอดใหม่หลังอนุมัติ:{' '}
+                                <strong className="text-sky-700">{actualQty}</strong> {selectedIng.unit}
+                              </span>
+                            )}
                             <span className="font-medium text-slate-600">
-                              มูลค่ากระทบ: {(diff * Number(selectedIng.costPerUnit || 0)).toLocaleString()} ฿
+                              มูลค่ากระทบ: {item.inputValue.trim() === '' ? '0' : (diff * Number(selectedIng.costPerUnit || 0)).toLocaleString()} ฿
                             </span>
                           </div>
                         )}
