@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 import Pagination from '@/components/Pagination';
@@ -92,6 +92,7 @@ const DEFAULT_CATEGORIES = [
 
 export default function IngredientsPage() {
   const { user: currentUser, isAdmin } = useAuth();
+  const { mutate: globalMutate } = useSWRConfig();
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [unitMode, setUnitMode] = useState<'SELECT' | 'CUSTOM'>('SELECT');
   const [categoryMode, setCategoryMode] = useState<'SELECT' | 'CUSTOM'>('SELECT');
@@ -345,6 +346,8 @@ export default function IngredientsPage() {
       setModalOpen(false);
       setHighlightId(returned.id);
       setTimeout(() => setHighlightId(null), 2500);
+      mutate();
+      globalMutate('/api/notifications');
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
     } finally {
@@ -376,6 +379,8 @@ export default function IngredientsPage() {
         setIngredients((prev) => prev.filter((i) => i.id !== id));
         await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบวัตถุดิบ "${name}" ออกจากระบบเรียบร้อยแล้ว`);
       }
+      mutate();
+      globalMutate('/api/notifications');
     } catch (error: any) {
       await showErrorAlert('เกิดข้อผิดพลาดในการลบ', error.message);
     }
@@ -521,31 +526,67 @@ export default function IngredientsPage() {
 
         {/* 5 Summary Stat Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">วัตถุดิบทั้งหมด</div>
-            <div className="text-2xl font-black text-slate-800 mt-1">
-              {totalCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+          <div
+            onClick={() => setSelectedStockStatus('ALL')}
+            className={`p-4 rounded-3xl border transition-all cursor-pointer ${
+              selectedStockStatus === 'ALL'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm ring-2 ring-slate-900/30'
+                : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+            }`}
+          >
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${selectedStockStatus === 'ALL' ? 'text-slate-300' : 'text-slate-400'}`}>
+              วัตถุดิบทั้งหมด
+            </div>
+            <div className={`text-2xl font-black mt-1 ${selectedStockStatus === 'ALL' ? 'text-white' : 'text-slate-800'}`}>
+              {totalCount} <span className={`text-xs font-semibold ${selectedStockStatus === 'ALL' ? 'text-slate-300' : 'text-slate-500'}`}>รายการ</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-            <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">สต็อกเพียงพอ</div>
-            <div className="text-2xl font-black text-emerald-700 mt-1">
-              {safeCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+          <div
+            onClick={() => setSelectedStockStatus('SAFE')}
+            className={`p-4 rounded-3xl border transition-all cursor-pointer ${
+              selectedStockStatus === 'SAFE'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-600/30'
+                : 'bg-white border-slate-200 shadow-2xs hover:border-emerald-300'
+            }`}
+          >
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${selectedStockStatus === 'SAFE' ? 'text-emerald-100' : 'text-emerald-600'}`}>
+              สต็อกเพียงพอ
+            </div>
+            <div className={`text-2xl font-black mt-1 ${selectedStockStatus === 'SAFE' ? 'text-white' : 'text-emerald-700'}`}>
+              {safeCount} <span className={`text-xs font-semibold ${selectedStockStatus === 'SAFE' ? 'text-emerald-100' : 'text-slate-500'}`}>รายการ</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-            <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">ใกล้หมด (ต่ำกว่าขั้นต่ำ)</div>
-            <div className="text-2xl font-black text-amber-600 mt-1">
-              {lowCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+          <div
+            onClick={() => setSelectedStockStatus('LOW')}
+            className={`p-4 rounded-3xl border transition-all cursor-pointer ${
+              selectedStockStatus === 'LOW'
+                ? 'bg-amber-500 text-white border-amber-500 shadow-sm ring-2 ring-amber-500/30'
+                : 'bg-white border-slate-200 shadow-2xs hover:border-amber-300'
+            }`}
+          >
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${selectedStockStatus === 'LOW' ? 'text-amber-100' : 'text-amber-600'}`}>
+              ใกล้หมด (ต่ำกว่าขั้นต่ำ)
+            </div>
+            <div className={`text-2xl font-black mt-1 ${selectedStockStatus === 'LOW' ? 'text-white' : 'text-amber-600'}`}>
+              {lowCount} <span className={`text-xs font-semibold ${selectedStockStatus === 'LOW' ? 'text-amber-100' : 'text-slate-500'}`}>รายการ</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
-            <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider">หมดสต็อก (0)</div>
-            <div className="text-2xl font-black text-red-600 mt-1">
-              {outCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+          <div
+            onClick={() => setSelectedStockStatus('OUT')}
+            className={`p-4 rounded-3xl border transition-all cursor-pointer ${
+              selectedStockStatus === 'OUT'
+                ? 'bg-red-600 text-white border-red-600 shadow-sm ring-2 ring-red-600/30'
+                : 'bg-white border-slate-200 shadow-2xs hover:border-red-300'
+            }`}
+          >
+            <div className={`text-[11px] font-bold uppercase tracking-wider ${selectedStockStatus === 'OUT' ? 'text-red-100' : 'text-red-600'}`}>
+              หมดสต็อก (0)
+            </div>
+            <div className={`text-2xl font-black mt-1 ${selectedStockStatus === 'OUT' ? 'text-white' : 'text-red-600'}`}>
+              {outCount} <span className={`text-xs font-semibold ${selectedStockStatus === 'OUT' ? 'text-red-100' : 'text-slate-500'}`}>รายการ</span>
             </div>
           </div>
 
