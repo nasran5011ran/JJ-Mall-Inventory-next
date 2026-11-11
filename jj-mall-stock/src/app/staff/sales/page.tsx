@@ -1027,7 +1027,7 @@ export default function SalesPage() {
               <thead>
                 <tr className="border-b border-black text-left font-bold">
                   <th className="py-1">รายการ</th>
-                  <th className="py-1 text-center w-8">จน.</th>
+                  <th className="py-1 text-center w-12">จำนวน</th>
                   <th className="py-1 text-right w-14">รวม</th>
                 </tr>
               </thead>
