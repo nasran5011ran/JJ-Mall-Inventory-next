@@ -836,49 +836,70 @@ export default function AdminStockOutPage() {
                     </button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {formItems.map((item, idx) => {
                       const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                       const availableStock = selectedIng ? Number(selectedIng.currentStock) : 0;
                       const reqQty = parseFloat(item.quantity) || 0;
+                      const balanceAfter = availableStock - reqQty;
                       const isOverStock = reqQty > availableStock;
 
                       return (
                         <div
                           key={idx}
-                          className={`p-3 rounded-2xl border transition-all ${
+                          className={`p-3.5 rounded-2xl border transition-all ${
                             isOverStock
-                              ? 'bg-red-50/60 border-red-300 ring-1 ring-red-400'
-                              : 'bg-slate-50/70 border-slate-200'
+                              ? 'bg-red-50/70 border-red-300 ring-2 ring-red-400/20 shadow-xs'
+                              : 'bg-slate-50/80 border-slate-200/90 shadow-2xs hover:border-slate-300'
                           }`}
                         >
                           <div className="grid grid-cols-12 gap-2.5 items-center">
                             {/* Ingredient Dropdown */}
                             <div className="col-span-12 sm:col-span-7">
-                              <label className="block text-[10px] text-slate-400 font-bold mb-0.5">
-                                รายการวัตถุดิบ
-                              </label>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                  <Package className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>รายการวัตถุดิบ #{idx + 1}</span>
+                                </label>
+                                {selectedIng && (
+                                  <span className="text-[11px] font-medium text-slate-500">
+                                    รหัส: <strong className="font-mono text-slate-700">{selectedIng.code}</strong>
+                                  </span>
+                                )}
+                              </div>
                               <select
                                 value={item.ingredientId}
                                 onChange={(e) =>
                                   handleItemChange(idx, 'ingredientId', e.target.value)
                                 }
                                 required
-                                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 cursor-pointer"
                               >
                                 {ingredients.map((ing) => (
                                   <option key={ing.id} value={ing.id}>
-                                    {ing.name} ({ing.code}) • คงเหลือในคลัง: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                                    {ing.name} ({ing.code}) — คงเหลือในคลัง: {Number(ing.currentStock).toLocaleString()} {ing.unit}
                                   </option>
                                 ))}
                               </select>
                             </div>
 
                             {/* Quantity Input */}
-                            <div className="col-span-8 sm:col-span-4">
-                              <label className="block text-[10px] text-slate-400 font-bold mb-0.5">
-                                จำนวนที่เบิก ({selectedIng?.unit || 'หน่วย'})
-                              </label>
+                            <div className="col-span-10 sm:col-span-4">
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-bold text-slate-700">
+                                  จำนวนที่เบิก ({selectedIng?.unit || 'หน่วย'})
+                                </label>
+                                {selectedIng && availableStock > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleItemChange(idx, 'quantity', String(availableStock))}
+                                    className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 underline cursor-pointer"
+                                    title="เบิกทั้งหมดที่คลังมี"
+                                  >
+                                    เบิกทั้งหมด
+                                  </button>
+                                )}
+                              </div>
                               <input
                                 type="number"
                                 step="any"
@@ -892,13 +913,13 @@ export default function AdminStockOutPage() {
                                 className={`w-full px-3 py-2 text-xs rounded-xl border font-mono font-bold text-right focus:outline-none focus:ring-2 ${
                                   isOverStock
                                     ? 'border-red-400 bg-white text-red-700 focus:ring-red-500/20'
-                                    : 'border-slate-200 bg-white text-slate-900 focus:ring-emerald-500/20'
+                                    : 'border-slate-200 bg-white text-slate-900 focus:ring-emerald-500/20 focus:border-emerald-600'
                                 }`}
                               />
                             </div>
 
                             {/* Delete Row */}
-                            <div className="col-span-4 sm:col-span-1 flex items-end justify-center pt-3.5">
+                            <div className="col-span-2 sm:col-span-1 flex items-end justify-center pt-5 sm:pt-4">
                               <button
                                 type="button"
                                 disabled={formItems.length === 1}
@@ -911,12 +932,62 @@ export default function AdminStockOutPage() {
                             </div>
                           </div>
 
+                          {/* 3 Metric Calculation Cards: ยอดปัจจุบัน / จำนวนเบิก / ยอดคงเหลือ */}
+                          {selectedIng && (
+                            <div className="mt-2.5 pt-2.5 border-t border-slate-200/70 grid grid-cols-3 gap-2 text-center">
+                              {/* 1. ยอดปัจจุบัน */}
+                              <div className="p-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs">
+                                <div className="text-[10px] font-bold text-slate-500">ยอดปัจจุบัน (ในคลัง)</div>
+                                <div className="font-mono font-bold text-slate-800 text-xs sm:text-sm mt-0.5">
+                                  {availableStock.toLocaleString()}{' '}
+                                  <span className="text-[10px] font-normal text-slate-500">{selectedIng.unit}</span>
+                                </div>
+                              </div>
+
+                              {/* 2. จำนวนเบิก */}
+                              <div className="p-2 rounded-xl bg-amber-50/80 border border-amber-200 shadow-2xs">
+                                <div className="text-[10px] font-bold text-amber-800">จำนวนที่เบิก</div>
+                                <div className="font-mono font-bold text-amber-700 text-xs sm:text-sm mt-0.5">
+                                  -{reqQty.toLocaleString()}{' '}
+                                  <span className="text-[10px] font-normal text-amber-600">{selectedIng.unit}</span>
+                                </div>
+                              </div>
+
+                              {/* 3. คงเหลือหลังเบิก */}
+                              <div
+                                className={`p-2 rounded-xl border shadow-2xs ${
+                                  isOverStock
+                                    ? 'bg-red-50 border-red-300'
+                                    : 'bg-emerald-50/80 border-emerald-200'
+                                }`}
+                              >
+                                <div
+                                  className={`text-[10px] font-bold ${
+                                    isOverStock ? 'text-red-700' : 'text-emerald-800'
+                                  }`}
+                                >
+                                  {isOverStock ? 'สต็อกไม่พอ! (ขาด)' : 'คงเหลือหลังเบิก'}
+                                </div>
+                                <div
+                                  className={`font-mono font-black text-xs sm:text-sm mt-0.5 ${
+                                    isOverStock ? 'text-red-600' : 'text-emerald-700'
+                                  }`}
+                                >
+                                  {balanceAfter.toLocaleString()}{' '}
+                                  <span className="text-[10px] font-normal">
+                                    {selectedIng.unit}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Warning if requested exceeds available */}
                           {isOverStock && (
-                            <div className="mt-1.5 text-[11px] font-bold text-red-600 flex items-center gap-1">
-                              <AlertCircle className="w-3.5 h-3.5" />
+                            <div className="mt-2 text-[11px] font-bold text-red-600 flex items-center gap-1.5 bg-red-100/60 p-2 rounded-xl border border-red-200">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-600" />
                               <span>
-                                ยอดเบิกเกินจำนวนคงเหลือในคลัง (คลังกลางมีเพียง {availableStock.toLocaleString()} {selectedIng?.unit})
+                                ยอดเบิกเกินจำนวนคงเหลือในคลัง (มีเพียง {availableStock.toLocaleString()} {selectedIng?.unit} ขาดอีก {Math.abs(balanceAfter).toLocaleString()} {selectedIng?.unit})
                               </span>
                             </div>
                           )}
@@ -924,6 +995,27 @@ export default function AdminStockOutPage() {
                       );
                     })}
                   </div>
+
+                  {/* Summary of entire withdrawal */}
+                  {formItems.length > 0 && (
+                    <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-emerald-700" />
+                        <span className="font-bold text-slate-700">
+                          สรุปการเบิกจ่าย: <strong>{formItems.length} รายการ</strong>
+                        </span>
+                      </div>
+                      <div className="font-mono text-xs text-slate-600">
+                        รวมจำนวนเบิกทั้งหมด:{' '}
+                        <strong className="text-emerald-800 text-sm font-black">
+                          {formItems
+                            .reduce((sum, it) => sum + (parseFloat(it.quantity) || 0), 0)
+                            .toLocaleString()}
+                        </strong>{' '}
+                        หน่วย
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1000,8 +1092,14 @@ export default function AdminStockOutPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-slate-400">ยอดคงเหลือก่อนเบิก:</span>
+                <span className="font-mono font-bold text-slate-700">
+                  {(Number(selectedTx.balanceAfter) + Number(selectedTx.quantityOut)).toLocaleString()} {selectedTx.ingredient?.unit}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-slate-400">จำนวนที่เบิกจ่าย:</span>
-                <span className="font-mono font-bold text-sm text-emerald-700">
+                <span className="font-mono font-bold text-sm text-amber-700">
                   -{Number(selectedTx.quantityOut).toLocaleString()} {selectedTx.ingredient?.unit}
                 </span>
               </div>
