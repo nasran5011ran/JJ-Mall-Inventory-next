@@ -881,7 +881,7 @@ export default function AdminSalesReportPage() {
                           }}
                           className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 font-bold text-xs transition-colors cursor-pointer"
                         >
-                          ดูบิล
+                          ดูรายละเอียด
                         </button>
                       </td>
                     </tr>
@@ -911,7 +911,7 @@ export default function AdminSalesReportPage() {
                   <ReceiptIcon />
                 </div>
                 <div>
-                  <h3 className="font-bold text-base text-slate-800">ใบเสร็จรับเงิน (Sales Receipt)</h3>
+                  <h3 className="font-bold text-base text-slate-800">รายละเอียดการขาย (Sale Details)</h3>
                   <p className="text-xs text-slate-400 font-mono">{selectedSale.saleNumber}</p>
                 </div>
               </div>
