@@ -594,15 +594,15 @@ export default function AdminStockOutPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="py-3.5 px-4">เลขที่ใบเบิก / เลขที่รายการ</th>
-                    <th className="py-3.5 px-4">วันที่ & เวลาเบิก</th>
-                    <th className="py-3.5 px-4">ร้านค้าผู้เบิกรับ</th>
-                    <th className="py-3.5 px-4">วัตถุดิบที่เบิก</th>
-                    <th className="py-3.5 px-4 text-right">จำนวนที่เบิกจ่าย</th>
-                    <th className="py-3.5 px-4 text-right">คลังกลางคงเหลือ</th>
-                    <th className="py-3.5 px-4">หมายเหตุ</th>
-                    <th className="py-3.5 px-4 text-right">การจัดการ</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3.5 px-5 sm:px-6">เลขที่ใบเบิก / เลขที่รายการ</th>
+                    <th className="py-3.5 px-5 sm:px-6">วันที่ & เวลาเบิก</th>
+                    <th className="py-3.5 px-5 sm:px-6">ร้านค้าผู้เบิกรับ</th>
+                    <th className="py-3.5 px-5 sm:px-6">วัตถุดิบที่เบิก</th>
+                    <th className="py-3.5 px-5 sm:px-6 text-right">จำนวนที่เบิกจ่าย</th>
+                    <th className="py-3.5 px-5 sm:px-6 text-right">คลังกลางคงเหลือ</th>
+                    <th className="py-3.5 px-5 sm:px-6">หมายเหตุ</th>
+                    <th className="py-3.5 px-5 sm:px-6 text-right">การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -624,7 +624,7 @@ export default function AdminStockOutPage() {
                         className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                       >
                         {/* Requisition Number */}
-                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-800">
+                        <td className="py-3.5 px-5 sm:px-6 font-mono font-bold text-emerald-800">
                           <div className="group-hover:underline flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5 text-emerald-700" />
                             <span>{tx.refId || tx.transactionNumber}</span>
@@ -635,7 +635,7 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Date & Time */}
-                        <td className="py-3.5 px-4 text-slate-500">
+                        <td className="py-3.5 px-5 sm:px-6 text-slate-500">
                           <div className="font-bold text-slate-700">
                             {new Date(tx.createdAt).toLocaleDateString('th-TH')}
                           </div>
@@ -646,7 +646,7 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Store Destination Badge */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-5 sm:px-6">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-900 border border-emerald-200">
                             <Store className="w-3 h-3 text-emerald-700" />
                             <span>{storeNameDisplay}</span>
@@ -654,7 +654,7 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Ingredient Name */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3.5 px-5 sm:px-6">
                           <div className="font-bold text-slate-800 flex items-center gap-1.5">
                             <Package className="w-3.5 h-3.5 text-slate-400" />
                             <span>{tx.ingredient?.name || '-'}</span>
@@ -665,7 +665,7 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Quantity Out */}
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-5 sm:px-6 text-right">
                           <span className="font-mono font-bold text-sm text-emerald-700">
                             -{qtyOut.toLocaleString()}
                           </span>
@@ -675,7 +675,7 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Balance After in Central Warehouse */}
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-5 sm:px-6 text-right">
                           <span className="font-mono font-bold text-slate-800">
                             {balAfter.toLocaleString()}
                           </span>
@@ -685,12 +685,12 @@ export default function AdminStockOutPage() {
                         </td>
 
                         {/* Note */}
-                        <td className="py-3.5 px-4 text-slate-600 max-w-xs truncate">
+                        <td className="py-3.5 px-5 sm:px-6 text-slate-600 max-w-xs truncate">
                           {tx.note || '-'}
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                        <td className="py-3.5 px-5 sm:px-6 text-right whitespace-nowrap">
                           <div
                             className="flex items-center justify-end gap-1.5"
                             onClick={(e) => e.stopPropagation()}
@@ -734,7 +734,7 @@ export default function AdminStockOutPage() {
       {/* Modal 1: Create New Stock Out (บันทึกเบิกจ่ายสินค้าไปหน้าร้าน) */}
       {modalOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
