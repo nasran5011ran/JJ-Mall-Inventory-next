@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { TransactionType, AdjustmentStatus } from '@prisma/client';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET: Fetch Stock Adjustments with items and ingredients
 export async function GET(req: NextRequest) {
@@ -49,7 +50,14 @@ export async function GET(req: NextRequest) {
     });
 
     // 2. Fetch all active ingredients for new adjustment creation
-    const ingredients = await prisma.ingredient.findMany({
+    // For STAFF users, currentStock must represent their own store's stock!
+    let storeBalMap = new Map<number, number>();
+    if (session.role === 'STAFF') {
+      const storeBalances = await calculateStoreReconciliation(session.id);
+      storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
+    }
+
+    const rawIngredients = await prisma.ingredient.findMany({
       where: { status: 'ACTIVE' },
       select: {
         id: true,
@@ -62,6 +70,17 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { name: 'asc' },
     });
+
+    const ingredients = rawIngredients.map((ing) => ({
+      ...ing,
+      warehouseStock: Number(ing.currentStock),
+      currentStock: session.role === 'STAFF'
+        ? (storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0)
+        : Number(ing.currentStock),
+      storeStock: session.role === 'STAFF'
+        ? (storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0)
+        : null,
+    }));
 
     // 3. Compute KPI metrics
     const allAdjustments = await prisma.stockAdjustment.findMany({
@@ -141,6 +160,12 @@ export async function POST(req: NextRequest) {
       const ingMap = new Map<number, any>();
       dbIngredients.forEach((ing) => ingMap.set(ing.id, ing));
 
+      let storeBalMap = new Map<number, number>();
+      if (session.role === 'STAFF') {
+        const storeBalances = await calculateStoreReconciliation(session.id);
+        storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
+      }
+
       // 2. Prepare items data
       const adjustmentItemsData: any[] = [];
       const stockUpdates: { id: number; newStock: number; diff: number; ing: any }[] = [];
@@ -153,7 +178,9 @@ export async function POST(req: NextRequest) {
         const dbIng = ingMap.get(ingId);
         if (!dbIng) continue;
 
-        const systemQty = parseFloat(String(dbIng.currentStock));
+        const systemQty = session.role === 'STAFF'
+          ? (storeBalMap.has(ingId) ? storeBalMap.get(ingId)! : 0)
+          : parseFloat(String(dbIng.currentStock));
         const diffQty = actualQty - systemQty;
 
         adjustmentItemsData.push({
@@ -302,6 +329,7 @@ export async function PATCH(req: NextRequest) {
     const existing = await prisma.stockAdjustment.findUnique({
       where: { id: adjustmentId },
       include: {
+        requestedBy: true,
         items: {
           include: {
             ingredient: true,
@@ -344,22 +372,29 @@ export async function PATCH(req: NextRequest) {
       }
 
       // If APPROVE: Update ingredient stock and record StockTransactions
+      const isStoreAdjustment = existing.requestedBy?.role === 'STAFF';
+
       for (const item of existing.items) {
         const diff = Number(item.diffQuantity);
         const newActual = Number(item.actualQuantity);
 
         if (diff !== 0) {
-          // Update current stock
-          await tx.ingredient.update({
-            where: { id: item.ingredientId },
-            data: { currentStock: newActual },
-          });
+          // Update Central Warehouse ingredient currentStock ONLY for warehouse adjustments
+          // Store adjustments affect the store's stock via StockTransaction with [STORE_ID:...], NOT Central Warehouse stock
+          if (!isStoreAdjustment) {
+            await tx.ingredient.update({
+              where: { id: item.ingredientId },
+              data: { currentStock: newActual },
+            });
+          }
 
           // Create StockTransaction
           const isAdd = diff > 0;
           const qtyIn = isAdd ? Math.abs(diff) : 0;
           const qtyOut = !isAdd ? Math.abs(diff) : 0;
           const txType = isAdd ? TransactionType.ADJUST_ADD : TransactionType.ADJUST_SUB;
+
+          const storeTag = isStoreAdjustment && existing.requestedById ? ` [STORE_ID:${existing.requestedById}]` : '';
 
           await tx.stockTransaction.create({
             data: {
@@ -371,7 +406,7 @@ export async function PATCH(req: NextRequest) {
               balanceAfter: newActual,
               refType: 'STOCK_ADJUSTMENT',
               refId: existing.adjustmentNumber,
-              note: `อนุมัติปรับยอดสต็อก #${existing.adjustmentNumber} (${diff > 0 ? '+' : ''}${diff} ${item.ingredient.unit}): ${existing.reason}`,
+              note: `อนุมัติปรับยอดสต็อก${isStoreAdjustment ? 'หน้าร้าน' : 'คลังกลาง'} #${existing.adjustmentNumber} (${diff > 0 ? '+' : ''}${diff} ${item.ingredient.unit}): ${existing.reason}${storeTag}`,
               createdById: session.id,
             },
           });

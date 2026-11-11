@@ -85,6 +85,28 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
     salesMap.set(tx.ingredientId, prev + Number(tx.quantityOut));
   }
 
+  // Adjustments for this store since last count (waste, damage, manual adjustment)
+  const adjustmentTxs = await prisma.stockTransaction.findMany({
+    where: {
+      type: { in: [TransactionType.ADJUST_SUB, TransactionType.ADJUST_ADD] },
+      createdAt: { gt: sinceDate },
+      OR: [
+        { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+        { note: { contains: `@${targetStore.username}` } },
+      ],
+    },
+  });
+
+  const adjustmentDiffMap = new Map<number, number>();
+  for (const tx of adjustmentTxs) {
+    const prev = adjustmentDiffMap.get(tx.ingredientId) || 0;
+    if (tx.type === TransactionType.ADJUST_SUB) {
+      adjustmentDiffMap.set(tx.ingredientId, prev - Number(tx.quantityOut));
+    } else if (tx.type === TransactionType.ADJUST_ADD) {
+      adjustmentDiffMap.set(tx.ingredientId, prev + Number(tx.quantityIn));
+    }
+  }
+
   const lastCountItemsMap = new Map<number, number>();
   if (lastCount && lastCount.items) {
     for (const item of lastCount.items) {
@@ -96,7 +118,8 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
     const opening = lastCountItemsMap.get(ing.id) ?? 0;
     const inbound = inboundMap.get(ing.id) ?? 0;
     const sales = salesMap.get(ing.id) ?? 0;
-    const expected = Math.max(0, opening + inbound - sales);
+    const adj = adjustmentDiffMap.get(ing.id) ?? 0;
+    const expected = Math.max(0, opening + inbound - sales + adj);
 
     return {
       ingredientId: ing.id,

@@ -622,7 +622,7 @@ export default function StaffStockAdjustmentsPage() {
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">สร้างใบขอปรับสต็อก / แจ้งของเสีย</h2>
                   <p className="text-xs text-slate-500">
-                    สาขา: <span className="font-semibold text-slate-700">{user?.name}</span> (ส่งให้ Admin พิจารณาอนุมัติ)
+                    สต็อกหน้าร้าน: <span className="font-bold text-emerald-700">{user?.name}</span> (ส่งให้ Admin พิจารณาอนุมัติ)
                   </p>
                 </div>
               </div>
@@ -758,7 +758,7 @@ export default function StaffStockAdjustmentsPage() {
                               </option>
                               {ingredients.map((ing) => (
                                 <option key={ing.id} value={ing.id}>
-                                  {ing.name} ({ing.code}) [{ing.unit}]
+                                  {ing.name} ({ing.code}) — คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
                                 </option>
                               ))}
                             </select>
@@ -767,9 +767,9 @@ export default function StaffStockAdjustmentsPage() {
                           {/* Current System Stock */}
                           <div className="sm:col-span-2">
                             <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                              สต็อกเดิม
+                              สต็อกในร้าน
                             </label>
-                            <div className="px-3 py-2 bg-slate-200/70 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 text-center">
+                            <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm font-bold text-emerald-800 text-center">
                               {sysStock} {selectedIng?.unit || ''}
                             </div>
                           </div>
@@ -821,12 +821,12 @@ export default function StaffStockAdjustmentsPage() {
                           <div className="text-[11px] text-slate-500 flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-100">
                             {item.inputValue.trim() === '' ? (
                               <span className="text-slate-400 italic">
-                                สต็อกปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (รอระบุ{item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'})
+                                สต็อกหน้าร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (รอระบุ{item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'})
                               </span>
                             ) : (
                               <span>
-                                สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → ยอดใหม่หลังอนุมัติ:{' '}
-                                <strong className="text-sky-700">{actualQty}</strong> {selectedIng.unit}
+                                สต็อกหน้าร้านปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → ยอดใหม่หลังอนุมัติ:{' '}
+                                <strong className="text-emerald-700 font-bold">{actualQty}</strong> {selectedIng.unit}
                               </span>
                             )}
                             <span className="font-medium text-slate-600">
