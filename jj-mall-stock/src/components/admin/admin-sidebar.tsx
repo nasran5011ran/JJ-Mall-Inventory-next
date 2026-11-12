@@ -156,7 +156,6 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
                 const isAdjustment = item.href === '/admin/stock-adjustments';
                 const isRequisition = item.href === '/admin/stock-requests';
-                const isIngredients = item.href === '/admin/ingredients';
 
                 return (
                   <Link
@@ -199,16 +198,6 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                           title={`มีใบขอปรับปรุงสต็อกรออนุมัติ ${pendingAdjustmentsCount} รายการ`}
                         >
                           {pendingAdjustmentsCount > 99 ? '99+' : pendingAdjustmentsCount}
-                        </span>
-                      )}
-
-                      {/* 2. Ingredients: Store low stock (Red - ต้องซื้อเพิ่ม) */}
-                      {isIngredients && storeLowCount > 0 && (
-                        <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center shadow-xs"
-                          title={`มีวัตถุดิบในร้านต่ำกว่าเกณฑ์ขั้นต่ำ ${storeLowCount} รายการ (ต้องซื้อเพิ่ม)`}
-                        >
-                          {storeLowCount > 99 ? '99+' : storeLowCount}
                         </span>
                       )}
 
