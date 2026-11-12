@@ -549,6 +549,7 @@ export default function ProductsPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                     <th className="py-3.5 px-4 text-center">รูปภาพ</th>
                     <th className="py-3.5 px-4">รหัสสินค้า</th>
                     <th className="py-3.5 px-4">ชื่อสินค้า</th>
@@ -563,7 +564,8 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {paginatedProducts.map((p) => {
+                  {paginatedProducts.map((p, idx) => {
+                    const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                     const isHighlighted = highlightId === p.id;
                     const hasRecipe = p.recipe && p.recipe.items && p.recipe.items.length > 0;
                     const bomCost = hasRecipe
@@ -596,6 +598,11 @@ export default function ProductsPage() {
                             : 'hover:bg-slate-50/70'
                         }`}
                       >
+                        {/* Sequence Row Number */}
+                        <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          {rowNumber}
+                        </td>
+
                         {/* Product Image Thumbnail */}
                         <td className="py-2.5 px-4 text-center">
                           {p.image ? (

@@ -403,6 +403,7 @@ export default function AdminStockRequestsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-3 px-4">เลขที่ใบขอเบิก</th>
                   <th className="py-3 px-3">ร้านค้าที่ขอเบิก</th>
                   <th className="py-3 px-3">วันที่ส่งคำขอ</th>
@@ -413,9 +414,15 @@ export default function AdminStockRequestsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedList.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4">
+                {paginatedList.map((req, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
+                  return (
+                    <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                      {/* Sequence Row Number */}
+                      <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
+                      <td className="py-3 px-4">
                       <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
                         {req.requisitionNumber}
                       </span>
@@ -493,7 +500,8 @@ export default function AdminStockRequestsPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>

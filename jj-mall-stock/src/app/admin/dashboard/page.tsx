@@ -525,6 +525,7 @@ export default function DashboardPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                  <th className="py-3 px-3 text-center w-10 text-slate-400">#</th>
                   <th className="py-3 px-3">เลขที่ใบเสร็จ</th>
                   <th className="py-3 px-3">เวลา</th>
                   <th className="py-3 px-3">ร้านค้า / จุดขาย</th>
@@ -533,13 +534,16 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {recentSales.map((sale: any) => (
+                {recentSales.map((sale: any, idx: number) => (
                   <tr
                     key={sale.id}
                     onClick={() => router.push('/admin/reports/sales')}
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                     title="คลิกเพื่อดูรายละเอียดในหน้ารายงานยอดขาย"
                   >
+                    <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                      {idx + 1}
+                    </td>
                     <td className="py-3 px-3 font-mono font-bold text-emerald-700">{sale.saleNumber}</td>
                     <td className="py-3 px-3 text-slate-500">
                       {new Date(sale.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.

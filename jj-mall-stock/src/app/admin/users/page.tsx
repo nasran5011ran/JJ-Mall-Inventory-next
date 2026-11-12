@@ -510,6 +510,7 @@ export default function AdminUsersPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-3.5 px-4">ผู้ใช้งาน</th>
                   <th className="py-3.5 px-4">สิทธิ์ในระบบ (Role)</th>
                   <th className="py-3.5 px-4 text-center">สถานะบัญชี</th>
@@ -518,7 +519,8 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedUsers.map((u) => {
+                {paginatedUsers.map((u, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                   const isCurrent = u.id === currentUser?.id;
                   const isHighlighted = highlightId === u.id;
                   const isAdminRole = u.role === 'ADMIN';
@@ -531,6 +533,11 @@ export default function AdminUsersPage() {
                         isHighlighted ? 'bg-emerald-50/60 ring-1 ring-emerald-500/30' : ''
                       }`}
                     >
+                      {/* Sequence Row Number */}
+                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
+
                       {/* Name & Username */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">

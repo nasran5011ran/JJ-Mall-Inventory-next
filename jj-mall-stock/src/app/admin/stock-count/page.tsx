@@ -582,6 +582,7 @@ export default function AdminStockCountPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-2.5 px-3 text-center w-12 text-slate-400">#</th>
                     <th className="py-2.5 px-3 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
                     <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
                     <th className="py-2.5 px-3 whitespace-nowrap">จุดตรวจนับ / ร้านค้า</th>
@@ -593,7 +594,8 @@ export default function AdminStockCountPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {paginatedCounts.map((sc) => {
+                  {paginatedCounts.map((sc, idx) => {
+                    const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                     const matchCount = sc.items.filter((i) => i.status === 'MATCH').length;
                     const shortageCount = sc.items.filter((i) => i.status === 'SHORTAGE').length;
                     const surplusCount = sc.items.filter((i) => i.status === 'SURPLUS').length;
@@ -605,6 +607,11 @@ export default function AdminStockCountPage() {
                         onClick={() => setSelectedCount(sc)}
                         className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                       >
+                        {/* Sequence Row Number */}
+                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          {rowNumber}
+                        </td>
+
                         {/* Count Number */}
                         <td className="py-2.5 px-3 font-mono font-bold text-emerald-700 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 group-hover:underline">

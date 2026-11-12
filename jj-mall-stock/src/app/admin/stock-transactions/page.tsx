@@ -552,6 +552,7 @@ export default function AdminStockTransactionsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-2.5 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลา</th>
                   <th className="py-2.5 px-3 whitespace-nowrap">รหัสรายการ / เอกสารอ้างอิง</th>
                   <th className="py-2.5 px-3 whitespace-nowrap text-center">ประเภทรายการ</th>
@@ -564,7 +565,8 @@ export default function AdminStockTransactionsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedTransactions.map((tx) => {
+                {paginatedTransactions.map((tx, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                   const badge = getTypeBadge(tx.type);
                   const BadgeIcon = badge.icon;
                   const qtyIn = Number(tx.quantityIn);
@@ -577,6 +579,11 @@ export default function AdminStockTransactionsPage() {
                       onClick={() => setSelectedTx(tx)}
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
+                      {/* Sequence Row Number */}
+                      <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
+
                       {/* Date & Time */}
                       <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
                         <div className="font-bold text-slate-700">

@@ -504,6 +504,7 @@ export default function StaffStockAdjustmentsPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-3.5 px-4">เลขที่เอกสาร</th>
                   <th className="py-3.5 px-4">วันเวลาที่ยื่น</th>
                   <th className="py-3.5 px-4">เหตุผลในการขอปรับ</th>
@@ -513,7 +514,8 @@ export default function StaffStockAdjustmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-                {paginatedAdjustments.map((adj) => {
+                {paginatedAdjustments.map((adj, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                   const isPending = adj.status === 'PENDING';
                   const isApproved = adj.status === 'APPROVED';
                   const isRejected = adj.status === 'REJECTED';
@@ -526,6 +528,9 @@ export default function StaffStockAdjustmentsPage() {
                       className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
                       onClick={() => setSelectedAdjustment(adj)}
                     >
+                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
                       <td className="py-3.5 px-4">
                         <div className="font-semibold text-slate-900 group-hover:text-sky-600 flex items-center gap-1.5">
                           <FileText className="w-3.5 h-3.5 text-slate-400" />

@@ -593,6 +593,7 @@ export default function StaffStockRequestsPage() {
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
                       <th className="py-3 px-4">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3">หมวดหมู่</th>
                       <th className="py-3 px-3 text-right">ยอดยกมา</th>
@@ -606,7 +607,8 @@ export default function StaffStockRequestsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {paginatedStoreBalances.map((item) => {
+                    {paginatedStoreBalances.map((item, idx) => {
+                      const rowNumber = (stockPage - 1) * stockPageSize + idx + 1;
                       const isLow = item.hasStockHistory && Number(item.expectedStock) <= Number(item.minStock);
                       const isUnstocked = !item.hasStockHistory;
 
@@ -617,6 +619,9 @@ export default function StaffStockRequestsPage() {
                             isLow ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/60'
                           }`}
                         >
+                          <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                            {rowNumber}
+                          </td>
                           <td className="py-3 px-4">
                             <div className="font-bold text-slate-900">{item.name}</div>
                             <div className="text-[11px] font-mono text-slate-400">{item.code}</div>
@@ -863,6 +868,7 @@ export default function StaffStockRequestsPage() {
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
                       <th className="py-3 px-4">เลขที่ใบขอเบิก</th>
                       <th className="py-3 px-3">วันที่ขอเบิก</th>
                       <th className="py-3 px-3">เหตุผล / วัตถุประสงค์</th>
@@ -873,9 +879,14 @@ export default function StaffStockRequestsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {paginatedRequisitions.map((req) => (
-                      <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="py-3 px-4">
+                    {paginatedRequisitions.map((req, idx) => {
+                      const rowNumber = (reqPage - 1) * reqPageSize + idx + 1;
+                      return (
+                        <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                            {rowNumber}
+                          </td>
+                          <td className="py-3 px-4">
                           <span className="font-mono font-bold text-sky-700 bg-sky-50 px-2 py-1 rounded-lg border border-sky-100">
                             {req.requisitionNumber}
                           </span>
@@ -955,7 +966,8 @@ export default function StaffStockRequestsPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
                 </table>
               </div>

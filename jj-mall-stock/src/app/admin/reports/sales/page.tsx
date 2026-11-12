@@ -762,6 +762,7 @@ export default function AdminSalesReportPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-3.5 px-4">เลขที่บิลขาย</th>
                   <th className="py-3.5 px-4">วันที่ & เวลา</th>
                   <th className="py-3.5 px-4">ร้านค้า / แคชเชียร์</th>
@@ -772,7 +773,8 @@ export default function AdminSalesReportPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedSales.map((s) => {
+                {paginatedSales.map((s, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                   const isCash = (s.paymentMethod || 'CASH').toUpperCase() === 'CASH';
 
                   return (
@@ -781,6 +783,11 @@ export default function AdminSalesReportPage() {
                       onClick={() => setSelectedSale(s)}
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
+                      {/* Sequence Row Number */}
+                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
+
                       {/* Sale Number */}
                       <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
                         <div className="group-hover:underline flex items-center gap-1.5">

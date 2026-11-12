@@ -79,6 +79,7 @@ export default function StaffSalesHistoryPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                     <th className="py-3.5 px-4">เลขที่ใบเสร็จ</th>
                     <th className="py-3.5 px-4">วันที่ / เวลา</th>
                     <th className="py-3.5 px-4">รายการสินค้า</th>
@@ -88,9 +89,14 @@ export default function StaffSalesHistoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {paginatedSales.map((sale) => (
-                    <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
+                  {paginatedSales.map((sale, idx) => {
+                    const rowNumber = (currentPage - 1) * pageSize + idx + 1;
+                    return (
+                      <tr key={sale.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          {rowNumber}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
                         {sale.saleNumber}
                       </td>
                       <td className="py-3.5 px-4 text-slate-500">
@@ -111,7 +117,8 @@ export default function StaffSalesHistoryPage() {
                         ฿{Number(sale.totalAmount).toFixed(2)}
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
                 </tbody>
               </table>
             </div>
