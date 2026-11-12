@@ -26,6 +26,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
 
 interface Ingredient {
   id: number;
@@ -104,6 +105,9 @@ export default function AdminStockInPage() {
   const [destinationFilter, setDestinationFilter] = useState('ALL'); // ALL | staffStoreId
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
 
+  const router = useRouter();
+  const [returnUrl, setReturnUrl] = useState<string | null>(null);
+
   // Modal State for New Stock In
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +115,14 @@ export default function AdminStockInPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
   const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
+
+  const handleCloseModal = () => {
+    if (returnUrl) {
+      router.push(returnUrl);
+    } else {
+      setModalOpen(false);
+    }
+  };
 
   // Detail Modal State
   const [selectedTx, setSelectedTx] = useState<InboundTransaction | null>(null);
@@ -163,8 +175,10 @@ export default function AdminStockInPage() {
       const urlParams = new URLSearchParams(window.location.search);
       const qStoreId = urlParams.get('storeId');
       const qCode = urlParams.get('code');
+      const qReturnUrl = urlParams.get('returnUrl');
+      if (qReturnUrl) setReturnUrl(qReturnUrl);
 
-      if (qStoreId || qCode) {
+      if (qStoreId || qCode || qReturnUrl) {
         const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         setInvoiceNumber(`PO-${todayStr}-${randomSuffix}`);
@@ -307,7 +321,11 @@ export default function AdminStockInPage() {
 
       showToast(data.message || 'บันทึกรับสินค้าเข้าสต็อกร้านเรียบร้อยแล้ว');
       await mutate();
-      setModalOpen(false);
+      if (returnUrl) {
+        router.push(returnUrl);
+      } else {
+        setModalOpen(false);
+      }
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
@@ -742,7 +760,7 @@ export default function AdminStockInPage() {
                 </div>
               </div>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={handleCloseModal}
                 className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1091,7 +1109,7 @@ export default function AdminStockInPage() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setModalOpen(false)}
+                      onClick={handleCloseModal}
                       className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs cursor-pointer transition-colors"
                     >
                       ยกเลิก
