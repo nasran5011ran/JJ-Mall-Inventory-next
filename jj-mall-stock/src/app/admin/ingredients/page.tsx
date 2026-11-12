@@ -256,11 +256,15 @@ export default function IngredientsPage() {
 
   // Expected store balance of currently selected ingredient in Quick Stock-In modal
   const quickStockInCurrentBalance = useMemo(() => {
-    if (!stockInIngredient || !stockInStoreId) return 0;
-    const list = storeBalances[Number(stockInStoreId)] || [];
+    if (!stockInIngredient) return 0;
+    const storeIdNum = Number(stockInStoreId || selectedStoreId || staffStores[0]?.id || 0);
+    const list = storeBalances[storeIdNum] || [];
     const found = list.find((b) => b.ingredientId === stockInIngredient.id);
-    return found ? Number(found.expectedStock) : 0;
-  }, [stockInIngredient, stockInStoreId, storeBalances]);
+    if (found && found.expectedStock !== undefined) {
+      return Number(found.expectedStock);
+    }
+    return Number(stockInIngredient.currentStock || 0);
+  }, [stockInIngredient, stockInStoreId, selectedStoreId, staffStores, storeBalances]);
 
   // Detail / Recipes modal
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
@@ -1532,8 +1536,10 @@ export default function IngredientsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-[10px] text-slate-500 font-medium">หน่วยนับ</div>
-                  <div className="text-xs font-black text-emerald-900">{stockInIngredient.unit}</div>
+                  <div className="text-[10px] text-slate-500">จำนวนคงเหลือ</div>
+                  <div className="text-xs font-bold text-slate-800 font-mono">
+                    {quickStockInCurrentBalance.toLocaleString()} {stockInIngredient.unit}
+                  </div>
                 </div>
               </div>
 
@@ -1614,6 +1620,34 @@ export default function IngredientsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* สรุปยอดสต็อก: ธรรมดาและสะอาด */}
+              {(() => {
+                const qtyIn = parseFloat(stockInQty) || 0;
+                const newBalance = quickStockInCurrentBalance + qtyIn;
+                return (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>จำนวนคงเหลือ:</span>
+                      <span className="font-mono font-bold text-slate-800">
+                        {quickStockInCurrentBalance.toLocaleString()} {stockInIngredient.unit}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>จำนวนที่รับเข้า:</span>
+                      <span className="font-mono font-bold text-emerald-700">
+                        +{qtyIn > 0 ? qtyIn.toLocaleString() : '0'} {stockInIngredient.unit}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-800 font-bold border-t border-slate-200 pt-1.5 mt-1">
+                      <span>ยอดคงเหลือใหม่:</span>
+                      <span className="font-mono font-black text-sm text-emerald-700">
+                        {newBalance.toLocaleString()} {stockInIngredient.unit}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Total Cost live calculation */}
               {parseFloat(stockInQty) > 0 && (
