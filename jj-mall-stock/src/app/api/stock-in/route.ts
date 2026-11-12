@@ -2,23 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { TransactionType } from '@prisma/client';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET: Fetch recent Stock In / Inbound purchase transactions
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session) {
       return NextResponse.json(
-        { success: false, message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลการรับสินค้าเข้าคลัง (Admin Only)' },
-        { status: 403 }
+        { success: false, message: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' },
+        { status: 401 }
       );
     }
 
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const target = searchParams.get('target') || 'ALL'; // ALL | WAREHOUSE | STORE_ID
+    const targetStoreId = searchParams.get('storeId');
 
-    // 1. Fetch all ingredients for lookup
+    // 1. Fetch all active ingredients
     const allIngredients = await prisma.ingredient.findMany({
       where: { status: 'ACTIVE' },
       select: {
@@ -29,11 +30,12 @@ export async function GET(req: NextRequest) {
         unit: true,
         currentStock: true,
         costPerUnit: true,
+        minStock: true,
       },
       orderBy: { name: 'asc' },
     });
 
-    // 2. Fetch all staff users for store allocation options
+    // 2. Fetch all staff users / stores for selection
     const staffStores = await prisma.user.findMany({
       where: { role: 'STAFF', status: 'ACTIVE' },
       select: {
@@ -44,11 +46,44 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
-    // 3. Fetch inbound stock transactions (type: PURCHASE_IN or quantityIn > 0)
+    // 3. For STAFF, calculate their store balances
+    let storeBalancesList: any[] = [];
+    let storeStockMap = new Map<number, number>();
+    if (session.role === 'STAFF') {
+      storeBalancesList = await calculateStoreReconciliation(session.id);
+      storeBalancesList.forEach((b) => storeStockMap.set(b.ingredientId, b.expectedStock));
+    }
+
+    const ingredients = allIngredients.map((ing) => ({
+      ...ing,
+      storeStock: session.role === 'STAFF' ? (storeStockMap.get(ing.id) ?? 0) : null,
+    }));
+
+    // 4. Fetch inbound stock transactions (type: PURCHASE_IN)
+    const txWhere: any = {
+      type: TransactionType.PURCHASE_IN,
+    };
+
+    if (session.role === 'STAFF') {
+      txWhere.OR = [
+        { createdById: session.id },
+        { note: { contains: `@${session.username}` } },
+        { note: { contains: `[STORE_ID:${session.id}]` } },
+      ];
+    } else if (targetStoreId && targetStoreId !== 'ALL') {
+      const storeIdNum = parseInt(targetStoreId, 10);
+      const storeObj = staffStores.find((s) => s.id === storeIdNum);
+      if (storeObj) {
+        txWhere.OR = [
+          { createdById: storeIdNum },
+          { note: { contains: `@${storeObj.username}` } },
+          { note: { contains: `[STORE_ID:${storeIdNum}]` } },
+        ];
+      }
+    }
+
     const transactions = await prisma.stockTransaction.findMany({
-      where: {
-        type: TransactionType.PURCHASE_IN,
-      },
+      where: txWhere,
       include: {
         ingredient: true,
         createdBy: {
@@ -62,7 +97,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       transactions,
-      ingredients: allIngredients,
+      ingredients,
+      storeBalances: storeBalancesList,
       staffStores,
     });
   } catch (error: any) {
@@ -74,26 +110,32 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Record new Inbound Stock / Purchase (Admin Only)
+// POST: Record new Inbound Stock / Purchase (Store purchases stock)
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || session.role !== 'ADMIN') {
+    if (!session) {
       return NextResponse.json(
-        { success: false, message: 'ไม่มีสิทธิ์บันทึกรับสินค้าเข้าคลัง (Admin Only)' },
-        { status: 403 }
+        { success: false, message: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' },
+        { status: 401 }
       );
     }
 
     const body = await req.json();
-    const {
-      targetType, // 'WAREHOUSE' | 'STORE'
-      targetStoreId, // number (staff user ID if targetType === 'STORE')
-      supplier, // e.g. 'แม็คโคร', 'ตลาดไท'
-      invoiceNumber, // PO or receipt number
+    let {
+      targetType = 'STORE',
+      targetStoreId,
+      supplier,
+      invoiceNumber,
       note,
-      items, // Array of { ingredientId: number, quantity: number, costPerUnit?: number }
+      items,
     } = body;
+
+    // If STAFF, force target to their own store
+    if (session.role === 'STAFF') {
+      targetType = 'STORE';
+      targetStoreId = session.id;
+    }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -102,17 +144,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate destination
+    // Determine target store
     let targetStore: any = null;
     if (targetType === 'STORE') {
-      if (!targetStoreId) {
-        return NextResponse.json(
-          { success: false, message: 'กรุณาเลือกสาขา/ร้านค้าปลายทางที่รับสต็อก' },
-          { status: 400 }
-        );
-      }
+      const storeIdNum = Number(targetStoreId || session.id);
       targetStore = await prisma.user.findUnique({
-        where: { id: Number(targetStoreId) },
+        where: { id: storeIdNum },
         select: { id: true, name: true, username: true, role: true },
       });
       if (!targetStore) {
@@ -129,9 +166,9 @@ export async function POST(req: NextRequest) {
         : `PO-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const destinationLabel =
-      targetType === 'STORE' && targetStore
-        ? `จัดสรรเข้าร้าน: ${targetStore.name} (@${targetStore.username})`
-        : 'รับเข้าคลังสินค้าส่วนกลาง JJ Mall';
+      targetStore
+        ? `รับเข้าสต็อกร้าน: ${targetStore.name} (@${targetStore.username})`
+        : 'รับเข้าสต็อก';
 
     // Execute atomic transaction in database
     const createdTransactions = await prisma.$transaction(async (tx) => {
@@ -144,7 +181,7 @@ export async function POST(req: NextRequest) {
 
         if (isNaN(qtyIn) || qtyIn <= 0) continue;
 
-        // 1. Update ingredient stock in database
+        // 1. Update ingredient stock and cost in database
         const updateData: any = {
           currentStock: {
             increment: qtyIn,
@@ -162,8 +199,8 @@ export async function POST(req: NextRequest) {
         // 2. Generate unique transaction number
         const txNumber = `TX-IN-${receiptNumber}-${updatedIng.code}-${Date.now().toString().slice(-4)}`;
 
-        // 3. Record stock transaction in DB
-        // If assigned to a store, createdById is the staff ID representing that store, so store queries find it!
+        // 3. Record stock transaction in DB (PURCHASE_IN)
+        const recipientUserId = targetStore ? targetStore.id : session.id;
         const txRecord = await tx.stockTransaction.create({
           data: {
             transactionNumber: txNumber,
@@ -172,10 +209,10 @@ export async function POST(req: NextRequest) {
             quantityIn: qtyIn,
             quantityOut: 0,
             balanceAfter: updatedIng.currentStock,
-            refType: targetType === 'STORE' ? 'STORE_ALLOCATE' : 'PURCHASE',
-            refId: targetType === 'STORE' ? `STORE-${targetStore.id}` : receiptNumber,
-            note: `${destinationLabel} • ซัพพลายเออร์: ${supplier || 'ทั่วไป'} ${note ? '• ' + note : ''}`,
-            createdById: targetType === 'STORE' ? targetStore.id : session.id,
+            refType: 'PURCHASE',
+            refId: targetStore ? `STORE-${targetStore.id}` : receiptNumber,
+            note: `${destinationLabel} • ซัพพลายเออร์: ${supplier || 'ทั่วไป'} ${note ? '• ' + note : ''} [STORE_ID:${recipientUserId}]`,
+            createdById: recipientUserId,
           },
           include: {
             ingredient: true,
@@ -193,7 +230,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `บันทึกรับสินค้าเข้าคลังเรียบร้อยแล้ว (${createdTransactions.length} รายการ)`,
+      message: `บันทึกรับวัตถุดิบเข้าสต็อกร้านเรียบร้อยแล้ว (${createdTransactions.length} รายการ)`,
       receiptNumber,
       destinationLabel,
       transactions: createdTransactions,

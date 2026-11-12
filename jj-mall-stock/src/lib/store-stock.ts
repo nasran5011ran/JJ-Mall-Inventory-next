@@ -52,23 +52,37 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
 
-  // Inbound transfers from warehouse to this store since last count
-  const transferTxs = await prisma.stockTransaction.findMany({
+  // Inbound purchases directly into this store, or store allocations since last count
+  const inboundTxs = await prisma.stockTransaction.findMany({
     where: {
-      type: TransactionType.TRANSFER_OUT,
       createdAt: { gt: sinceDate },
       OR: [
-        { note: { contains: `@${targetStore.username}` } },
-        { note: { contains: targetStore.name } },
-        { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+        {
+          type: TransactionType.PURCHASE_IN,
+          OR: [
+            { createdById: targetStore.id },
+            { note: { contains: `@${targetStore.username}` } },
+            { note: { contains: targetStore.name } },
+            { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+          ],
+        },
+        {
+          type: TransactionType.TRANSFER_OUT,
+          OR: [
+            { note: { contains: `@${targetStore.username}` } },
+            { note: { contains: targetStore.name } },
+            { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+          ],
+        },
       ],
     },
   });
 
   const inboundMap = new Map<number, number>();
-  for (const tx of transferTxs) {
+  for (const tx of inboundTxs) {
+    const qty = tx.type === TransactionType.PURCHASE_IN ? Number(tx.quantityIn) : Number(tx.quantityOut);
     const prev = inboundMap.get(tx.ingredientId) || 0;
-    inboundMap.set(tx.ingredientId, prev + Number(tx.quantityOut));
+    inboundMap.set(tx.ingredientId, prev + qty);
   }
 
   // Sales usage from POS transactions by this store since last count

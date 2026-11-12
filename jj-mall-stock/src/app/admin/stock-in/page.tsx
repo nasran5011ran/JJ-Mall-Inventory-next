@@ -97,7 +97,7 @@ export default function AdminStockInPage() {
 
   // Filter States
   const [search, setSearch] = useState('');
-  const [destinationFilter, setDestinationFilter] = useState('ALL'); // ALL | WAREHOUSE | staffId
+  const [destinationFilter, setDestinationFilter] = useState('ALL'); // ALL | staffStoreId
   const [dateFilter, setDateFilter] = useState<'ALL' | 'TODAY' | 'WEEK' | 'MONTH'>('ALL');
 
   // Modal State for New Stock In
@@ -110,7 +110,6 @@ export default function AdminStockInPage() {
   const [selectedTx, setSelectedTx] = useState<InboundTransaction | null>(null);
 
   // Form Fields
-  const [targetType, setTargetType] = useState<'WAREHOUSE' | 'STORE'>('WAREHOUSE');
   const [targetStoreId, setTargetStoreId] = useState<string>('');
   const [supplier, setSupplier] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -124,12 +123,42 @@ export default function AdminStockInPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Check URL params on mount (?storeId=...&code=...)
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && ingredients.length > 0 && staffStores.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const qStoreId = urlParams.get('storeId');
+      const qCode = urlParams.get('code');
+
+      if (qStoreId || qCode) {
+        const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        setInvoiceNumber(`PO-${todayStr}-${randomSuffix}`);
+
+        const matchedStore = staffStores.find((s) => String(s.id) === qStoreId) || staffStores[0];
+        setTargetStoreId(matchedStore ? String(matchedStore.id) : '');
+
+        const matchedIng = ingredients.find((i) => i.code === qCode) || ingredients[0];
+        setFormItems([
+          {
+            ingredientId: matchedIng ? String(matchedIng.id) : '',
+            quantity: '',
+            costPerUnit: String(matchedIng?.costPerUnit || '0'),
+          },
+        ]);
+        setSupplier('แม็คโคร (Makro)');
+        setNote('');
+        setFormError(null);
+        setModalOpen(true);
+      }
+    }
+  }, [ingredients, staffStores]);
+
   // Open modal with fresh auto-generated PO number
   const openNewStockInModal = () => {
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     setInvoiceNumber(`PO-${todayStr}-${randomSuffix}`);
-    setTargetType('WAREHOUSE');
     setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
     setSupplier('แม็คโคร (Makro)');
     setNote('');
@@ -191,8 +220,8 @@ export default function AdminStockInPage() {
       return;
     }
 
-    if (targetType === 'STORE' && !targetStoreId) {
-      setFormError('กรุณาเลือกสาขา/ร้านค้าปลายทางที่รับสต็อก');
+    if (!targetStoreId) {
+      setFormError('กรุณาเลือกร้านค้า / จุดขายที่รับสต็อกเข้า');
       return;
     }
 
@@ -200,8 +229,8 @@ export default function AdminStockInPage() {
 
     try {
       const payload = {
-        targetType,
-        targetStoreId: targetType === 'STORE' ? Number(targetStoreId) : null,
+        targetType: 'STORE',
+        targetStoreId: Number(targetStoreId),
         supplier: supplier.trim(),
         invoiceNumber: invoiceNumber.trim(),
         note: note.trim(),
@@ -223,7 +252,7 @@ export default function AdminStockInPage() {
         throw new Error(data.message || 'บันทึกรับสินค้าไม่สำเร็จ');
       }
 
-      showToast(data.message || 'บันทึกรับสินค้าเข้าคลังเรียบร้อยแล้ว');
+      showToast(data.message || 'บันทึกรับสินค้าเข้าสต็อกร้านเรียบร้อยแล้ว');
       await mutate();
       setModalOpen(false);
     } catch (err: any) {
@@ -239,20 +268,15 @@ export default function AdminStockInPage() {
     const todayStr = now.toISOString().split('T')[0];
 
     return transactions.filter((tx) => {
-      // Destination filter
-      if (destinationFilter === 'WAREHOUSE') {
-        if (tx.refType === 'STORE_ALLOCATE') return false;
-      } else if (destinationFilter === 'ALL_STORES') {
-        if (tx.refType !== 'STORE_ALLOCATE') return false;
-      } else if (destinationFilter !== 'ALL') {
-        // เฉพาะร้านค้าที่เลือกเท่านั้น: ต้องเป็น STORE_ALLOCATE และตรงกับ Store/Staff ID นั้นจริง
-        if (tx.refType !== 'STORE_ALLOCATE') return false;
+      // Store Destination filter
+      if (destinationFilter !== 'ALL') {
         const staffId = Number(destinationFilter);
         const selectedStore = staffStores.find((st) => st.id === staffId);
         const matchStore =
           tx.createdBy?.id === staffId ||
           tx.refId === `STORE-${staffId}` ||
-          (selectedStore && tx.note?.includes(selectedStore.name));
+          (selectedStore && tx.note?.includes(selectedStore.name)) ||
+          tx.note?.includes(`[STORE_ID:${staffId}]`);
         if (!matchStore) return false;
       }
 
@@ -280,7 +304,7 @@ export default function AdminStockInPage() {
 
       return true;
     });
-  }, [transactions, destinationFilter, search, dateFilter]);
+  }, [transactions, destinationFilter, search, dateFilter, staffStores]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -319,8 +343,11 @@ export default function AdminStockInPage() {
       {/* Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <p className="text-xs text-slate-500">
-            บันทึกรับวัตถุดิบเข้าคลังสินค้าส่วนกลาง หรือจัดสรรส่งตรงไปยังแต่ละจุดขายหน้าร้าน (Stock In & Store Inbound)
+          <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <span>📥 บันทึกรับสินค้าเข้าสต็อก (ซื้อเข้า)</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            บันทึกการซื้อวัตถุดิบเข้าสต็อกร้านค้าโดยตรง (ไม่มีคลังกลาง - ร้านค้าเป็นผู้ซื้อและเพิ่มสต็อกเข้าจุดขาย)
           </p>
         </div>
 
@@ -340,7 +367,7 @@ export default function AdminStockInPage() {
             className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>+ บันทึกรับสินค้าเข้าคลัง / ซื้อเข้า</span>
+            <span>+ บันทึกรับสินค้าเข้าสต็อกร้าน (ซื้อเข้า)</span>
           </button>
         </div>
       </div>
@@ -378,23 +405,23 @@ export default function AdminStockInPage() {
           <div className="text-2xl font-black text-slate-800 mt-1 font-mono">
             {totalInboundItems} <span className="text-xs font-semibold text-slate-500">ครั้ง</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">บันทึกผ่านระบบ PO</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">บันทึกซื้อเข้าสต็อก</p>
         </div>
 
-        {/* Card 3: Store Allocations */}
+        {/* Card 3: Store Count */}
         <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">
-              จัดสรรส่งหน้าร้าน
+              ร้านค้าในระบบ
             </span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Store className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-slate-800 mt-1 font-mono">
-            {storeAllocationsCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+            {staffStores.length} <span className="text-xs font-semibold text-slate-500">สาขา/ร้าน</span>
           </div>
-          <p className="text-[11px] text-slate-400 mt-0.5">กระจายสต็อกสู่จุดขาย</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">พร้อมบันทึกสต็อกขาย</p>
         </div>
 
         {/* Card 4: Total Raw Materials */}
@@ -430,18 +457,16 @@ export default function AdminStockInPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-2 w-full md:w-auto">
-          {/* Destination Filter */}
+          {/* Destination Store Filter */}
           <select
             value={destinationFilter}
             onChange={(e) => setDestinationFilter(e.target.value)}
             className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
           >
-            <option value="ALL">📦 ทุกปลายทางรับเข้า</option>
-            <option value="WAREHOUSE">🏢 คลังสินค้าส่วนกลาง JJ Mall</option>
-            <option value="ALL_STORES">🏪 จุดขายหน้าร้าน (ทุกร้าน)</option>
+            <option value="ALL">🏪 ทุกร้านค้า / จุดขาย</option>
             {staffStores.map((st) => (
               <option key={st.id} value={st.id}>
-                &nbsp;&nbsp;↳ 🏪 {st.name} (@{st.username})
+                🏪 {st.name} (@{st.username})
               </option>
             ))}
           </select>
@@ -465,12 +490,12 @@ export default function AdminStockInPage() {
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-2">
             <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs text-slate-400">กำลังโหลดประวัติการรับสินค้าเข้าคลัง...</span>
+            <span className="text-xs text-slate-400">กำลังโหลดประวัติการรับสินค้าเข้าสต็อก...</span>
           </div>
         ) : filteredTransactions.length === 0 ? (
           <div className="py-20 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
             <ArrowDownToLine className="w-10 h-10 text-slate-300" />
-            <span>ไม่พบประวัติการรับสินค้าเข้าคลังที่ตรงกับเงื่อนไข</span>
+            <span>ไม่พบประวัติการรับสินค้าเข้าสต็อกที่ตรงกับเงื่อนไข</span>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -479,17 +504,15 @@ export default function AdminStockInPage() {
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                   <th className="py-3.5 px-4">เลขที่เอกสาร / รหัส</th>
                   <th className="py-3.5 px-4">วันที่ & เวลา</th>
-                  <th className="py-3.5 px-4">ปลายทางที่รับเข้า</th>
+                  <th className="py-3.5 px-4">ร้านค้าที่รับเข้า</th>
                   <th className="py-3.5 px-4">วัตถุดิบที่รับเข้า</th>
-                  <th className="py-3.5 px-4 text-right">จำนวนที่รับ</th>
+                  <th className="py-3.5 px-4 text-right">จำนวนที่ซื้อเข้า</th>
                   <th className="py-3.5 px-4 text-right">คงเหลือหลังรับ</th>
                   <th className="py-3.5 px-4">ผู้บันทึก / ข้อมูล</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {paginatedTransactions.map((tx) => {
-                  const isStoreAllocate = tx.refType === 'STORE_ALLOCATE';
-
                   return (
                     <tr
                       key={tx.id}
@@ -518,19 +541,12 @@ export default function AdminStockInPage() {
                         </div>
                       </td>
 
-                      {/* Destination Badge */}
+                      {/* Destination Store Badge */}
                       <td className="py-3.5 px-4">
-                        {isStoreAllocate ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                            <Store className="w-3 h-3 text-amber-700" />
-                            <span>จุดขาย: {tx.createdBy?.name || 'ร้านค้า'}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <Warehouse className="w-3 h-3 text-emerald-600" />
-                            <span>คลังสินค้าส่วนกลาง</span>
-                          </span>
-                        )}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                          <Store className="w-3 h-3 text-amber-700" />
+                          <span>{tx.createdBy?.name || 'ร้านค้า'}</span>
+                        </span>
                       </td>
 
                       {/* Ingredient Name */}
@@ -592,7 +608,7 @@ export default function AdminStockInPage() {
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">รายละเอียดใบรับสินค้าเข้าคลัง</h3>
+                  <h3 className="text-base font-bold text-slate-800">รายละเอียดใบรับสินค้าเข้าสต็อก</h3>
                   <p className="text-xs text-slate-500 font-mono">{selectedTx.transactionNumber}</p>
                 </div>
               </div>
@@ -617,11 +633,9 @@ export default function AdminStockInPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">ปลายทาง:</span>
+                  <span className="text-slate-400">ร้านค้าปลายทาง:</span>
                   <span className="font-bold text-emerald-800">
-                    {selectedTx.refType === 'STORE_ALLOCATE'
-                      ? `จุดขายหน้าร้าน (${selectedTx.createdBy?.name || 'ร้านค้า'})`
-                      : 'คลังสินค้าส่วนกลาง JJ Mall'}
+                    🏪 {selectedTx.createdBy?.name || 'ร้านค้า'}
                   </span>
                 </div>
               </div>
@@ -674,8 +688,8 @@ export default function AdminStockInPage() {
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-800">บันทึกรับสินค้าเข้าคลัง / ซื้อเข้า (Stock In)</h3>
-                  <p className="text-xs text-slate-500">บันทึกยอดซื้อเข้าคลังกลาง หรือจัดสรรส่งตรงให้จุดขายหน้าร้าน</p>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800">📥 บันทึกรับสินค้าเข้าสต็อก (ซื้อเข้า)</h3>
+                  <p className="text-xs text-slate-500">บันทึกยอดการซื้อวัตถุดิบและเพิ่มยอดเข้าสต็อกของร้านค้าโดยตรง</p>
                 </div>
               </div>
               <button
@@ -696,90 +710,29 @@ export default function AdminStockInPage() {
             <form onSubmit={handleSubmitStockIn} className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden">
               {/* Single Scrollable Form Container (No Double Scrollbars!) */}
               <div className="flex-1 min-h-0 overflow-y-auto pr-1.5 space-y-3.5 scrollbar-thin">
-                {/* Destination Radio Selection */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                    เลือกปลายทางที่รับสต็อกเข้า <span className="text-red-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <label
-                      className={`p-2.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
-                        targetType === 'WAREHOUSE'
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="targetType"
-                        checked={targetType === 'WAREHOUSE'}
-                        onChange={() => setTargetType('WAREHOUSE')}
-                        className="sr-only"
-                      />
-                      <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <Warehouse className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs">คลังสินค้าส่วนกลาง</div>
-                        <div className="text-[10px] text-slate-400">JJ Mall Warehouse Center</div>
-                      </div>
-                    </label>
-
-                    <label
-                      className={`p-2.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
-                        targetType === 'STORE'
-                          ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
-                          : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="targetType"
-                        checked={targetType === 'STORE'}
-                        onChange={() => {
-                          setTargetType('STORE');
-                          if (!targetStoreId && staffStores.length > 0) {
-                            setTargetStoreId(String(staffStores[0].id));
-                          }
-                        }}
-                        className="sr-only"
-                      />
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                        <Store className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-xs">จัดสรรตรงให้จุดขายหน้าร้าน</div>
-                        <div className="text-[10px] text-slate-400">ระบุเคาน์เตอร์ขายประจำร้าน</div>
-                      </div>
-                    </label>
+                {/* Store Selection */}
+                <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                    <Store className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>เลือกร้านค้า / จุดขายที่รับสต็อกเข้า (ซื้อเข้า):</span>
+                    <span className="text-red-500">*</span>
                   </div>
+                  <select
+                    value={targetStoreId}
+                    onChange={(e) => setTargetStoreId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                  >
+                    {staffStores.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        🏪 {st.name} (@{st.username})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-amber-800">
+                    💡 วัตถุดิบที่บันทึกรับเข้าจะถูกเพิ่มเข้าสต็อกคงเหลือของร้านค้านี้โดยตรงทันที เพื่อให้พร้อมใช้งานและขายผ่าน POS
+                  </p>
                 </div>
-
-                {/* If Store Selected, pick specific staff shop */}
-                {targetType === 'STORE' && (
-                  <div className="p-3 rounded-2xl bg-amber-50 border border-amber-300 animate-in fade-in duration-150 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
-                      <Store className="w-4 h-4 text-amber-700 shrink-0" />
-                      <span>เลือกร้านค้า / แคชเชียร์ประจำจุดขายที่รับสต็อก:</span>
-                      <span className="text-red-500">*</span>
-                    </div>
-                    <select
-                      value={targetStoreId}
-                      onChange={(e) => setTargetStoreId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 text-xs rounded-xl border-2 border-amber-400 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                    >
-                      {staffStores.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          🏪 {st.name} (@{st.username})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[10px] text-amber-800">
-                      💡 สต็อกวัตถุดิบจะถูกบันทึกจัดสรรส่งตรงให้จุดขายหน้าร้านนี้ทันที เพื่อให้พนักงานใช้ขายได้ทันที
-                    </p>
-                  </div>
-                )}
 
                 {/* Bill Meta: PO Number & Supplier */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -910,14 +863,14 @@ export default function AdminStockInPage() {
                           {selectedIng && (
                             <div className="pt-2 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                               <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                                <span>คงเหลือเดิมในคลัง:</span>
+                                <span>คงเหลือเดิม:</span>
                                 <span className="font-mono font-bold text-slate-700">
                                   {currentStock.toLocaleString()} {selectedIng.unit}
                                 </span>
                                 {inboundQty > 0 && (
                                   <>
                                     <span className="text-emerald-600 font-black">+</span>
-                                    <span>รับเข้า:</span>
+                                    <span>ซื้อเข้า:</span>
                                     <span className="font-mono font-bold text-emerald-700">
                                       {inboundQty.toLocaleString()} {selectedIng.unit}
                                     </span>
@@ -977,7 +930,7 @@ export default function AdminStockInPage() {
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   <ArrowDownToLine className="w-4 h-4" />
-                  <span>{submitting ? 'กำลังบันทึก...' : '💾 ยืนยันบันทึกรับสินค้าเข้าคลัง'}</span>
+                  <span>{submitting ? 'กำลังบันทึก...' : '💾 ยืนยันบันทึกรับสินค้าเข้าสต็อกร้าน'}</span>
                 </button>
               </div>
             </form>

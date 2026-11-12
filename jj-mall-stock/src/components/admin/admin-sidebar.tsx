@@ -62,16 +62,14 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: 'จัดการสินค้า & สูตรการผลิต',
       items: [
         { href: '/admin/products', label: 'จัดการสินค้า & ราคา', icon: Package },
-        { href: '/admin/ingredients', label: 'จัดการคลังวัตถุดิบ', icon: Layers },
+        { href: '/admin/ingredients', label: 'จัดการสต็อกวัตถุดิบร้านค้า', icon: Layers },
         { href: '/admin/recipes', label: 'สูตรการผลิต (BOM)', icon: ChefHat },
       ],
     },
     {
-      title: 'งานคลัง & การอนุมัติ',
+      title: 'งานสต็อก & การอนุมัติ',
       items: [
-        { href: '/admin/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
-        { href: '/admin/stock-requests', label: 'อนุมัติใบขอเบิกสต็อก', icon: ClipboardCheck },
-        { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
+        { href: '/admin/stock-in', label: 'รับสินค้าเข้าสต็อก (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-adjustments', label: 'อนุมัติใบปรับปรุงสต็อก', icon: FileEdit },
         { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
         { href: '/admin/stock-transactions', label: 'ประวัติเคลื่อนไหวสต็อก', icon: History },
@@ -183,17 +181,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      {/* 1. Pending stock requisitions badge (Red) */}
-                      {isRequisition && pendingRequisitionsCount > 0 && (
-                        <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
-                          title={`มีใบขอเบิกสต็อกรออนุมัติ ${pendingRequisitionsCount} รายการ`}
-                        >
-                          {pendingRequisitionsCount > 99 ? '99+' : pendingRequisitionsCount}
-                        </span>
-                      )}
-
-                      {/* 2. Pending adjustments badge (Red) */}
+                      {/* 1. Pending adjustments badge (Red) */}
                       {isAdjustment && pendingAdjustmentsCount > 0 && (
                         <span
                           className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
@@ -203,21 +191,11 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                         </span>
                       )}
 
-                      {/* 2. Ingredients: Central warehouse low stock (Red) */}
-                      {isIngredients && centralLowCount > 0 && (
-                        <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
-                          title={`สต็อกคลังกลางต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${centralLowCount} รายการ (สีแดง)`}
-                        >
-                          {centralLowCount > 99 ? '99+' : centralLowCount}
-                        </span>
-                      )}
-
-                      {/* 3. Ingredients: Store stock low stock (Yellow) */}
+                      {/* 2. Ingredients: Store low stock (Red - ต้องซื้อเพิ่ม) */}
                       {isIngredients && storeLowCount > 0 && (
                         <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-amber-400 text-amber-950 font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-amber-500/40"
-                          title={`สต็อกร้านค้าต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${storeLowCount} รายการ (สีเหลือง)`}
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white font-black text-[10px] flex items-center justify-center shadow-xs"
+                          title={`มีวัตถุดิบในร้านต่ำกว่าเกณฑ์ขั้นต่ำ ${storeLowCount} รายการ (ต้องซื้อเพิ่ม)`}
                         >
                           {storeLowCount > 99 ? '99+' : storeLowCount}
                         </span>
