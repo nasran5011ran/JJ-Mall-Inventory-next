@@ -254,6 +254,14 @@ export default function IngredientsPage() {
     }
   };
 
+  // Expected store balance of currently selected ingredient in Quick Stock-In modal
+  const quickStockInCurrentBalance = useMemo(() => {
+    if (!stockInIngredient || !stockInStoreId) return 0;
+    const list = storeBalances[Number(stockInStoreId)] || [];
+    const found = list.find((b) => b.ingredientId === stockInIngredient.id);
+    return found ? Number(found.expectedStock) : 0;
+  }, [stockInIngredient, stockInStoreId, storeBalances]);
+
   // Detail / Recipes modal
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
