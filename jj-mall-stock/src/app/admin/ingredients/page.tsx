@@ -95,8 +95,6 @@ export default function IngredientsPage() {
   const { user: currentUser, isAdmin } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
-  const [unitMode, setUnitMode] = useState<'SELECT' | 'CUSTOM'>('SELECT');
-  const [categoryMode, setCategoryMode] = useState<'SELECT' | 'CUSTOM'>('SELECT');
 
   // Instant SWR Cache: Shows cached ingredients immediately & auto-refreshes in real-time
   const { data: swrData, isLoading, isValidating, mutate } = useSWR('/api/ingredients', {
@@ -378,8 +376,6 @@ export default function IngredientsPage() {
 
   const openAddModal = () => {
     setEditingIngredient(null);
-    setUnitMode('SELECT');
-    setCategoryMode('SELECT');
     setFormData({
       code: `ING-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
@@ -396,10 +392,6 @@ export default function IngredientsPage() {
 
   const openEditModal = (ing: IngredientItem) => {
     setEditingIngredient(ing);
-    const hasPresetUnit = allAvailableUnits.includes(ing.unit);
-    const hasPresetCategory = allAvailableCategories.includes(ing.category);
-    setUnitMode(hasPresetUnit ? 'SELECT' : 'CUSTOM');
-    setCategoryMode(hasPresetCategory ? 'SELECT' : 'CUSTOM');
     setFormData({
       code: ing.code,
       name: ing.name,
@@ -1144,81 +1136,23 @@ export default function IngredientsPage() {
 
                 {/* Unit */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      หน่วยนับ <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setUnitMode(unitMode === 'SELECT' ? 'CUSTOM' : 'SELECT')}
-                      className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
-                    >
-                      {unitMode === 'SELECT' ? '✍️ พิมพ์เอง' : '📋 เลือกจากรายการ'}
-                    </button>
-                  </div>
-
-                  {unitMode === 'SELECT' ? (
-                    <select
-                      value={allAvailableUnits.includes(formData.unit) ? formData.unit : '__CUSTOM__'}
-                      onChange={(e) => {
-                        if (e.target.value === '__CUSTOM__') {
-                          setUnitMode('CUSTOM');
-                        } else {
-                          setFormData({ ...formData, unit: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    >
-                      {allAvailableUnits.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                      <option value="__CUSTOM__">✍️ พิมพ์หน่วยนับเอง...</option>
-                    </select>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        required
-                        value={formData.unit}
-                        onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                        placeholder="เช่น กรัม, มล., ใบ, ชิ้น, หลอด"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 pr-16"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUnitMode('SELECT');
-                          if (!allAvailableUnits.includes(formData.unit)) {
-                            setFormData({ ...formData, unit: allAvailableUnits[0] || 'กรัม' });
-                          }
-                        }}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold cursor-pointer"
-                      >
-                        เลือก
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Quick unit chips */}
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['กรัม', 'มล.', 'กิโลกรัม', 'ลิตร', 'ใบ', 'ชิ้น', 'ขวด'].map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, unit: chip })}
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-pointer transition-all ${
-                          formData.unit === chip
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold'
-                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {chip}
-                      </button>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    หน่วยนับ <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    list="unit-options"
+                    required
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    placeholder="พิมพ์หรือเลือก เช่น กรัม, มล., ใบ, ชิ้น"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  />
+                  <datalist id="unit-options">
+                    {allAvailableUnits.map((u) => (
+                      <option key={u} value={u} />
                     ))}
-                  </div>
+                  </datalist>
                 </div>
               </div>
 
@@ -1240,89 +1174,22 @@ export default function IngredientsPage() {
               <div className="grid grid-cols-2 gap-3">
                 {/* Category */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      หมวดหมู่วัตถุดิบ
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setCategoryMode(categoryMode === 'SELECT' ? 'CUSTOM' : 'SELECT')}
-                      className="text-[10px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
-                    >
-                      {categoryMode === 'SELECT' ? '✍️ พิมพ์เอง' : '📋 เลือกจากรายการ'}
-                    </button>
-                  </div>
-
-                  {categoryMode === 'SELECT' ? (
-                    <select
-                      value={allAvailableCategories.includes(formData.category) ? formData.category : '__CUSTOM__'}
-                      onChange={(e) => {
-                        if (e.target.value === '__CUSTOM__') {
-                          setCategoryMode('CUSTOM');
-                        } else {
-                          setFormData({ ...formData, category: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    >
-                      {allAvailableCategories.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                      <option value="__CUSTOM__">✍️ พิมพ์หมวดหมู่เอง...</option>
-                    </select>
-                  ) : (
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        placeholder="เช่น ผงเครื่องดื่ม, บรรจุภัณฑ์"
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 pr-16"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCategoryMode('SELECT');
-                          if (!allAvailableCategories.includes(formData.category)) {
-                            setFormData({
-                              ...formData,
-                              category: allAvailableCategories[0] || 'ผงเครื่องดื่ม / ชา / กาแฟ',
-                            });
-                          }
-                        }}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-bold cursor-pointer"
-                      >
-                        เลือก
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Quick category chips */}
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['ผงเครื่องดื่ม', 'นมและครีม', 'ไซรัป', 'ท็อปปิ้ง', 'บรรจุภัณฑ์'].map((chip) => {
-                      const matched = formData.category.includes(chip);
-                      return (
-                        <button
-                          key={chip}
-                          type="button"
-                          onClick={() => {
-                            const fullCat = allAvailableCategories.find((c) => c.includes(chip)) || chip;
-                            setFormData({ ...formData, category: fullCat });
-                          }}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-medium border cursor-pointer transition-all ${
-                            matched
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold'
-                              : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                          }`}
-                        >
-                          {chip}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    หมวดหมู่วัตถุดิบ
+                  </label>
+                  <input
+                    type="text"
+                    list="category-options"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    placeholder="เช่น ผงเครื่องดื่ม, บรรจุภัณฑ์"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  />
+                  <datalist id="category-options">
+                    {allAvailableCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
 
                 {/* Status */}
