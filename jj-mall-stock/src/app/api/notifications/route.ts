@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 export const dynamic = 'force-dynamic';
 
@@ -272,6 +273,28 @@ export async function GET() {
       });
     });
 
+    // 6. Calculate store-level low stock alerts across active staff stores
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, name: true, username: true },
+    });
+
+    const minStockMap = new Map<number, number>();
+    activeIngredients.forEach((ing) => minStockMap.set(ing.id, Number(ing.minStock)));
+
+    const storeLowIngredientIds = new Set<number>();
+    for (const store of staffStores) {
+      const storeBalances = await calculateStoreReconciliation(store.id);
+      storeBalances.forEach((item) => {
+        const min = minStockMap.get(item.ingredientId) ?? 0;
+        if (item.expectedStock <= min) {
+          storeLowIngredientIds.add(item.ingredientId);
+        }
+      });
+    }
+    const storeLowCount = storeLowIngredientIds.size;
+    const centralLowCount = outOfStockCount + lowStockCount;
+
     // Sort by priority (CRITICAL -> ACTION_REQUIRED -> WARNING -> INFO) then by date descending
     const severityRank: Record<string, number> = {
       CRITICAL: 1,
@@ -286,7 +309,7 @@ export async function GET() {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
 
-    const totalActionable = outOfStockCount + lowStockCount + realPendingCount;
+    const totalActionable = centralLowCount + storeLowCount + realPendingCount;
 
     return NextResponse.json({
       success: true,
@@ -296,7 +319,9 @@ export async function GET() {
           totalActionable,
           outOfStockCount,
           lowStockCount,
-          lowIngredientsCount: outOfStockCount + lowStockCount,
+          centralLowCount,
+          storeLowCount,
+          lowIngredientsCount: centralLowCount,
           pendingAdjustmentsCount: realPendingCount,
           discrepancyCount: discrepancyItemCount,
           recentActivityCount: recentTransactions.length,

@@ -44,10 +44,11 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   );
 
   const pendingAdjustmentsCount = Number(notifData?.data?.kpis?.pendingAdjustmentsCount || 0);
-  const lowIngredientsCount = Number(
-    notifData?.data?.kpis?.lowIngredientsCount ??
+  const centralLowCount = Number(
+    notifData?.data?.kpis?.centralLowCount ??
     ((notifData?.data?.kpis?.outOfStockCount || 0) + (notifData?.data?.kpis?.lowStockCount || 0))
   );
+  const storeLowCount = Number(notifData?.data?.kpis?.storeLowCount || 0);
 
   const menuSections = [
     {
@@ -154,7 +155,6 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
                 const isAdjustment = item.href === '/admin/stock-adjustments';
                 const isIngredients = item.href === '/admin/ingredients';
-                const badgeCount = isAdjustment ? pendingAdjustmentsCount : isIngredients ? lowIngredientsCount : 0;
 
                 return (
                   <Link
@@ -180,22 +180,36 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      {badgeCount > 0 && (
+                      {/* 1. Pending adjustments badge (Red) */}
+                      {isAdjustment && pendingAdjustmentsCount > 0 && (
                         <span
-                          className={`px-2 py-0.5 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center shadow-xs ${
-                            isIngredients
-                              ? 'bg-amber-400 text-amber-950 ring-1 ring-amber-500/40'
-                              : 'bg-rose-600 text-white'
-                          }`}
-                          title={
-                            isAdjustment
-                              ? `มีใบขอปรับปรุงสต็อกรออนุมัติ ${badgeCount} รายการ`
-                              : `มีวัตถุดิบคงเหลือน้อยกว่าเกณฑ์ขั้นต่ำ (Min) ${badgeCount} รายการ`
-                          }
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
+                          title={`มีใบขอปรับปรุงสต็อกรออนุมัติ ${pendingAdjustmentsCount} รายการ`}
                         >
-                          {badgeCount > 99 ? '99+' : badgeCount}
+                          {pendingAdjustmentsCount > 99 ? '99+' : pendingAdjustmentsCount}
                         </span>
                       )}
+
+                      {/* 2. Ingredients: Central warehouse low stock (Red) */}
+                      {isIngredients && centralLowCount > 0 && (
+                        <span
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
+                          title={`สต็อกคลังกลางต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${centralLowCount} รายการ (สีแดง)`}
+                        >
+                          {centralLowCount > 99 ? '99+' : centralLowCount}
+                        </span>
+                      )}
+
+                      {/* 3. Ingredients: Store stock low stock (Yellow) */}
+                      {isIngredients && storeLowCount > 0 && (
+                        <span
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-amber-400 text-amber-950 font-black text-[10px] flex items-center justify-center shadow-xs ring-1 ring-amber-500/40"
+                          title={`สต็อกร้านค้าต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${storeLowCount} รายการ (สีเหลือง)`}
+                        >
+                          {storeLowCount > 99 ? '99+' : storeLowCount}
+                        </span>
+                      )}
+
                       {isActive && <ChevronRight className="w-3.5 h-3.5 text-white/80" />}
                     </div>
                   </Link>

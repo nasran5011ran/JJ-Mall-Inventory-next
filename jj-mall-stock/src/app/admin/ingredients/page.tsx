@@ -141,6 +141,26 @@ export default function IngredientsPage() {
     return staffStores.find((s) => s.id === Number(selectedStoreId)) || null;
   }, [selectedStoreId, staffStores]);
 
+  // Low Stock Counts for Central Warehouse & Stores (for visual indicator tabs)
+  const centralLowCountTab = useMemo(() => {
+    return ingredients.filter((ing) => Number(ing.currentStock) <= Number(ing.minStock)).length;
+  }, [ingredients]);
+
+  const storeLowCountMap = useMemo(() => {
+    const minMap = new Map<number, number>();
+    ingredients.forEach((i) => minMap.set(i.id, Number(i.minStock)));
+    const counts: Record<number, number> = {};
+    staffStores.forEach((st) => {
+      const list = storeBalances[st.id] || [];
+      const lowItems = list.filter((item) => {
+        const min = minMap.get(item.ingredientId) ?? 0;
+        return Number(item.expectedStock) <= min;
+      });
+      counts[st.id] = lowItems.length;
+    });
+    return counts;
+  }, [ingredients, staffStores, storeBalances]);
+
   // Highlight updated or newly added row
   const [highlightId, setHighlightId] = useState<number | null>(null);
 
@@ -469,10 +489,23 @@ export default function IngredientsPage() {
           >
             <Warehouse className="w-4 h-4" />
             <span>คลังสินค้าส่วนกลาง (Central Warehouse)</span>
+            {centralLowCountTab > 0 && (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  selectedStoreId === 'CENTRAL'
+                    ? 'bg-rose-500 text-white ring-1 ring-white/30'
+                    : 'bg-rose-600 text-white'
+                }`}
+                title={`สต็อกคลังกลางต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${centralLowCountTab} รายการ`}
+              >
+                {centralLowCountTab}
+              </span>
+            )}
           </button>
 
           {staffStores.map((st) => {
             const isSelected = selectedStoreId === String(st.id);
+            const storeLow = storeLowCountMap[st.id] || 0;
             return (
               <button
                 key={st.id}
@@ -486,6 +519,18 @@ export default function IngredientsPage() {
               >
                 <Store className="w-4 h-4" />
                 <span>🏪 สต็อกร้าน: {st.name}</span>
+                {storeLow > 0 && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      isSelected
+                        ? 'bg-amber-300 text-amber-950 ring-1 ring-amber-950/20'
+                        : 'bg-amber-400 text-amber-950'
+                    }`}
+                    title={`สต็อกร้านนี้ต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${storeLow} รายการ`}
+                  >
+                    {storeLow}
+                  </span>
+                )}
               </button>
             );
           })}
