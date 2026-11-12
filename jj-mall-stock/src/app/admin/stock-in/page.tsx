@@ -225,6 +225,32 @@ export default function AdminStockInPage() {
     ]);
   };
 
+  // Quick Select ingredient directly from search popup (1-click selection!)
+  const handleSelectIngredientFromSearch = (ing: Ingredient) => {
+    setFormItems((prev) => {
+      const lastIdx = prev.length - 1;
+      const isLastEmpty =
+        lastIdx >= 0 && (!prev[lastIdx].ingredientId || prev[lastIdx].quantity === '');
+
+      const newItem: InboundItemForm = {
+        ingredientId: String(ing.id),
+        quantity: '',
+        costPerUnit: String(ing.costPerUnit || '0'),
+      };
+
+      if (isLastEmpty) {
+        const updated = [...prev];
+        updated[lastIdx] = newItem;
+        return updated;
+      } else {
+        return [...prev, newItem];
+      }
+    });
+
+    setModalIngSearch('');
+    showToast(`เลือก "${ing.name}" เรียบร้อยแล้ว สามารถกรอกจำนวนได้ทันที`);
+  };
+
   const removeItemRow = (index: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, i) => i !== index));
@@ -821,15 +847,15 @@ export default function AdminStockInPage() {
                     </button>
                   </div>
 
-                  {/* Search box to filter ingredients */}
+                  {/* Search box with Instant Click-to-Select Popover */}
                   <div className="relative">
                     <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="🔍 ค้นหาวัตถุดิบ (พิมพ์ชื่อหรือรหัสเพื่อกรองตัวเลือกในแถว)..."
+                      placeholder="🔍 พิมพ์ค้นหาชื่อ หรือรหัสวัตถุดิบ (มีผลลัพธ์ให้คลิกเลือกได้ทันที)..."
                       value={modalIngSearch}
                       onChange={(e) => setModalIngSearch(e.target.value)}
-                      className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                      className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border-2 border-emerald-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium placeholder:text-slate-400"
                     />
                     {modalIngSearch && (
                       <button
@@ -840,6 +866,46 @@ export default function AdminStockInPage() {
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
+                    )}
+
+                    {/* Instant Search Results Dropdown (1-Click Select!) */}
+                    {modalIngSearch.trim().length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                        {filteredIngredientsForModal.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-400">
+                            ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{modalIngSearch}&rdquo;
+                          </div>
+                        ) : (
+                          filteredIngredientsForModal.map((ing) => {
+                            const inStoreStock = currentStoreStockMap.get(ing.id) ?? 0;
+                            return (
+                              <button
+                                key={ing.id}
+                                type="button"
+                                onClick={() => handleSelectIngredientFromSearch(ing)}
+                                className="w-full text-left p-3 hover:bg-emerald-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                              >
+                                <div>
+                                  <div className="font-bold text-xs text-slate-800 group-hover:text-emerald-700 flex items-center gap-1.5">
+                                    <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
+                                    <span>{ing.name}</span>
+                                    <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-0.5">
+                                    หมวด: {ing.category || 'ทั่วไป'} • ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 group-hover:bg-emerald-100 group-hover:text-emerald-800">
+                                    ในร้านเหลือ: {inStoreStock.toLocaleString()} {ing.unit}
+                                  </span>
+                                  <div className="text-[10px] text-emerald-600 font-bold mt-0.5">+ คลิกเลือกทันที</div>
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
                     )}
                   </div>
 
