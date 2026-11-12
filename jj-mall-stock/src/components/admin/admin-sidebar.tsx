@@ -44,9 +44,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   );
 
   const pendingAdjustmentsCount = Number(notifData?.data?.kpis?.pendingAdjustmentsCount || 0);
-  const lowIngredientsCount =
-    Number(notifData?.data?.kpis?.outOfStockCount || 0) +
-    Number(notifData?.data?.kpis?.lowStockCount || 0);
+  const lowIngredientsCount = Number(
+    notifData?.data?.kpis?.lowIngredientsCount ??
+    ((notifData?.data?.kpis?.outOfStockCount || 0) + (notifData?.data?.kpis?.lowStockCount || 0))
+  );
 
   const menuSections = [
     {
@@ -181,7 +182,11 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       {badgeCount > 0 && (
                         <span
-                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
+                          className={`px-2 py-0.5 min-w-[20px] h-5 rounded-full text-[10px] font-black flex items-center justify-center shadow-xs ${
+                            isIngredients
+                              ? 'bg-amber-400 text-amber-950 ring-1 ring-amber-500/40'
+                              : 'bg-rose-600 text-white'
+                          }`}
                           title={
                             isAdjustment
                               ? `มีใบขอปรับปรุงสต็อกรออนุมัติ ${badgeCount} รายการ`

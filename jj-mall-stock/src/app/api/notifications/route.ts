@@ -296,6 +296,7 @@ export async function GET() {
           totalActionable,
           outOfStockCount,
           lowStockCount,
+          lowIngredientsCount: outOfStockCount + lowStockCount,
           pendingAdjustmentsCount: realPendingCount,
           discrepancyCount: discrepancyItemCount,
           recentActivityCount: recentTransactions.length,
