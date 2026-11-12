@@ -71,20 +71,30 @@ export async function GET(req: NextRequest) {
         category: true,
         unit: true,
         currentStock: true,
+        minStock: true,
         costPerUnit: true,
       },
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
 
-    // For staff, also get their current store balance for reference
+    const minStockMap = new Map<number, number>();
+    rawIngredients.forEach((i) => minStockMap.set(i.id, Number(i.minStock)));
+
+    // For staff, also get their detailed store balance list for the In-Store Stock Tab
+    let storeBalancesList: any[] = [];
     let storeBalMap = new Map<number, number>();
     if (session.role === 'STAFF') {
-      const storeBalances = await calculateStoreReconciliation(session.id);
-      storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
+      const balances = await calculateStoreReconciliation(session.id);
+      storeBalancesList = balances.map((b) => ({
+        ...b,
+        minStock: minStockMap.get(b.ingredientId) ?? 0,
+      }));
+      balances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
     }
 
     const ingredients = rawIngredients.map((ing) => ({
       ...ing,
+      minStock: Number(ing.minStock),
       warehouseStock: Number(ing.currentStock),
       storeStock: session.role === 'STAFF' ? (storeBalMap.get(ing.id) ?? 0) : null,
     }));
@@ -99,6 +109,11 @@ export async function GET(req: NextRequest) {
     const approvedCount = allRequisitions.filter((r) => r.status === 'APPROVED').length;
     const rejectedCount = allRequisitions.filter((r) => r.status === 'REJECTED').length;
 
+    // Store level low items count
+    const storeLowItemsCount = storeBalancesList.filter(
+      (b) => b.hasStockHistory && Number(b.expectedStock) <= Number(b.minStock)
+    ).length;
+
     // 4. Stores list for Admin filter
     const staffStores = await prisma.user.findMany({
       where: { role: 'STAFF', status: 'ACTIVE' },
@@ -110,12 +125,14 @@ export async function GET(req: NextRequest) {
       success: true,
       requisitions,
       ingredients,
+      storeBalances: storeBalancesList,
       staffStores,
       metrics: {
         pendingCount,
         approvedCount,
         rejectedCount,
         totalCount: allRequisitions.length,
+        storeLowItemsCount,
       },
     });
   } catch (error: any) {
