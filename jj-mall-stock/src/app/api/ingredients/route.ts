@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     }
 
     const initialStock = currentStock !== undefined && currentStock !== '' ? Number(currentStock) : 0;
-    const safetyStock = minStock !== undefined && minStock !== '' ? Number(minStock) : 10;
+    const safetyStock = minStock !== undefined && minStock !== '' ? Number(minStock) : 0;
     const unitCost = costPerUnit !== undefined && costPerUnit !== '' ? Number(costPerUnit) : 0;
 
     const ingredient = await prisma.ingredient.create({

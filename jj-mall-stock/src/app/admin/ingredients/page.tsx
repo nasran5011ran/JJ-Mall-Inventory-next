@@ -189,9 +189,9 @@ export default function IngredientsPage() {
     name: '',
     category: 'ผงเครื่องดื่ม',
     unit: 'กรัม',
-    currentStock: '0',
-    minStock: '10',
-    costPerUnit: '0',
+    currentStock: '',
+    minStock: '',
+    costPerUnit: '',
     status: 'ACTIVE',
   });
 
@@ -298,9 +298,9 @@ export default function IngredientsPage() {
       name: '',
       category: allAvailableCategories[0] || 'ผงเครื่องดื่ม / ชา / กาแฟ',
       unit: 'กรัม',
-      currentStock: '0',
-      minStock: '10',
-      costPerUnit: '0',
+      currentStock: '',
+      minStock: '',
+      costPerUnit: '',
       status: 'ACTIVE',
     });
     setFormError(null);
@@ -1256,37 +1256,40 @@ export default function IngredientsPage() {
                 {/* Current Stock */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    จำนวนคงเหลือ
+                    {editingIngredient ? 'จำนวนคงเหลือปัจจุบัน' : 'สต็อกเริ่มต้น'}
                   </label>
                   <input
                     type="number"
                     step="0.001"
                     min="0"
-                    required
                     value={formData.currentStock}
                     onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
                     placeholder="0"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
+                  {!editingIngredient && (
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      💡 ปล่อยว่างได้ (ระบบบันทึกเป็น 0)
+                    </p>
+                  )}
                 </div>
 
                 {/* Min Stock (Safety Threshold) */}
                 <div>
-                  <label className="block text-xs font-bold text-amber-700 mb-1">
-                    สต็อกขั้นต่ำ (Min) <span className="text-red-500">*</span>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    สต็อกขั้นต่ำ (Min)
                   </label>
                   <input
                     type="number"
                     step="0.001"
                     min="0"
-                    required
                     value={formData.minStock}
                     onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                    placeholder="เช่น 500"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/30 font-mono font-bold text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    placeholder="เช่น 10 (เว้นว่างได้)"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
-                  <p className="mt-1 text-[10px] text-amber-700">
-                    💡 ถ้ายอดคงเหลือลดลงมาแตะตัวเลขนี้ ระบบจะเตือนสีส้มว่าต้องสั่งของเพิ่ม
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    💡 ถ้ายอดลดลงถึงจุดนี้ ระบบจะแจ้งเตือน
                   </p>
                 </div>
 
@@ -1301,9 +1304,12 @@ export default function IngredientsPage() {
                     min="0"
                     value={formData.costPerUnit}
                     onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
-                    placeholder="0.25"
+                    placeholder="0.00"
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                   />
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    💡 เว้นว่างได้ (ไประบุตอนซื้อเข้าได้)
+                  </p>
                 </div>
               </div>
 
