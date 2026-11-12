@@ -27,7 +27,6 @@ import {
   AlertCircle,
   Warehouse,
   Store,
-  Lock,
 } from 'lucide-react';
 
 interface Ingredient {
@@ -874,12 +873,7 @@ export default function AdminStockCountPage() {
                     ) : (
                       <th className="py-2.5 px-3 text-right">สต็อกในระบบ (คลังกลาง)</th>
                     )}
-                    <th className="py-2.5 px-3 text-center w-36">
-                      <span className="inline-flex items-center gap-1 justify-center">
-                        <Lock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>ยอดนับได้จริง</span>
-                      </span>
-                    </th>
+                    <th className="py-2.5 px-3 text-center w-36">ยอดนับได้จริง</th>
                     <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
                     <th className="py-2.5 px-3 text-center">สถานะ</th>
                   </tr>
@@ -983,18 +977,16 @@ export default function AdminStockCountPage() {
                             </td>
                           )}
 
-                          {/* Actual Input (Locked / Read-only) */}
+                          {/* Actual Input - Read-only (พิมพ์ไม่ได้) */}
                           <td className="py-2.5 px-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <input
                                 type="text"
                                 readOnly
-                                disabled
                                 value={systemQty.toLocaleString()}
-                                title="ยอดนับได้จริงถูกล็อคไว้ ไม่สามารถแก้ไขได้"
-                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-bold rounded-xl border border-slate-200 bg-slate-100 text-slate-700 cursor-not-allowed select-none shadow-none"
+                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 bg-slate-50 text-slate-800 focus:outline-none select-none"
                               />
-                              <span className="text-[11px] font-bold text-slate-500 w-8 text-left truncate">{ing.unit}</span>
+                              <span className="text-[11px] font-bold text-slate-600 w-8 text-left truncate">{ing.unit}</span>
                             </div>
                           </td>
 
