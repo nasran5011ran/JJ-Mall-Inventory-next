@@ -109,7 +109,8 @@ export default function AdminStockInPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [modalIngSearch, setModalIngSearch] = useState('');
+  const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
+  const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
 
   // Detail Modal State
   const [selectedTx, setSelectedTx] = useState<InboundTransaction | null>(null);
@@ -139,17 +140,17 @@ export default function AdminStockInPage() {
     return staffStores.find((s) => String(s.id) === String(targetStoreId));
   }, [staffStores, targetStoreId]);
 
-  // Filter ingredients in modal by search keyword
-  const filteredIngredientsForModal = useMemo(() => {
-    if (!modalIngSearch.trim()) return ingredients;
-    const q = modalIngSearch.toLowerCase().trim();
+  // Helper to filter ingredients for each row independently
+  const getRowFilteredIngredients = (idx: number) => {
+    const q = (rowSearchTexts[idx] || '').toLowerCase().trim();
+    if (!q) return ingredients;
     return ingredients.filter(
       (ing) =>
         ing.name.toLowerCase().includes(q) ||
         ing.code.toLowerCase().includes(q) ||
         (ing.category && ing.category.toLowerCase().includes(q))
     );
-  }, [ingredients, modalIngSearch]);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -195,7 +196,8 @@ export default function AdminStockInPage() {
     setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
     setSupplier('แม็คโคร (Makro)');
     setNote('');
-    setModalIngSearch('');
+    setActiveRowSearchIdx(null);
+    setRowSearchTexts({});
     setFormItems([{ ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '', costPerUnit: String(ingredients[0]?.costPerUnit || '0') }]);
     setFormError(null);
     setModalOpen(true);
@@ -219,41 +221,32 @@ export default function AdminStockInPage() {
   };
 
   const addItemRow = () => {
+    const nextIdx = formItems.length;
     setFormItems((prev) => [
       ...prev,
-      { ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '', costPerUnit: String(ingredients[0]?.costPerUnit || '0') },
+      { ingredientId: '', quantity: '', costPerUnit: '' },
     ]);
-  };
-
-  // Quick Select ingredient directly from search popup (1-click selection!)
-  const handleSelectIngredientFromSearch = (ing: Ingredient) => {
-    setFormItems((prev) => {
-      const lastIdx = prev.length - 1;
-      const isLastEmpty =
-        lastIdx >= 0 && (!prev[lastIdx].ingredientId || prev[lastIdx].quantity === '');
-
-      const newItem: InboundItemForm = {
-        ingredientId: String(ing.id),
-        quantity: '',
-        costPerUnit: String(ing.costPerUnit || '0'),
-      };
-
-      if (isLastEmpty) {
-        const updated = [...prev];
-        updated[lastIdx] = newItem;
-        return updated;
-      } else {
-        return [...prev, newItem];
-      }
-    });
-
-    setModalIngSearch('');
-    showToast(`เลือก "${ing.name}" เรียบร้อยแล้ว สามารถกรอกจำนวนได้ทันที`);
+    setActiveRowSearchIdx(nextIdx);
+    setRowSearchTexts((prev) => ({ ...prev, [nextIdx]: '' }));
   };
 
   const removeItemRow = (index: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, i) => i !== index));
+    if (activeRowSearchIdx === index) {
+      setActiveRowSearchIdx(null);
+    } else if (activeRowSearchIdx !== null && activeRowSearchIdx > index) {
+      setActiveRowSearchIdx(activeRowSearchIdx - 1);
+    }
+    setRowSearchTexts((prev) => {
+      const updated: Record<number, string> = {};
+      Object.keys(prev).forEach((key) => {
+        const k = Number(key);
+        if (k < index) updated[k] = prev[k];
+        else if (k > index) updated[k - 1] = prev[k];
+      });
+      return updated;
+    });
   };
 
   // Grand Total Calculation of Inbound Bill
@@ -400,36 +393,25 @@ export default function AdminStockInPage() {
         </div>
       )}
 
-      {/* Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
-            <span>📥 บันทึกรับสินค้าเข้าสต็อก (ซื้อเข้า)</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            บันทึกการซื้อวัตถุดิบเข้าสต็อกร้านค้าโดยตรง (ไม่มีคลังกลาง - ร้านค้าเป็นผู้ซื้อและเพิ่มสต็อกเข้าจุดขาย)
-          </p>
-        </div>
+      {/* Top Action Bar */}
+      <div className="flex items-center justify-end gap-2.5">
+        <button
+          onClick={() => mutate()}
+          disabled={refreshing}
+          className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+          title="รีเฟรชข้อมูลล่าสุด"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">รีเฟรช</span>
+        </button>
 
-        <div className="flex items-center gap-2.5 ml-auto">
-          <button
-            onClick={() => mutate()}
-            disabled={refreshing}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
-            title="รีเฟรชข้อมูลล่าสุด"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">รีเฟรช</span>
-          </button>
-
-          <button
-            onClick={openNewStockInModal}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ บันทึกรับสินค้าเข้าสต็อกร้าน (ซื้อเข้า)</span>
-          </button>
-        </div>
+        <button
+          onClick={openNewStockInModal}
+          className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          <span>+ บันทึกรับสินค้าเข้าสต็อกร้าน (ซื้อเข้า)</span>
+        </button>
       </div>
 
       {/* 4 KPI Summary Cards */}
@@ -746,9 +728,9 @@ export default function AdminStockInPage() {
 
       {/* Modal: Record New Stock In */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 h-[92vh] max-h-[92vh] flex flex-col overflow-hidden">
-            {/* Header */}
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] h-[92vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -768,308 +750,362 @@ export default function AdminStockInPage() {
             </div>
 
             {formError && (
-              <div className="mt-3 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
+              <div className="mt-2.5 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmitStockIn} className="mt-3 flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Single Scrollable Form Container (No Double Scrollbars!) */}
-              <div className="flex-1 min-h-0 overflow-y-auto pr-1.5 space-y-3.5 scrollbar-thin">
+            <form onSubmit={handleSubmitStockIn} className="mt-2.5 flex-1 min-h-0 flex flex-col overflow-hidden">
+              {/* Top Compact Settings: Store, PO Number & Supplier (Always visible, No scrolling needed!) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 shrink-0 mb-3">
                 {/* Store Selection */}
-                <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
-                    <Store className="w-4 h-4 text-amber-700 shrink-0" />
-                    <span>เลือกร้านค้า / จุดขายที่รับสต็อกเข้า (ซื้อเข้า):</span>
+                <div>
+                  <label className="block text-[11px] font-bold text-amber-950 mb-1 flex items-center gap-1">
+                    <Store className="w-3.5 h-3.5 text-amber-700" />
+                    <span>ร้านค้าที่รับเข้า</span>
                     <span className="text-red-500">*</span>
-                  </div>
+                  </label>
                   <select
                     value={targetStoreId}
                     onChange={(e) => setTargetStoreId(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-amber-300 bg-white font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   >
                     {staffStores.map((st) => (
                       <option key={st.id} value={st.id}>
-                        🏪 {st.name} (@{st.username})
+                        🏪 {st.name}
                       </option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-amber-800">
-                    💡 วัตถุดิบที่บันทึกรับเข้าจะถูกเพิ่มเข้าสต็อกคงเหลือของร้านค้านี้โดยตรงทันที เพื่อให้พร้อมใช้งานและขายผ่าน POS
-                  </p>
                 </div>
 
-                {/* Bill Meta: PO Number & Supplier */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      เลขที่ใบสั่งซื้อ / ใบเสร็จ (PO Number) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={invoiceNumber}
-                      onChange={(e) => setInvoiceNumber(e.target.value)}
-                      placeholder="PO-20261106-xxxx"
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      ผู้จำหน่าย / แหล่งซื้อ (Supplier)
-                    </label>
-                    <input
-                      type="text"
-                      value={supplier}
-                      onChange={(e) => setSupplier(e.target.value)}
-                      placeholder="เช่น แม็คโคร, ตลาดไท, โรงงาน..."
-                      className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    />
-                  </div>
-                </div>
-
-                {/* Dynamic Items List (Natural flow without inner nested scrollbar!) */}
-                <div className="space-y-2.5 pt-1">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-700">
-                      รายการวัตถุดิบที่รับเข้า ({formItems.length} รายการ) <span className="text-red-500">*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={addItemRow}
-                      className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>เพิ่มแถววัตถุดิบ</span>
-                    </button>
-                  </div>
-
-                  {/* Search box with Instant Click-to-Select Popover */}
-                  <div className="relative">
-                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="🔍 พิมพ์ค้นหาชื่อ หรือรหัสวัตถุดิบ (มีผลลัพธ์ให้คลิกเลือกได้ทันที)..."
-                      value={modalIngSearch}
-                      onChange={(e) => setModalIngSearch(e.target.value)}
-                      className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border-2 border-emerald-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-medium placeholder:text-slate-400"
-                    />
-                    {modalIngSearch && (
-                      <button
-                        type="button"
-                        onClick={() => setModalIngSearch('')}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                        title="ล้างคำค้นหา"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {/* Instant Search Results Dropdown (1-Click Select!) */}
-                    {modalIngSearch.trim().length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
-                        {filteredIngredientsForModal.length === 0 ? (
-                          <div className="p-4 text-center text-xs text-slate-400">
-                            ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{modalIngSearch}&rdquo;
-                          </div>
-                        ) : (
-                          filteredIngredientsForModal.map((ing) => {
-                            const inStoreStock = currentStoreStockMap.get(ing.id) ?? 0;
-                            return (
-                              <button
-                                key={ing.id}
-                                type="button"
-                                onClick={() => handleSelectIngredientFromSearch(ing)}
-                                className="w-full text-left p-3 hover:bg-emerald-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
-                              >
-                                <div>
-                                  <div className="font-bold text-xs text-slate-800 group-hover:text-emerald-700 flex items-center gap-1.5">
-                                    <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
-                                    <span>{ing.name}</span>
-                                    <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
-                                  </div>
-                                  <div className="text-[10px] text-slate-400 mt-0.5">
-                                    หมวด: {ing.category || 'ทั่วไป'} • ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}
-                                  </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 group-hover:bg-emerald-100 group-hover:text-emerald-800">
-                                    ในร้านเหลือ: {inStoreStock.toLocaleString()} {ing.unit}
-                                  </span>
-                                  <div className="text-[10px] text-emerald-600 font-bold mt-0.5">+ คลิกเลือกทันที</div>
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    {formItems.map((item, idx) => {
-                      const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
-                      const storeStock = selectedIng ? (currentStoreStockMap.get(selectedIng.id) ?? 0) : 0;
-                      const inboundQty = parseFloat(item.quantity) || 0;
-                      const newBalance = storeStock + inboundQty;
-                      const rowSubtotal = inboundQty * (parseFloat(item.costPerUnit) || 0);
-
-                      return (
-                        <div
-                          key={idx}
-                          className="p-3 sm:p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2.5 transition-all hover:border-slate-300"
-                        >
-                          <div className="flex flex-col sm:flex-row items-center gap-2">
-                            {/* Ingredient Select */}
-                            <div className="flex-1 w-full">
-                              <select
-                                value={item.ingredientId}
-                                onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
-                                required
-                                className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                              >
-                                <option value="">-- เลือกวัตถุดิบ --</option>
-                                {/* Keep currently selected ingredient visible even if search filters it out */}
-                                {selectedIng && !filteredIngredientsForModal.some((i) => i.id === selectedIng.id) && (
-                                  <option value={selectedIng.id}>
-                                    {selectedIng.name} (ในร้านเหลือ: {(currentStoreStockMap.get(selectedIng.id) ?? 0).toLocaleString()} {selectedIng.unit})
-                                  </option>
-                                )}
-                                {filteredIngredientsForModal.map((ing) => {
-                                  const inStoreBal = currentStoreStockMap.get(ing.id) ?? 0;
-                                  return (
-                                    <option key={ing.id} value={ing.id}>
-                                      {ing.name} (ในร้านเหลือ: {inStoreBal.toLocaleString()} {ing.unit})
-                                    </option>
-                                  );
-                                })}
-                              </select>
-                            </div>
-
-                            {/* Quantity In */}
-                            <div className="w-full sm:w-36 flex items-center gap-1">
-                              <input
-                                type="number"
-                                min="0.001"
-                                step="any"
-                                required
-                                placeholder="ระบุจำนวน"
-                                value={item.quantity}
-                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                                className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold"
-                              />
-                              <span className="text-[11px] text-slate-500 font-mono w-12 truncate text-right">
-                                {selectedIng?.unit || 'หน่วย'}
-                              </span>
-                            </div>
-
-                            {/* Cost Per Unit */}
-                            <div className="w-full sm:w-28 flex items-center gap-1">
-                              <span className="text-slate-400 text-[11px]">฿</span>
-                              <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                placeholder="ต้นทุน"
-                                value={item.costPerUnit}
-                                onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
-                                className="w-full px-2 py-2 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none"
-                              />
-                            </div>
-
-                            {/* Subtotal Preview */}
-                            <div className="w-24 text-right font-mono font-bold text-slate-700 hidden sm:block">
-                              ฿{rowSubtotal.toFixed(2)}
-                            </div>
-
-                            {/* Delete Row */}
-                            <button
-                              type="button"
-                              onClick={() => removeItemRow(idx)}
-                              disabled={formItems.length === 1}
-                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-30 cursor-pointer transition-colors"
-                              title="ลบแถวนี้"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          {/* Real-time Store Stock Calculation: [Store Current Stock] + [Quantity In] = [New Store Balance] */}
-                          {selectedIng && (
-                            <div className="pt-2 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                              <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                                <span>คงเหลือเดิมในร้าน {targetStoreObj ? `(${targetStoreObj.name})` : ''}:</span>
-                                <span className="font-mono font-bold text-slate-700">
-                                  {storeStock.toLocaleString()} {selectedIng.unit}
-                                </span>
-                                {inboundQty > 0 && (
-                                  <>
-                                    <span className="text-emerald-600 font-black">+</span>
-                                    <span>ซื้อเข้า:</span>
-                                    <span className="font-mono font-bold text-emerald-700">
-                                      {inboundQty.toLocaleString()} {selectedIng.unit}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
-
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800">
-                                <span className="text-[10px] text-emerald-600 font-semibold">ยอดคงเหลือใหม่ในร้านหลังรับเข้า:</span>
-                                <span className="font-mono font-black text-xs text-emerald-700">
-                                  {newBalance.toLocaleString()} {selectedIng.unit}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Grand Total Bar */}
-                <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-900">ยอดเงินรวมทั้งสิ้น (Grand Total):</span>
-                  <span className="font-mono font-black text-base text-emerald-800">
-                    ฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-
-                {/* Note */}
+                {/* PO / Invoice Number */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    หมายเหตุเพิ่มเติม
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    เลขที่ใบสั่งซื้อ / PO <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="เช่น สต็อกสำรองช่วงเทศกาล, ได้รับส่วนลดพิเศษ..."
-                    className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    required
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    placeholder="PO-20261106-xxxx"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                {/* Supplier */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    ผู้จำหน่าย / แหล่งซื้อ
+                  </label>
+                  <input
+                    type="text"
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    placeholder="เช่น แม็คโคร, ตลาดไท..."
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   />
                 </div>
               </div>
 
-              {/* Fixed Footer Actions pinned inside the modal card */}
-              <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 bg-white">
+              {/* Items List Section Header */}
+              <div className="flex items-center justify-between pb-1.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800">
+                    รายการวัตถุดิบ ({formItems.length})
+                  </span>
+                  <span className="text-[10px] text-slate-400 hidden sm:inline">
+                    (ค้นหาแยกอิสระต่อกันแต่ละแถว)
+                  </span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+                  onClick={addItemRow}
+                  className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1 cursor-pointer border border-emerald-200 transition-colors"
                 >
-                  ยกเลิก
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>เพิ่มแถว</span>
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  <ArrowDownToLine className="w-4 h-4" />
-                  <span>{submitting ? 'กำลังบันทึก...' : '💾 ยืนยันบันทึกรับสินค้าเข้าสต็อกร้าน'}</span>
-                </button>
+              </div>
+
+              {/* Desktop Column Header */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100/90 rounded-xl shrink-0 mb-1.5">
+                <div className="col-span-1 text-center">#</div>
+                <div className="col-span-5">วัตถุดิบ (คลิกเพื่อค้นหาและเลือก)</div>
+                <div className="col-span-2 text-right">จำนวนที่ซื้อเข้า</div>
+                <div className="col-span-2 text-right">ต้นทุน/หน่วย (฿)</div>
+                <div className="col-span-1 text-right">รวม (฿)</div>
+                <div className="col-span-1 text-center">ลบ</div>
+              </div>
+
+              {/* Backdrop Overlay when row search popover is open */}
+              {activeRowSearchIdx !== null && (
+                <div
+                  className="fixed inset-0 z-[55] bg-transparent"
+                  onClick={() => setActiveRowSearchIdx(null)}
+                />
+              )}
+
+              {/* Scrollable Items Container (NO horizontal scrollbar, overflow-x-hidden!) */}
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 space-y-2 scrollbar-thin">
+                {formItems.map((item, idx) => {
+                  const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
+                  const storeStock = selectedIng ? (currentStoreStockMap.get(selectedIng.id) ?? 0) : 0;
+                  const inboundQty = parseFloat(item.quantity) || 0;
+                  const newBalance = storeStock + inboundQty;
+                  const rowSubtotal = inboundQty * (parseFloat(item.costPerUnit) || 0);
+                  const isSearchingThisRow = activeRowSearchIdx === idx;
+                  const filteredRowIngs = getRowFilteredIngredients(idx);
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 sm:p-3 rounded-2xl bg-slate-50 border text-xs space-y-1.5 transition-all ${
+                        isSearchingThisRow
+                          ? 'border-emerald-400 ring-2 ring-emerald-500/20 shadow-md relative z-[60] bg-white'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row items-center gap-2 min-w-0">
+                        {/* Sequence number */}
+                        <div className="hidden sm:flex w-6 h-6 rounded-lg bg-slate-200/80 text-slate-700 font-mono font-bold text-xs items-center justify-center shrink-0">
+                          {idx + 1}
+                        </div>
+
+                        {/* Searchable Combobox */}
+                        <div className="flex-1 w-full min-w-0 relative">
+                          {isSearchingThisRow ? (
+                            <div className="relative">
+                              <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  placeholder="พิมพ์ค้นหาชื่อ หรือรหัสแถวนี้..."
+                                  value={rowSearchTexts[idx] || ''}
+                                  onChange={(e) =>
+                                    setRowSearchTexts((prev) => ({ ...prev, [idx]: e.target.value }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') setActiveRowSearchIdx(null);
+                                  }}
+                                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border-2 border-emerald-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveRowSearchIdx(null)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                  title="ปิดการค้นหา"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Search Dropdown Popover */}
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                {filteredRowIngs.length === 0 ? (
+                                  <div className="p-3.5 text-center text-xs text-slate-400">
+                                    ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
+                                  </div>
+                                ) : (
+                                  filteredRowIngs.map((ing) => {
+                                    const inStoreStock = currentStoreStockMap.get(ing.id) ?? 0;
+                                    return (
+                                      <button
+                                        key={ing.id}
+                                        type="button"
+                                        onClick={() => {
+                                          handleItemChange(idx, 'ingredientId', String(ing.id));
+                                          setActiveRowSearchIdx(null);
+                                          setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
+                                        }}
+                                        className={`w-full text-left p-2.5 hover:bg-emerald-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                                          String(ing.id) === item.ingredientId ? 'bg-emerald-50/70 font-bold' : ''
+                                        }`}
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="font-bold text-xs text-slate-800 group-hover:text-emerald-700 flex items-center gap-1.5 truncate">
+                                            <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 shrink-0" />
+                                            <span className="truncate">{ing.name}</span>
+                                            <span className="font-mono text-[10px] text-slate-400 shrink-0">({ing.code})</span>
+                                          </div>
+                                          <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                            หมวด: {ing.category || 'ทั่วไป'} • ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}
+                                          </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 group-hover:bg-emerald-100 group-hover:text-emerald-800">
+                                            ในร้านเหลือ: {inStoreStock.toLocaleString()} {ing.unit}
+                                          </span>
+                                          <div className="text-[10px] text-emerald-600 font-bold mt-0.5">+ เลือกแถวนี้</div>
+                                        </div>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveRowSearchIdx(idx);
+                                setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
+                              }}
+                              className={`w-full px-2.5 py-1.5 text-xs rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                                selectedIng
+                                  ? 'bg-white border-slate-300 text-slate-800 hover:border-emerald-500 hover:shadow-xs'
+                                  : 'bg-amber-50/80 border-amber-300 text-amber-800 hover:bg-amber-100/70'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate min-w-0">
+                                <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                {selectedIng ? (
+                                  <span className="font-bold text-slate-800 truncate">
+                                    {selectedIng.name}{' '}
+                                    <span className="font-mono font-normal text-slate-400 text-[10px]">({selectedIng.code})</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-800 font-semibold truncate">🔍 คลิกเพื่อค้นหาวัตถุดิบแถวนี้...</span>
+                                )}
+                              </div>
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                {selectedIng && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium hidden md:inline-block">
+                                    เหลือ: {storeStock.toLocaleString()} {selectedIng.unit}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                  ค้นหา/เปลี่ยน
+                                </span>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Quantity In */}
+                        <div className="w-full sm:w-32 flex items-center gap-1 shrink-0">
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="any"
+                            required
+                            placeholder="จำนวน"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold"
+                          />
+                          <span className="text-[11px] text-slate-500 font-mono w-10 truncate text-right">
+                            {selectedIng?.unit || 'หน่วย'}
+                          </span>
+                        </div>
+
+                        {/* Cost Per Unit */}
+                        <div className="w-full sm:w-28 flex items-center gap-1 shrink-0">
+                          <span className="text-slate-400 text-[11px]">฿</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="ต้นทุน"
+                            value={item.costPerUnit}
+                            onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          />
+                        </div>
+
+                        {/* Subtotal Preview */}
+                        <div className="w-20 text-right font-mono font-bold text-slate-700 hidden sm:block shrink-0">
+                          ฿{rowSubtotal.toFixed(2)}
+                        </div>
+
+                        {/* Delete Row Button */}
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(idx)}
+                          disabled={formItems.length === 1}
+                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-xl hover:bg-red-50 disabled:opacity-20 cursor-pointer transition-colors shrink-0"
+                          title="ลบแถวนี้"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Real-time Store Stock Calculation Preview */}
+                      {selectedIng && (
+                        <div className="pt-1.5 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                          <div className="flex flex-wrap items-center gap-1 text-slate-500">
+                            <span>คงเหลือเดิมในร้าน:</span>
+                            <span className="font-mono font-bold text-slate-700">
+                              {storeStock.toLocaleString()} {selectedIng.unit}
+                            </span>
+                            {inboundQty > 0 && (
+                              <>
+                                <span className="text-emerald-600 font-black">+</span>
+                                <span>ซื้อเข้า:</span>
+                                <span className="font-mono font-bold text-emerald-700">
+                                  {inboundQty.toLocaleString()} {selectedIng.unit}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800">
+                            <span className="text-[10px] text-emerald-600 font-semibold">ยอดคงเหลือใหม่:</span>
+                            <span className="font-mono font-black text-xs text-emerald-700">
+                              {newBalance.toLocaleString()} {selectedIng.unit}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Sticky Toolbar: Note + Grand Total + Submit Action (Always visible without scrolling down!) */}
+              <div className="pt-2.5 mt-2 border-t border-slate-200 shrink-0 bg-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                {/* Note input */}
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 shrink-0">หมายเหตุ:</span>
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="ระบุหมายเหตุเพิ่มเติม (ถ้ามี)..."
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                {/* Grand Total & Action Buttons */}
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400 font-bold uppercase">ยอดเงินรวมทั้งสิ้น</div>
+                    <div className="font-mono font-black text-base text-emerald-700">
+                      ฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs cursor-pointer transition-colors"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition-all"
+                    >
+                      <ArrowDownToLine className="w-4 h-4" />
+                      <span>{submitting ? 'กำลังบันทึก...' : '💾 บันทึกรับเข้าสต็อก'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </form>
           </div>
