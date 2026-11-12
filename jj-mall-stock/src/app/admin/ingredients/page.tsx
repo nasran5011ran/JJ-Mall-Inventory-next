@@ -1341,11 +1341,11 @@ export default function IngredientsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                {/* Current Stock */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Quantity */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    {editingIngredient ? 'จำนวนคงเหลือปัจจุบัน' : 'สต็อกเริ่มต้น'}
+                    จำนวน
                   </label>
                   <input
                     type="number"
@@ -1354,32 +1354,8 @@ export default function IngredientsPage() {
                     value={formData.currentStock}
                     onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
                     placeholder="0"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
-                  {!editingIngredient && (
-                    <p className="mt-1 text-[10px] text-slate-400">
-                      💡 ปล่อยว่างได้ (ระบบบันทึกเป็น 0)
-                    </p>
-                  )}
-                </div>
-
-                {/* Min Stock (Safety Threshold) */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    สต็อกขั้นต่ำ (Min)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={formData.minStock}
-                    onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                    placeholder="เช่น 10 (เว้นว่างได้)"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    💡 ถ้ายอดลดลงถึงจุดนี้ ระบบจะแจ้งเตือน
-                  </p>
                 </div>
 
                 {/* Cost Per Unit */}
@@ -1394,11 +1370,8 @@ export default function IngredientsPage() {
                     value={formData.costPerUnit}
                     onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                     placeholder="0.00"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
-                  <p className="mt-1 text-[10px] text-slate-400">
-                    💡 เว้นว่างได้ (ไประบุตอนซื้อเข้าได้)
-                  </p>
                 </div>
               </div>
 
