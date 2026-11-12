@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Warehouse,
   Store,
+  Lock,
 } from 'lucide-react';
 
 interface Ingredient {
@@ -328,15 +329,24 @@ export default function AdminStockCountPage() {
       return;
     }
 
-    const itemsToSubmit = Object.entries(countInputs)
-      .filter(([_, val]) => val !== undefined && val.trim() !== '' && !isNaN(parseFloat(val)))
-      .map(([ingId, val]) => ({
-        ingredientId: Number(ingId),
-        actualQuantity: parseFloat(val),
-      }));
+    const list = storeBalances[Number(targetStoreId)] || [];
+    const map = new Map<number, any>();
+    list.forEach((item) => map.set(item.ingredientId, item));
+
+    const itemsToSubmit = ingredients.map((ing) => {
+      const b = map.get(ing.id);
+      const val = countInputs[ing.id];
+      const actualQuantity = val !== undefined && val !== '' && !isNaN(parseFloat(val))
+        ? parseFloat(val)
+        : (b ? Number(b.expectedStock) : 0);
+      return {
+        ingredientId: ing.id,
+        actualQuantity,
+      };
+    });
 
     if (itemsToSubmit.length === 0) {
-      setFormError('กรุณากรอกยอดที่นับได้จริงอย่างน้อย 1 รายการ');
+      setFormError('ไม่พบรายการสินค้าสำหรับบันทึกตรวจนับ');
       return;
     }
 
@@ -841,24 +851,9 @@ export default function AdminStockCountPage() {
                     placeholder="ค้นหาชื่อสินค้า / วัตถุดิบ..."
                     value={modalSearch}
                     onChange={(e) => setModalSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-medium"
                   />
                 </div>
-                <button
-                  type="button"
-                  onClick={handleFillAllCurrent}
-                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shrink-0"
-                  title="ใส่ค่ายอดที่ควรมีลงทุกช่อง"
-                >
-                  ใส่ยอดที่ควรมีในร้านทั้งหมด
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 cursor-pointer shrink-0"
-                >
-                  ล้างค่า
-                </button>
               </div>
             </div>
 
@@ -879,7 +874,12 @@ export default function AdminStockCountPage() {
                     ) : (
                       <th className="py-2.5 px-3 text-right">สต็อกในระบบ (คลังกลาง)</th>
                     )}
-                    <th className="py-2.5 px-3 text-center w-36">ยอดนับได้จริง *</th>
+                    <th className="py-2.5 px-3 text-center w-36">
+                      <span className="inline-flex items-center gap-1 justify-center">
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>ยอดนับได้จริง</span>
+                      </span>
+                    </th>
                     <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
                     <th className="py-2.5 px-3 text-center">สถานะ</th>
                   </tr>
@@ -983,27 +983,18 @@ export default function AdminStockCountPage() {
                             </td>
                           )}
 
-                          {/* Actual Input */}
+                          {/* Actual Input (Locked / Read-only) */}
                           <td className="py-2.5 px-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <input
                                 type="text"
-                                inputMode="decimal"
-                                value={inputValue}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                    setCountInputs((prev) => ({
-                                      ...prev,
-                                      [ing.id]: val,
-                                    }));
-                                  }
-                                }}
-                                onFocus={(e) => e.target.select()}
-                                placeholder="0"
-                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white shadow-2xs"
+                                readOnly
+                                disabled
+                                value={systemQty.toLocaleString()}
+                                title="ยอดนับได้จริงถูกล็อคไว้ ไม่สามารถแก้ไขได้"
+                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-bold rounded-xl border border-slate-200 bg-slate-100 text-slate-700 cursor-not-allowed select-none shadow-none"
                               />
-                              <span className="text-[11px] font-bold text-slate-600 w-8 text-left truncate">{ing.unit}</span>
+                              <span className="text-[11px] font-bold text-slate-500 w-8 text-left truncate">{ing.unit}</span>
                             </div>
                           </td>
 
