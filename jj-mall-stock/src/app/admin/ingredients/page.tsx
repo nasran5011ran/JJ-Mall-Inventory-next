@@ -1092,7 +1092,7 @@ export default function IngredientsPage() {
       {/* Add / Edit Ingredient Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 min-h-[680px] sm:min-h-[750px] max-h-[92vh] overflow-y-auto flex flex-col justify-between">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-3">
@@ -1123,201 +1123,202 @@ export default function IngredientsPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-6 flex-1 flex flex-col justify-between">
-              <div className="space-y-5 pb-24">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Code */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      รหัสวัตถุดิบ <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="เช่น ING-MILO001"
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    />
-                  </div>
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              {/* Row 1: Name */}
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  ชื่อวัตถุดิบ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="เช่น ผงไมโลพรีเมียม, แก้ว 22oz"
+                  className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                />
+              </div>
 
-                  {/* Unit */}
-                  <div className="relative">
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      หน่วยนับ <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.unit}
-                      onChange={(e) => {
-                        setFormData({ ...formData, unit: e.target.value });
-                        setShowUnitMenu(true);
-                      }}
-                      onFocus={() => setShowUnitMenu(true)}
-                      onBlur={() => setTimeout(() => setShowUnitMenu(false), 250)}
-                      placeholder="พิมพ์หรือเลือกหน่วยนับ..."
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
-                    />
-                    {showUnitMenu && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl z-50 max-h-52 overflow-y-auto py-1 divide-y divide-slate-100">
-                        {allAvailableUnits
-                          .filter((u) => !formData.unit || u.toLowerCase().includes(formData.unit.toLowerCase().trim()))
-                          .map((u) => (
-                            <button
-                              key={u}
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                setFormData({ ...formData, unit: u });
-                                setShowUnitMenu(false);
-                              }}
-                              className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
-                            >
-                              <span>{u}</span>
-                              {formData.unit === u && <span className="text-xs text-emerald-600 font-bold">✓</span>}
-                            </button>
-                          ))}
-                        {formData.unit.trim() && (
+              {/* Row 2: Category & Unit */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Category */}
+                <div className="relative">
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                    หมวดหมู่วัตถุดิบ
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.category}
+                    onChange={(e) => {
+                      setFormData({ ...formData, category: e.target.value });
+                      setShowCategoryMenu(true);
+                    }}
+                    onFocus={() => setShowCategoryMenu(true)}
+                    onBlur={() => setTimeout(() => setShowCategoryMenu(false), 250)}
+                    placeholder="พิมพ์หรือเลือกหมวดหมู่..."
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
+                  />
+                  {showCategoryMenu && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1 divide-y divide-slate-100">
+                      {allAvailableCategories
+                        .filter((c) => !formData.category || c.toLowerCase().includes(formData.category.toLowerCase().trim()))
+                        .map((c) => (
                           <button
+                            key={c}
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              setShowUnitMenu(false);
+                              setFormData({ ...formData, category: c });
+                              setShowCategoryMenu(false);
                             }}
-                            className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/60"
+                            className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
                           >
-                            <span className="text-slate-500 font-normal">ใช้หน่วยนับนี้:</span>
-                            <span className="underline decoration-emerald-500 font-black">"{formData.unit.trim()}"</span>
+                            <span className="font-medium">{c}</span>
+                            {formData.category === c && <span className="text-xs text-emerald-600 font-bold">✓</span>}
                           </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                        ))}
+                      {formData.category.trim() && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setShowCategoryMenu(false);
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/70"
+                        >
+                          <span className="text-slate-500 font-normal">ใช้หมวดหมู่นี้:</span>
+                          <span className="underline decoration-emerald-500 font-black">"{formData.category.trim()}"</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Name */}
-                <div>
+                {/* Unit */}
+                <div className="relative">
                   <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                    ชื่อวัตถุดิบ <span className="text-red-500">*</span>
+                    หน่วยนับ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="เช่น ผงไมโลพรีเมียม, แก้ว 22oz"
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                    value={formData.unit}
+                    onChange={(e) => {
+                      setFormData({ ...formData, unit: e.target.value });
+                      setShowUnitMenu(true);
+                    }}
+                    onFocus={() => setShowUnitMenu(true)}
+                    onBlur={() => setTimeout(() => setShowUnitMenu(false), 250)}
+                    placeholder="พิมพ์หรือเลือกหน่วยนับ..."
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
                   />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Category */}
-                  <div className="relative">
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      หมวดหมู่วัตถุดิบ
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.category}
-                      onChange={(e) => {
-                        setFormData({ ...formData, category: e.target.value });
-                        setShowCategoryMenu(true);
-                      }}
-                      onFocus={() => setShowCategoryMenu(true)}
-                      onBlur={() => setTimeout(() => setShowCategoryMenu(false), 300)}
-                      placeholder="พิมพ์หรือเลือกหมวดหมู่..."
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
-                    />
-                    {showCategoryMenu && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-300 rounded-2xl shadow-2xl z-50 max-h-60 overflow-y-auto py-1 divide-y divide-slate-100 ring-4 ring-black/5">
-                        {allAvailableCategories
-                          .filter((c) => !formData.category || c.toLowerCase().includes(formData.category.toLowerCase().trim()))
-                          .map((c) => (
-                            <button
-                              key={c}
-                              type="button"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                setFormData({ ...formData, category: c });
-                                setShowCategoryMenu(false);
-                              }}
-                              className="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
-                            >
-                              <span className="font-medium">{c}</span>
-                              {formData.category === c && <span className="text-xs text-emerald-600 font-bold">✓</span>}
-                            </button>
-                          ))}
-                        {formData.category.trim() && (
+                  {showUnitMenu && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1 divide-y divide-slate-100">
+                      {allAvailableUnits
+                        .filter((u) => !formData.unit || u.toLowerCase().includes(formData.unit.toLowerCase().trim()))
+                        .map((u) => (
                           <button
+                            key={u}
                             type="button"
                             onMouseDown={(e) => {
                               e.preventDefault();
-                              setShowCategoryMenu(false);
+                              setFormData({ ...formData, unit: u });
+                              setShowUnitMenu(false);
                             }}
-                            className="w-full text-left px-4 py-2.5 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/70"
+                            className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
                           >
-                            <span className="text-slate-500 font-normal">ใช้หมวดหมู่นี้:</span>
-                            <span className="underline decoration-emerald-500 font-black">"{formData.category.trim()}"</span>
+                            <span>{u}</span>
+                            {formData.unit === u && <span className="text-xs text-emerald-600 font-bold">✓</span>}
                           </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                        ))}
+                      {formData.unit.trim() && (
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setShowUnitMenu(false);
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/60"
+                        >
+                          <span className="text-slate-500 font-normal">ใช้หน่วยนับนี้:</span>
+                          <span className="underline decoration-emerald-500 font-black">"{formData.unit.trim()}"</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-                  {/* Status */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      สถานะการใช้งาน
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    >
-                      <option value="ACTIVE">พร้อมใช้งาน (Active)</option>
-                      <option value="INACTIVE">ระงับการใช้งาน (Inactive)</option>
-                    </select>
-                  </div>
+              {/* Row 3: Code & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Code */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                    รหัสวัตถุดิบ <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    placeholder="เช่น ING-MILO001"
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Quantity */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      จำนวน
-                    </label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={formData.currentStock}
-                      onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                      placeholder="0"
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    />
-                  </div>
+                {/* Status */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                    สถานะการใช้งาน
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  >
+                    <option value="ACTIVE">พร้อมใช้งาน (Active)</option>
+                    <option value="INACTIVE">ระงับการใช้งาน (Inactive)</option>
+                  </select>
+                </div>
+              </div>
 
-                  {/* Cost Per Unit */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                      ต้นทุน/หน่วย (฿)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min="0"
-                      value={formData.costPerUnit}
-                      onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
-                      placeholder="0.00"
-                      className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                    />
-                  </div>
+              {/* Row 4: Quantity & Cost */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Quantity */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                    จำนวน
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={formData.currentStock}
+                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
+                    placeholder="0"
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  />
+                </div>
+
+                {/* Cost Per Unit */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                    ต้นทุน/หน่วย (฿)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    value={formData.costPerUnit}
+                    onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  />
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-5 border-t border-slate-100 flex items-center justify-end gap-3 mt-auto">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
