@@ -469,10 +469,45 @@ export default function IngredientsPage() {
       setTimeout(() => setHighlightId(null), 2500);
       mutate();
       globalMutate('/api/notifications');
+
+      await showSuccessAlert(
+        isEditing ? 'อัปเดตข้อมูลสำเร็จ' : 'เพิ่มวัตถุดิบสำเร็จ',
+        isEditing ? `อัปเดตข้อมูลวัตถุดิบ "${returned.name}" เรียบร้อยแล้ว` : `เพิ่มวัตถุดิบใหม่ "${returned.name}" เรียบร้อยแล้ว`
+      );
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Toggle Ingredient Status directly (Matching admin/users)
+  const handleToggleStatus = async (ing: IngredientItem) => {
+    const nextStatus = ing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const actionThai = nextStatus === 'ACTIVE' ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
+
+    try {
+      const res = await fetch(`/api/ingredients/${ing.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'เปลี่ยนสถานะไม่สำเร็จ');
+      }
+
+      showToast(`เปลี่ยนสถานะ "${ing.name}" เป็น ${actionThai} เรียบร้อยแล้ว`);
+      setHighlightId(ing.id);
+      setTimeout(() => setHighlightId(null), 2500);
+
+      setIngredients((prev) =>
+        prev.map((item) => (item.id === ing.id ? { ...item, status: nextStatus } : item))
+      );
+      mutate();
+    } catch (err: any) {
+      await showErrorAlert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ', err.message || 'ไม่สามารถเปลี่ยนสถานะได้');
     }
   };
 
@@ -795,10 +830,9 @@ export default function IngredientsPage() {
                       <th className="py-3 px-3.5">ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3.5">หมวดหมู่</th>
                       <th className="py-3 px-3.5 text-right">คงเหลือคลังกลาง</th>
-                      <th className="py-3 px-3.5 text-right">สต็อกขั้นต่ำ (Min)</th>
                       <th className="py-3 px-3.5 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3 px-3.5 text-right">มูลค่ารวม</th>
-                      <th className="py-3 px-3.5 text-center">สถานะสต็อก</th>
+                      <th className="py-3 px-3.5 text-center">สถานะ</th>
                       <th className="py-3 px-3.5 text-center">ใช้ในเมนู</th>
                       <th className="py-3 px-3.5 text-center">จัดการ</th>
                     </tr>
@@ -811,7 +845,6 @@ export default function IngredientsPage() {
                       <th className="py-3 px-3 text-right">รับเข้า (+)</th>
                       <th className="py-3 px-3 text-right">ขาย POS (-)</th>
                       <th className="py-3 px-3.5 text-right text-slate-800">คงเหลือในร้าน</th>
-                      <th className="py-3 px-3.5 text-right">ขั้นต่ำ (Min)</th>
                       <th className="py-3 px-3.5 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3 px-3.5 text-right">มูลค่าในร้าน</th>
                       <th className="py-3 px-3.5 text-center">สถานะ</th>
@@ -882,10 +915,7 @@ export default function IngredientsPage() {
                               <span className="text-[11px] font-normal text-slate-500 ml-0.5">{ing.unit}</span>
                             </td>
 
-                            {/* Min Stock */}
-                            <td className="py-3 px-3.5 text-right font-mono text-slate-600 text-xs">
-                              {min.toLocaleString()} {ing.unit}
-                            </td>
+                            
 
                             {/* Cost Per Unit */}
                             <td className="py-3 px-3.5 text-right font-mono text-slate-700 text-xs font-medium">
@@ -897,24 +927,25 @@ export default function IngredientsPage() {
                               ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
 
-                            {/* Stock Status Pill */}
+                            {/* Status (Clickable Toggle Matching admin/users) */}
                             <td className="py-3 px-3.5 text-center">
-                              {isOutOfStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-red-100 text-red-800 border border-red-200 shadow-2xs">
-                                  <XCircle className="w-3 h-3 text-red-600" />
-                                  หมดสต็อก
-                                </span>
-                              ) : isLowStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
-                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  ใกล้หมด
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200 shadow-2xs">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                  สต็อกเพียงพอ
-                                </span>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStatus(ing)}
+                                title="คลิกเพื่อสลับสถานะการใช้งาน"
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+                                  ing.status === 'ACTIVE'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                }`}
+                              >
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    ing.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                                  }`}
+                                />
+                                <span>{ing.status === 'ACTIVE' ? 'พร้อมใช้งาน' : 'ระงับใช้งาน'}</span>
+                              </button>
                             </td>
 
                             {/* Used in Recipes */}
@@ -1019,10 +1050,7 @@ export default function IngredientsPage() {
                               <span className="text-[11px] font-normal text-slate-500 ml-0.5">{ing.unit}</span>
                             </td>
 
-                            {/* Min Stock */}
-                            <td className="py-3 px-3.5 text-right font-mono text-slate-600 text-xs">
-                              {min.toLocaleString()} {ing.unit}
-                            </td>
+                            
 
                             {/* Cost */}
                             <td className="py-3 px-3.5 text-right font-mono text-slate-700 text-xs font-medium">
@@ -1034,41 +1062,70 @@ export default function IngredientsPage() {
                               ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
 
-                            {/* Status */}
-                            <td className="py-3 px-3.5 text-center">
-                              {!b?.hasStockHistory ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 shadow-2xs">
-                                  ยังไม่เคยเบิก
-                                </span>
-                              ) : isOutOfStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-red-100 text-red-800 border border-red-200 shadow-2xs">
-                                  <XCircle className="w-3 h-3 text-red-600" />
-                                  ของหมด
-                                </span>
-                              ) : isLowStock ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
-                                  <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                  ใกล้หมด
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-emerald-100/70 text-emerald-800 border border-emerald-200 shadow-2xs">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                  พร้อมขาย
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Actions in Store Mode: Quick stock-in button */}
+                            {/* Status (Clickable Toggle Matching admin/users) */}
                             <td className="py-3 px-3.5 text-center">
                               <button
                                 type="button"
-                                onClick={() => openQuickStockIn(ing, selectedStoreId)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 transition-colors cursor-pointer shadow-2xs"
-                                title="บันทึกรับเข้า (ซื้อมาให้ร้านนี้)"
+                                onClick={() => handleToggleStatus(ing)}
+                                title="คลิกเพื่อสลับสถานะการใช้งาน"
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+                                  ing.status === 'ACTIVE'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                    : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
+                                }`}
                               >
-                                <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-700" />
-                                <span>+ รับเข้า</span>
+                                <span
+                                  className={`w-2 h-2 rounded-full ${
+                                    ing.status === 'ACTIVE' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                                  }`}
+                                />
+                                <span>{ing.status === 'ACTIVE' ? 'พร้อมใช้งาน' : 'ระงับใช้งาน'}</span>
                               </button>
+                            </td>
+
+                            {/* Actions in Store Mode: Quick stock-in, Edit, Delete */}
+                            <td className="py-3 px-3.5 text-center">
+                              {isAdmin ? (
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openQuickStockIn(ing, selectedStoreId)}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] border border-emerald-200 transition-colors flex items-center gap-1 shadow-2xs cursor-pointer"
+                                    title="รับเข้าสต็อก"
+                                  >
+                                    <ArrowDownToLine className="w-3 h-3" />
+                                    <span>รับเข้า</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditModal(ing)}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                                    title="แก้ไขข้อมูล (ชื่อ/หน่วย/รหัส)"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(ing.id, ing.name)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                    title="ลบวัตถุดิบ"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => openQuickStockIn(ing, selectedStoreId)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 transition-colors cursor-pointer shadow-2xs"
+                                  title="บันทึกรับเข้า"
+                                >
+                                  <ArrowDownToLine className="w-3.5 h-3.5 text-emerald-700" />
+                                  <span>+ รับเข้า</span>
+                                </button>
+                              )}
                             </td>
                           </>
                         )}
