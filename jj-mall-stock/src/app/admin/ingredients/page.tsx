@@ -176,6 +176,8 @@ export default function IngredientsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showUnitMenu, setShowUnitMenu] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
 
   // Quick Stock-In Modal
   const [stockInModalOpen, setStockInModalOpen] = useState(false);
@@ -376,11 +378,13 @@ export default function IngredientsPage() {
 
   const openAddModal = () => {
     setEditingIngredient(null);
+    setShowUnitMenu(false);
+    setShowCategoryMenu(false);
     setFormData({
       code: `ING-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
-      category: allAvailableCategories[0] || 'ผงเครื่องดื่ม / ชา / กาแฟ',
-      unit: 'กรัม',
+      category: '',
+      unit: '',
       currentStock: '',
       minStock: '',
       costPerUnit: '',
@@ -392,11 +396,13 @@ export default function IngredientsPage() {
 
   const openEditModal = (ing: IngredientItem) => {
     setEditingIngredient(ing);
+    setShowUnitMenu(false);
+    setShowCategoryMenu(false);
     setFormData({
       code: ing.code,
       name: ing.name,
-      category: ing.category || allAvailableCategories[0] || 'ผงเครื่องดื่ม / ชา / กาแฟ',
-      unit: ing.unit || 'กรัม',
+      category: ing.category || '',
+      unit: ing.unit || '',
       currentStock: ing.currentStock.toString(),
       minStock: ing.minStock.toString(),
       costPerUnit: ing.costPerUnit ? ing.costPerUnit.toString() : '0',
@@ -1135,24 +1141,44 @@ export default function IngredientsPage() {
                 </div>
 
                 {/* Unit */}
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     หน่วยนับ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    list="unit-options"
                     required
                     value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="พิมพ์หรือเลือก เช่น กรัม, มล., ใบ, ชิ้น"
+                    onChange={(e) => {
+                      setFormData({ ...formData, unit: e.target.value });
+                      setShowUnitMenu(true);
+                    }}
+                    onFocus={() => setShowUnitMenu(true)}
+                    onBlur={() => setTimeout(() => setShowUnitMenu(false), 200)}
+                    placeholder="พิมพ์หรือเลือกหน่วยนับ..."
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
-                  <datalist id="unit-options">
-                    {allAvailableUnits.map((u) => (
-                      <option key={u} value={u} />
-                    ))}
-                  </datalist>
+                  {showUnitMenu && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 max-h-44 overflow-y-auto py-1">
+                      {allAvailableUnits
+                        .filter((u) => !formData.unit || u.toLowerCase().includes(formData.unit.toLowerCase().trim()))
+                        .map((u) => (
+                          <button
+                            key={u}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setFormData({ ...formData, unit: u });
+                              setShowUnitMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <span>{u}</span>
+                            {formData.unit === u && <span className="text-[10px] text-emerald-600 font-bold">✓</span>}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1173,23 +1199,43 @@ export default function IngredientsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 {/* Category */}
-                <div>
+                <div className="relative">
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     หมวดหมู่วัตถุดิบ
                   </label>
                   <input
                     type="text"
-                    list="category-options"
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="เช่น ผงเครื่องดื่ม, บรรจุภัณฑ์"
+                    onChange={(e) => {
+                      setFormData({ ...formData, category: e.target.value });
+                      setShowCategoryMenu(true);
+                    }}
+                    onFocus={() => setShowCategoryMenu(true)}
+                    onBlur={() => setTimeout(() => setShowCategoryMenu(false), 200)}
+                    placeholder="พิมพ์หรือเลือกหมวดหมู่..."
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
-                  <datalist id="category-options">
-                    {allAvailableCategories.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
+                  {showCategoryMenu && (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 max-h-44 overflow-y-auto py-1">
+                      {allAvailableCategories
+                        .filter((c) => !formData.category || c.toLowerCase().includes(formData.category.toLowerCase().trim()))
+                        .map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setFormData({ ...formData, category: c });
+                              setShowCategoryMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <span>{c}</span>
+                            {formData.category === c && <span className="text-[10px] text-emerald-600 font-bold">✓</span>}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Status */}
