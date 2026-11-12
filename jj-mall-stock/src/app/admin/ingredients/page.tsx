@@ -707,6 +707,7 @@ export default function IngredientsPage() {
                 <thead>
                   {isCentral ? (
                     <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
                       <th className="py-3 px-3.5">รหัสวัตถุดิบ</th>
                       <th className="py-3 px-3.5">ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3.5">หมวดหมู่</th>
@@ -720,6 +721,7 @@ export default function IngredientsPage() {
                     </tr>
                   ) : (
                     <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
                       <th className="py-3 px-3.5">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3.5">หมวดหมู่</th>
                       <th className="py-3 px-3 text-right">ยอดยกมา</th>
@@ -735,7 +737,8 @@ export default function IngredientsPage() {
                   )}
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {paginatedIngredients.map((ing) => {
+                  {paginatedIngredients.map((ing, idx) => {
+                    const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                     const isHighlighted = highlightId === ing.id;
                     const b = selectedStoreBalancesMap.get(ing.id);
                     const stock = isCentral ? Number(ing.currentStock) : (b ? Number(b.expectedStock) : 0);
@@ -757,6 +760,11 @@ export default function IngredientsPage() {
                       >
                         {isCentral ? (
                           <>
+                            {/* Sequence Row Number */}
+                            <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                              {rowNumber}
+                            </td>
+
                             {/* Code */}
                             <td className="py-3 px-3.5 font-mono font-bold text-slate-700 text-xs">
                               {ing.code}
@@ -876,6 +884,11 @@ export default function IngredientsPage() {
                           </>
                         ) : (
                           <>
+                            {/* Sequence Row Number */}
+                            <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                              {rowNumber}
+                            </td>
+
                             {/* Store Mode: Name & Code */}
                             <td className="py-3 px-3.5">
                               <div className="font-bold text-slate-900 text-xs">{ing.name}</div>

@@ -46,11 +46,16 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
-    // 3. For STAFF, calculate their store balances
+    // 3. Calculate store balances for all staff stores
+    const storeBalancesByStore: Record<number, any[]> = {};
+    for (const store of staffStores) {
+      storeBalancesByStore[store.id] = await calculateStoreReconciliation(store.id);
+    }
+
     let storeBalancesList: any[] = [];
     let storeStockMap = new Map<number, number>();
     if (session.role === 'STAFF') {
-      storeBalancesList = await calculateStoreReconciliation(session.id);
+      storeBalancesList = storeBalancesByStore[session.id] || [];
       storeBalancesList.forEach((b) => storeStockMap.set(b.ingredientId, b.expectedStock));
     }
 
@@ -98,7 +103,8 @@ export async function GET(req: NextRequest) {
       success: true,
       transactions,
       ingredients,
-      storeBalances: storeBalancesList,
+      storeBalances: session.role === 'STAFF' ? storeBalancesList : storeBalancesByStore,
+      storeBalancesByStore,
       staffStores,
     });
   } catch (error: any) {

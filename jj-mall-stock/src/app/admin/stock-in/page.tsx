@@ -92,6 +92,10 @@ export default function AdminStockInPage() {
     return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
   }, [swrData]);
 
+  const storeBalancesByStore: Record<number, any[]> = useMemo(() => {
+    return swrData?.storeBalancesByStore || swrData?.storeBalances || {};
+  }, [swrData]);
+
   const loading = isLoading && transactions.length === 0;
   const refreshing = isValidating;
 
@@ -105,6 +109,7 @@ export default function AdminStockInPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [modalIngSearch, setModalIngSearch] = useState('');
 
   // Detail Modal State
   const [selectedTx, setSelectedTx] = useState<InboundTransaction | null>(null);
@@ -117,6 +122,34 @@ export default function AdminStockInPage() {
   const [formItems, setFormItems] = useState<InboundItemForm[]>([
     { ingredientId: '', quantity: '', costPerUnit: '' },
   ]);
+
+  // Current selected store's stock map: ingredientId -> expectedStock
+  const currentStoreStockMap = useMemo(() => {
+    const map = new Map<number, number>();
+    const storeIdNum = Number(targetStoreId);
+    if (storeIdNum && storeBalancesByStore[storeIdNum]) {
+      storeBalancesByStore[storeIdNum].forEach((b: any) => {
+        map.set(b.ingredientId, Number(b.expectedStock));
+      });
+    }
+    return map;
+  }, [storeBalancesByStore, targetStoreId]);
+
+  const targetStoreObj = useMemo(() => {
+    return staffStores.find((s) => String(s.id) === String(targetStoreId));
+  }, [staffStores, targetStoreId]);
+
+  // Filter ingredients in modal by search keyword
+  const filteredIngredientsForModal = useMemo(() => {
+    if (!modalIngSearch.trim()) return ingredients;
+    const q = modalIngSearch.toLowerCase().trim();
+    return ingredients.filter(
+      (ing) =>
+        ing.name.toLowerCase().includes(q) ||
+        ing.code.toLowerCase().includes(q) ||
+        (ing.category && ing.category.toLowerCase().includes(q))
+    );
+  }, [ingredients, modalIngSearch]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -162,6 +195,7 @@ export default function AdminStockInPage() {
     setTargetStoreId(staffStores[0]?.id ? String(staffStores[0].id) : '');
     setSupplier('แม็คโคร (Makro)');
     setNote('');
+    setModalIngSearch('');
     setFormItems([{ ingredientId: ingredients[0]?.id ? String(ingredients[0].id) : '', quantity: '', costPerUnit: String(ingredients[0]?.costPerUnit || '0') }]);
     setFormError(null);
     setModalOpen(true);
@@ -502,6 +536,7 @@ export default function AdminStockInPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                  <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-3.5 px-4">เลขที่เอกสาร / รหัส</th>
                   <th className="py-3.5 px-4">วันที่ & เวลา</th>
                   <th className="py-3.5 px-4">ร้านค้าที่รับเข้า</th>
@@ -512,13 +547,19 @@ export default function AdminStockInPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {paginatedTransactions.map((tx) => {
+                {paginatedTransactions.map((tx, idx) => {
+                  const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                   return (
                     <tr
                       key={tx.id}
                       onClick={() => setSelectedTx(tx)}
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
+                      {/* Sequence Row Number */}
+                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        {rowNumber}
+                      </td>
+
                       {/* Document / PO Number */}
                       <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
                         <div className="group-hover:underline flex items-center gap-1.5">
@@ -765,7 +806,7 @@ export default function AdminStockInPage() {
                 </div>
 
                 {/* Dynamic Items List (Natural flow without inner nested scrollbar!) */}
-                <div className="space-y-2 pt-1">
+                <div className="space-y-2.5 pt-1">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-slate-700">
                       รายการวัตถุดิบที่รับเข้า ({formItems.length} รายการ) <span className="text-red-500">*</span>
@@ -780,12 +821,34 @@ export default function AdminStockInPage() {
                     </button>
                   </div>
 
+                  {/* Search box to filter ingredients */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="🔍 ค้นหาวัตถุดิบ (พิมพ์ชื่อหรือรหัสเพื่อกรองตัวเลือกในแถว)..."
+                      value={modalIngSearch}
+                      onChange={(e) => setModalIngSearch(e.target.value)}
+                      className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    />
+                    {modalIngSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setModalIngSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                        title="ล้างคำค้นหา"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     {formItems.map((item, idx) => {
                       const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
-                      const currentStock = Number(selectedIng?.currentStock || 0);
+                      const storeStock = selectedIng ? (currentStoreStockMap.get(selectedIng.id) ?? 0) : 0;
                       const inboundQty = parseFloat(item.quantity) || 0;
-                      const newBalance = currentStock + inboundQty;
+                      const newBalance = storeStock + inboundQty;
                       const rowSubtotal = inboundQty * (parseFloat(item.costPerUnit) || 0);
 
                       return (
@@ -803,11 +866,20 @@ export default function AdminStockInPage() {
                                 className="w-full px-2.5 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                               >
                                 <option value="">-- เลือกวัตถุดิบ --</option>
-                                {ingredients.map((ing) => (
-                                  <option key={ing.id} value={ing.id}>
-                                    {ing.name} (คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit})
+                                {/* Keep currently selected ingredient visible even if search filters it out */}
+                                {selectedIng && !filteredIngredientsForModal.some((i) => i.id === selectedIng.id) && (
+                                  <option value={selectedIng.id}>
+                                    {selectedIng.name} (ในร้านเหลือ: {(currentStoreStockMap.get(selectedIng.id) ?? 0).toLocaleString()} {selectedIng.unit})
                                   </option>
-                                ))}
+                                )}
+                                {filteredIngredientsForModal.map((ing) => {
+                                  const inStoreBal = currentStoreStockMap.get(ing.id) ?? 0;
+                                  return (
+                                    <option key={ing.id} value={ing.id}>
+                                      {ing.name} (ในร้านเหลือ: {inStoreBal.toLocaleString()} {ing.unit})
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </div>
 
@@ -859,13 +931,13 @@ export default function AdminStockInPage() {
                             </button>
                           </div>
 
-                          {/* Real-time Stock Calculation: [Current Stock] + [Quantity In] = [New Balance] */}
+                          {/* Real-time Store Stock Calculation: [Store Current Stock] + [Quantity In] = [New Store Balance] */}
                           {selectedIng && (
                             <div className="pt-2 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                               <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                                <span>คงเหลือเดิม:</span>
+                                <span>คงเหลือเดิมในร้าน {targetStoreObj ? `(${targetStoreObj.name})` : ''}:</span>
                                 <span className="font-mono font-bold text-slate-700">
-                                  {currentStock.toLocaleString()} {selectedIng.unit}
+                                  {storeStock.toLocaleString()} {selectedIng.unit}
                                 </span>
                                 {inboundQty > 0 && (
                                   <>
@@ -879,7 +951,7 @@ export default function AdminStockInPage() {
                               </div>
 
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800">
-                                <span className="text-[10px] text-emerald-600 font-semibold">ยอดคงเหลือใหม่หลังรับเข้า:</span>
+                                <span className="text-[10px] text-emerald-600 font-semibold">ยอดคงเหลือใหม่ในร้านหลังรับเข้า:</span>
                                 <span className="font-mono font-black text-xs text-emerald-700">
                                   {newBalance.toLocaleString()} {selectedIng.unit}
                                 </span>
