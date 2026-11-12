@@ -18,6 +18,12 @@ enum AdjustmentStatus {
   REJECTED
 }
 
+enum RequisitionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum TransactionType {
   PURCHASE_IN     // รับสินค้าจากการซื้อ
   ADJUST_ADD      // ปรับปรุงเพิ่ม
@@ -45,6 +51,8 @@ model User {
   stockCounts         StockCount[]
   requestedAdjustments StockAdjustment[] @relation("RequestedAdjustments")
   approvedAdjustments  StockAdjustment[] @relation("ApprovedAdjustments")
+  requestedRequisitions StockRequisition[] @relation("RequestedRequisitions")
+  approvedRequisitions  StockRequisition[] @relation("ApprovedRequisitions")
   products            Product[]         @relation("StoreProducts")
 
   @@map("users")
@@ -90,6 +98,7 @@ model Ingredient {
   stockTransactions    StockTransaction[]
   stockCountItems      StockCountItem[]
   stockAdjustmentItems StockAdjustmentItem[]
+  stockRequisitionItems StockRequisitionItem[]
 
   @@map("ingredients")
 }
@@ -256,4 +265,36 @@ model SystemNotification {
   createdAt   DateTime @default(now())
 
   @@map("system_notifications")
+}
+
+model StockRequisition {
+  id                Int                     @id @default(autoincrement())
+  requisitionNumber String                  @unique
+  reason            String?                 @db.Text
+  status            RequisitionStatus       @default(PENDING)
+  storeId           Int
+  store             User                    @relation("RequestedRequisitions", fields: [storeId], references: [id])
+  approvedById      Int?
+  approvedBy        User?                   @relation("ApprovedRequisitions", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  rejectReason      String?                 @db.Text
+  note              String?                 @db.Text
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  items             StockRequisitionItem[]
+
+  @@map("stock_requisitions")
+}
+
+model StockRequisitionItem {
+  id            Int              @id @default(autoincrement())
+  requisitionId Int
+  requisition   StockRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  ingredientId  Int
+  ingredient    Ingredient       @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  requestedQty  Decimal          @db.Decimal(12, 3)
+  approvedQty   Decimal?         @db.Decimal(12, 3)
+
+  @@map("stock_requisition_items")
 }

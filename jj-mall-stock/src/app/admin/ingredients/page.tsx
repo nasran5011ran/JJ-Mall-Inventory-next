@@ -46,6 +46,7 @@ interface StoreIngredientBalance {
   inboundQuantity: number;
   salesQuantity: number;
   expectedStock: number;
+  hasStockHistory: boolean;
 }
 
 interface IngredientItem {
@@ -153,6 +154,7 @@ export default function IngredientsPage() {
     staffStores.forEach((st) => {
       const list = storeBalances[st.id] || [];
       const lowItems = list.filter((item) => {
+        if (!item.hasStockHistory) return false;
         const min = minMap.get(item.ingredientId) ?? 0;
         return Number(item.expectedStock) <= min;
       });
@@ -240,19 +242,27 @@ export default function IngredientsPage() {
       const matchCategory = selectedCategory === 'ALL' || ing.category === selectedCategory;
 
       let stock = Number(ing.currentStock);
+      let isStockedInStore = true;
       if (!isCentral) {
         const b = selectedStoreBalancesMap.get(ing.id);
         stock = b ? Number(b.expectedStock) : 0;
+        isStockedInStore = Boolean(b?.hasStockHistory);
       }
       const min = Number(ing.minStock);
 
       let matchStock = true;
-      if (selectedStockStatus === 'SAFE') {
-        matchStock = stock > min;
-      } else if (selectedStockStatus === 'LOW') {
-        matchStock = stock > 0 && stock <= min;
-      } else if (selectedStockStatus === 'OUT') {
-        matchStock = stock <= 0;
+      if (!isCentral && !isStockedInStore) {
+        if (selectedStockStatus === 'SAFE' || selectedStockStatus === 'LOW' || selectedStockStatus === 'OUT') {
+          matchStock = false;
+        }
+      } else {
+        if (selectedStockStatus === 'SAFE') {
+          matchStock = stock > min;
+        } else if (selectedStockStatus === 'LOW') {
+          matchStock = stock > 0 && stock <= min;
+        } else if (selectedStockStatus === 'OUT') {
+          matchStock = stock <= 0;
+        }
       }
 
       return matchSearch && matchCategory && matchStock;
@@ -415,13 +425,20 @@ export default function IngredientsPage() {
 
   ingredients.forEach((ing) => {
     let s = Number(ing.currentStock);
+    let isStockedInStore = true;
     if (!isCentral) {
       const b = selectedStoreBalancesMap.get(ing.id);
       s = b ? Number(b.expectedStock) : 0;
+      isStockedInStore = Boolean(b?.hasStockHistory);
     }
     const m = Number(ing.minStock);
     const cost = Number(ing.costPerUnit || 0);
     totalValue += s * cost;
+
+    if (!isCentral && !isStockedInStore) {
+      // Store has never requested or stocked this item - don't count as low or out
+      return;
+    }
 
     if (s <= 0) outCount++;
     else if (s <= m) lowCount++;
@@ -901,8 +918,18 @@ export default function IngredientsPage() {
                             </td>
 
                             {/* Expected In-Store Stock */}
-                            <td className="py-3 px-3.5 text-right bg-slate-50/60 font-bold text-xs text-slate-900 font-mono">
-                              <span className={isOutOfStock ? 'text-red-600' : isLowStock ? 'text-amber-600' : 'text-slate-900'}>
+                            <td className="py-3 px-3.5 text-right bg-slate-50/60 font-bold text-xs font-mono">
+                              <span
+                                className={
+                                  !b?.hasStockHistory
+                                    ? 'text-slate-400 font-normal'
+                                    : isOutOfStock
+                                    ? 'text-red-600'
+                                    : isLowStock
+                                    ? 'text-amber-600'
+                                    : 'text-slate-900'
+                                }
+                              >
                                 {stock.toLocaleString()}
                               </span>{' '}
                               <span className="text-[11px] font-normal text-slate-500 ml-0.5">{ing.unit}</span>
@@ -925,7 +952,11 @@ export default function IngredientsPage() {
 
                             {/* Status */}
                             <td className="py-3 px-3.5 text-center">
-                              {isOutOfStock ? (
+                              {!b?.hasStockHistory ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-500 border border-slate-200 shadow-2xs">
+                                  ยังไม่เคยเบิก
+                                </span>
+                              ) : isOutOfStock ? (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase bg-red-100 text-red-800 border border-red-200 shadow-2xs">
                                   <XCircle className="w-3 h-3 text-red-600" />
                                   ของหมด

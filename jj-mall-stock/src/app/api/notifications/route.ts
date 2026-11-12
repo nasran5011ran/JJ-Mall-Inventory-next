@@ -286,14 +286,52 @@ export async function GET() {
     for (const store of staffStores) {
       const storeBalances = await calculateStoreReconciliation(store.id);
       storeBalances.forEach((item) => {
-        const min = minStockMap.get(item.ingredientId) ?? 0;
-        if (item.expectedStock <= min) {
-          storeLowIngredientIds.add(item.ingredientId);
+        // Only count as low stock if the store has actually had stock for this item
+        if (item.hasStockHistory) {
+          const min = minStockMap.get(item.ingredientId) ?? 0;
+          if (item.expectedStock <= min) {
+            storeLowIngredientIds.add(item.ingredientId);
+          }
         }
       });
     }
     const storeLowCount = storeLowIngredientIds.size;
     const centralLowCount = outOfStockCount + lowStockCount;
+
+    // 7. Calculate pending stock requisitions from stores
+    const pendingRequisitionsCount = await prisma.stockRequisition.count({
+      where: { status: 'PENDING' },
+    });
+
+    const pendingRequisitions = await prisma.stockRequisition.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        store: { select: { id: true, name: true } },
+        items: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    pendingRequisitions.forEach((reqItem) => {
+      notifications.push({
+        id: `REQ-${reqItem.id}`,
+        category: 'INVENTORY',
+        type: 'PENDING_REQUISITION',
+        severity: 'ACTION_REQUIRED',
+        title: `มีใบขอเบิกสต็อกรออนุมัติ: ${reqItem.requisitionNumber}`,
+        description: `ร้าน "${reqItem.store.name}" ขอเบิกวัตถุดิบ ${reqItem.items.length} รายการ`,
+        timestamp: reqItem.createdAt,
+        actionUrl: `/admin/stock-requests?highlight=${reqItem.id}`,
+        actionLabel: 'ตรวจและอนุมัติ',
+        metadata: {
+          requisitionId: reqItem.id,
+          requisitionNumber: reqItem.requisitionNumber,
+          storeName: reqItem.store.name,
+          itemsCount: reqItem.items.length,
+        },
+      });
+    });
 
     // Sort by priority (CRITICAL -> ACTION_REQUIRED -> WARNING -> INFO) then by date descending
     const severityRank: Record<string, number> = {
@@ -309,7 +347,7 @@ export async function GET() {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
 
-    const totalActionable = centralLowCount + storeLowCount + realPendingCount;
+    const totalActionable = centralLowCount + storeLowCount + realPendingCount + pendingRequisitionsCount;
 
     return NextResponse.json({
       success: true,
@@ -323,6 +361,7 @@ export async function GET() {
           storeLowCount,
           lowIngredientsCount: centralLowCount,
           pendingAdjustmentsCount: realPendingCount,
+          pendingRequisitionsCount,
           discrepancyCount: discrepancyItemCount,
           recentActivityCount: recentTransactions.length,
           staffMenuActivityCount,

@@ -44,6 +44,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   );
 
   const pendingAdjustmentsCount = Number(notifData?.data?.kpis?.pendingAdjustmentsCount || 0);
+  const pendingRequisitionsCount = Number(notifData?.data?.kpis?.pendingRequisitionsCount || 0);
   const centralLowCount = Number(
     notifData?.data?.kpis?.centralLowCount ??
     ((notifData?.data?.kpis?.outOfStockCount || 0) + (notifData?.data?.kpis?.lowStockCount || 0))
@@ -69,9 +70,10 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       title: 'งานคลัง & การอนุมัติ',
       items: [
         { href: '/admin/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
+        { href: '/admin/stock-requests', label: 'อนุมัติใบขอเบิกสต็อก', icon: ClipboardCheck },
         { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
-        { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
         { href: '/admin/stock-adjustments', label: 'อนุมัติใบปรับปรุงสต็อก', icon: FileEdit },
+        { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
         { href: '/admin/stock-transactions', label: 'ประวัติเคลื่อนไหวสต็อก', icon: History },
       ],
     },
@@ -154,6 +156,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 const Icon = item.icon;
                 const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
                 const isAdjustment = item.href === '/admin/stock-adjustments';
+                const isRequisition = item.href === '/admin/stock-requests';
                 const isIngredients = item.href === '/admin/ingredients';
 
                 return (
@@ -180,7 +183,17 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      {/* 1. Pending adjustments badge (Red) */}
+                      {/* 1. Pending stock requisitions badge (Red) */}
+                      {isRequisition && pendingRequisitionsCount > 0 && (
+                        <span
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
+                          title={`มีใบขอเบิกสต็อกรออนุมัติ ${pendingRequisitionsCount} รายการ`}
+                        >
+                          {pendingRequisitionsCount > 99 ? '99+' : pendingRequisitionsCount}
+                        </span>
+                      )}
+
+                      {/* 2. Pending adjustments badge (Red) */}
                       {isAdjustment && pendingAdjustmentsCount > 0 && (
                         <span
                           className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center shadow-xs"

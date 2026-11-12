@@ -13,6 +13,7 @@ export interface StoreIngredientBalance {
   inboundQuantity: number;
   salesQuantity: number;
   expectedStock: number;
+  hasStockHistory: boolean;
 }
 
 // Helper: Calculate store reconciliation (Opening + Inbound - Sales = Expected in-store)
@@ -120,6 +121,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
     const sales = salesMap.get(ing.id) ?? 0;
     const adj = adjustmentDiffMap.get(ing.id) ?? 0;
     const expected = Math.max(0, opening + inbound - sales + adj);
+    const hasStockHistory = opening > 0 || inbound > 0 || lastCountItemsMap.has(ing.id);
 
     return {
       ingredientId: ing.id,
@@ -133,6 +135,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
       inboundQuantity: inbound,
       salesQuantity: sales,
       expectedStock: expected,
+      hasStockHistory,
     };
   });
 }
