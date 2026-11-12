@@ -133,20 +133,19 @@ export default function IngredientsPage() {
     return swrData?.success && swrData.storeBalances ? swrData.storeBalances : {};
   }, [swrData]);
 
-  const isCentral = selectedStoreId === 'CENTRAL';
+  const isCentral = false;
 
   const selectedStoreBalancesMap = useMemo(() => {
-    if (selectedStoreId === 'CENTRAL') return new Map<number, StoreIngredientBalance>();
-    const storeIdNum = Number(selectedStoreId);
+    const storeIdNum = Number(selectedStoreId || staffStores[0]?.id || 0);
     const list = storeBalances[storeIdNum] || [];
     const map = new Map<number, StoreIngredientBalance>();
     list.forEach((item) => map.set(item.ingredientId, item));
     return map;
-  }, [selectedStoreId, storeBalances]);
+  }, [selectedStoreId, storeBalances, staffStores]);
 
   const currentSelectedStore = useMemo(() => {
-    if (selectedStoreId === 'CENTRAL') return null;
-    return staffStores.find((s) => s.id === Number(selectedStoreId)) || null;
+    const storeIdNum = Number(selectedStoreId || staffStores[0]?.id || 0);
+    return staffStores.find((s) => s.id === storeIdNum) || null;
   }, [selectedStoreId, staffStores]);
 
   // Low Stock Counts for Central Warehouse & Stores (for visual indicator tabs)
@@ -617,7 +616,7 @@ export default function IngredientsPage() {
 
           <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
             <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
-              {isCentral ? 'มูลค่าสต็อกในคลังกลาง' : `มูลค่าสต็อกร้าน: ${currentSelectedStore?.name || ''}`}
+              มูลค่าสต็อกร้าน: {currentSelectedStore?.name || ''}
             </div>
             <div className="text-2xl font-black text-blue-700 mt-1">
               ฿{totalValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -647,7 +646,6 @@ export default function IngredientsPage() {
               onChange={(e) => setSelectedStoreId(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/70 text-emerald-950 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
-              <option value="CENTRAL">🏬 คลังสินค้าส่วนกลาง</option>
               {staffStores.map((st) => (
                 <option key={st.id} value={st.id}>
                   🏪 ร้าน: {st.name}
