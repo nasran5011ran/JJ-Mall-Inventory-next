@@ -385,9 +385,9 @@ export default function IngredientsPage() {
       name: '',
       category: '',
       unit: '',
-      currentStock: '',
-      minStock: '',
-      costPerUnit: '',
+      currentStock: '0',
+      minStock: '0',
+      costPerUnit: '0',
       status: 'ACTIVE',
     });
     setFormError(null);
@@ -1160,7 +1160,7 @@ export default function IngredientsPage() {
                   <h3 className="text-xl font-bold text-slate-800">
                     {editingIngredient ? 'แก้ไขข้อมูลวัตถุดิบ' : 'เพิ่มวัตถุดิบใหม่'}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-400">กรอกข้อมูลวัตถุดิบและจำนวนเริ่มต้น</p>
+                  <p className="text-xs sm:text-sm text-slate-400">กรอกข้อมูลพื้นฐานของวัตถุดิบ</p>
                 </div>
               </div>
               <button
@@ -1306,7 +1306,7 @@ export default function IngredientsPage() {
                 </div>
               </div>
 
-              {/* Row 3: Code & Status */}
+              {/* Row 3: Code & Cost */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Code */}
                 <div>
@@ -1320,40 +1320,6 @@ export default function IngredientsPage() {
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     placeholder="เช่น ING-MILO001"
                     className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                  />
-                </div>
-
-                {/* Status */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                    สถานะการใช้งาน
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                  >
-                    <option value="ACTIVE">พร้อมใช้งาน (Active)</option>
-                    <option value="INACTIVE">ระงับการใช้งาน (Inactive)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Row 4: Quantity & Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Quantity */}
-                <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
-                    จำนวน
-                  </label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                    placeholder="0"
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
                 </div>
 
@@ -1372,6 +1338,21 @@ export default function IngredientsPage() {
                     className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
                   />
                 </div>
+              </div>
+
+              {/* Row 4: Status */}
+              <div>
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  สถานะการใช้งาน
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                >
+                  <option value="ACTIVE">พร้อมใช้งาน (Active)</option>
+                  <option value="INACTIVE">ระงับการใช้งาน (Inactive)</option>
+                </select>
               </div>
 
               {/* Submit Buttons */}
