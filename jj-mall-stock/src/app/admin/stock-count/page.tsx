@@ -122,7 +122,7 @@ export default function AdminStockCountPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form Fields
-  const [targetLocation, setTargetLocation] = useState<'WAREHOUSE' | 'STORE'>('WAREHOUSE');
+  const [targetLocation, setTargetLocation] = useState<'WAREHOUSE' | 'STORE'>('STORE');
   const [targetStoreId, setTargetStoreId] = useState<string>('');
   const [countNote, setCountNote] = useState('');
   const [syncStock, setSyncStock] = useState(true);
@@ -168,14 +168,21 @@ export default function AdminStockCountPage() {
 
   // Open New Stock Count Modal
   const openNewStockCount = () => {
+    const firstStoreId = staffStores[0]?.id ? String(staffStores[0].id) : '';
+    setTargetLocation('STORE');
+    setTargetStoreId(firstStoreId);
+
+    const list = storeBalances[Number(firstStoreId)] || [];
+    const map = new Map<number, any>();
+    list.forEach((item) => map.set(item.ingredientId, item));
+
     const initialInputs: Record<number, string> = {};
     ingredients.forEach((ing) => {
-      initialInputs[ing.id] = String(Number(ing.currentStock));
+      const b = map.get(ing.id);
+      initialInputs[ing.id] = String(b ? b.expectedStock : 0);
     });
     setCountInputs(initialInputs);
-    setTargetLocation('WAREHOUSE');
-    const firstStoreId = staffStores[0]?.id ? String(staffStores[0].id) : '';
-    setTargetStoreId(firstStoreId);
+
     setCountNote('ตรวจนับสินค้าจริงประจำรอบ');
     setSyncStock(true);
     setSelectedCategory('ALL');
@@ -219,16 +226,15 @@ export default function AdminStockCountPage() {
     setCountInputs(updated);
   };
 
-  // Quick fill all inputs with current system stock
+  // Quick fill all inputs with current store expected stock
   const handleFillAllCurrent = () => {
+    const list = storeBalances[Number(targetStoreId)] || [];
+    const map = new Map<number, any>();
+    list.forEach((item) => map.set(item.ingredientId, item));
     const updated: Record<number, string> = {};
     ingredients.forEach((ing) => {
-      if (targetLocation === 'STORE' && currentStoreBalances) {
-        const b = currentStoreBalances.get(ing.id);
-        updated[ing.id] = String(b ? b.expectedStock : 0);
-      } else {
-        updated[ing.id] = String(Number(ing.currentStock));
-      }
+      const b = map.get(ing.id);
+      updated[ing.id] = String(b ? b.expectedStock : 0);
     });
     setCountInputs(updated);
   };
@@ -742,7 +748,7 @@ export default function AdminStockCountPage() {
                     บันทึกผลการตรวจนับสต็อกจริง (Physical Stock Count)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    เลือกระหว่าง <strong>คลังสินค้าส่วนกลาง</strong> หรือ <strong>จุดขายหน้าร้าน</strong> เพื่อคำนวณยอดที่ควรมีและตัดยอดผลต่างอย่างถูกต้อง
+                    ตรวจนับสต็อกจริงจุดขายหน้าร้าน เพื่อกระทบยอดที่ควรมีและตัดยอดผลต่างอย่างถูกต้อง
                   </p>
                 </div>
               </div>
@@ -761,109 +767,38 @@ export default function AdminStockCountPage() {
               </div>
             )}
 
-            {/* Store / Location Radio Selector */}
-            <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 shrink-0 space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-700">
-                  เลือกจุดตรวจนับสต็อก (Location / Store) <span className="text-red-500">*</span>
+            {/* Store Selector */}
+            <div className="mt-2.5 p-3 rounded-2xl bg-amber-50/80 border border-amber-200/90 shrink-0 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                  <Store className="w-4 h-4 text-amber-700" />
+                  <span>เลือกร้านค้า / จุดขายที่ทำการตรวจนับสต็อก:</span>
+                  <span className="text-red-500">*</span>
                 </label>
-                {targetLocation === 'STORE' && (
-                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
-                    🏪 โหมดตรวจนับสต็อกหน้าร้าน
-                  </span>
-                )}
-                {targetLocation === 'WAREHOUSE' && (
-                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                    📦 โหมดตรวจนับคลังสินค้าส่วนกลาง
-                  </span>
-                )}
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md">
+                  🏪 โหมดตรวจนับสต็อกหน้าร้าน
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <label
-                  onClick={() => handleLocationChange('WAREHOUSE')}
-                  className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
-                    targetLocation === 'WAREHOUSE'
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-500/20'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="targetLocation"
-                    checked={targetLocation === 'WAREHOUSE'}
-                    onChange={() => handleLocationChange('WAREHOUSE')}
-                    className="sr-only"
-                  />
-                  <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Warehouse className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-xs">คลังสินค้าส่วนกลาง JJ Mall</div>
-                    <div className="text-[10px] text-slate-500">ตรวจนับสต็อกใหญ่ในคลังกลาง (Current Stock)</div>
-                  </div>
-                </label>
+              <select
+                value={targetStoreId}
+                onChange={(e) => handleStoreSelectChange(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border-2 border-amber-300 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-2xs"
+              >
+                {staffStores.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    🏪 {st.name} (@{st.username})
+                  </option>
+                ))}
+              </select>
 
-                <label
-                  onClick={() => handleLocationChange('STORE')}
-                  className={`p-2.5 rounded-xl border flex items-center gap-2.5 cursor-pointer transition-all ${
-                    targetLocation === 'STORE'
-                      ? 'bg-amber-50 border-amber-500 text-amber-900 ring-2 ring-amber-500/20'
-                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="targetLocation"
-                    checked={targetLocation === 'STORE'}
-                    onChange={() => handleLocationChange('STORE')}
-                    className="sr-only"
-                  />
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                    <Store className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-xs">จุดขายหน้าร้าน (Store / Kiosk)</div>
-                    <div className="text-[10px] text-slate-500">กระทบยอด: [ยกมา] + [เบิกเข้า] - [ขายไป]</div>
-                  </div>
-                </label>
+              <div className="p-2 rounded-xl bg-amber-100/60 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                <span>
+                  <strong>สูตรกระทบยอดหน้าร้าน:</strong> [ยอดยกมา] + [เบิกเข้าเพิ่ม] - [ขายไปตามสูตร] = <strong>[สต็อกที่ควรมีในร้าน]</strong> (ระบบดึงยอดที่ควรมีมาเทียบผลต่างให้อัตโนมัติ)
+                </span>
               </div>
-
-              {/* If Store Selected, pick specific staff shop */}
-              {targetLocation === 'STORE' && (
-                <div className="pt-1.5 border-t border-amber-200/60 animate-in fade-in duration-150 space-y-1.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                    <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                      <Store className="w-3.5 h-3.5 text-amber-700" />
-                      <span>เลือกร้านค้า / จุดขายที่ทำการตรวจนับ:</span>
-                      <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[10px] text-amber-700 font-medium">
-                      📌 สต็อกที่ควรมีในร้านคำนวณแยกอิสระจากคลังกลาง
-                    </span>
-                  </div>
-
-                  <select
-                    value={targetStoreId}
-                    onChange={(e) => handleStoreSelectChange(e.target.value)}
-                    required
-                    className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-amber-400 bg-white text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-2xs"
-                  >
-                    {staffStores.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        🏪 {st.name} (@{st.username})
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="p-2 rounded-xl bg-amber-100/60 border border-amber-200 text-amber-900 text-[11px] flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                    <span>
-                      <strong>สูตรกระทบยอดหน้าร้าน:</strong> [ยอดยกมา] + [เบิกเข้าเพิ่ม] - [ขายไปตามสูตร] = <strong>[สต็อกที่ควรมีในร้าน]</strong> (การตรวจนับหน้าร้านจะไม่แก้ไขยอดคงเหลือคลังสินค้าส่วนกลาง)
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Quick Filter, Search & Actions Bar */}
@@ -915,7 +850,7 @@ export default function AdminStockCountPage() {
                   className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 cursor-pointer shrink-0"
                   title="ใส่ค่ายอดที่ควรมีลงทุกช่อง"
                 >
-                  {targetLocation === 'STORE' ? 'ใส่ยอดที่ควรมีในร้านทั้งหมด' : 'ใส่ยอดในระบบทั้งหมด'}
+                  ใส่ยอดที่ควรมีในร้านทั้งหมด
                 </button>
                 <button
                   type="button"
@@ -932,6 +867,7 @@ export default function AdminStockCountPage() {
               <table className="w-full text-left text-xs">
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
+                    <th className="py-2.5 px-3 text-center w-12 text-slate-400 font-normal">#</th>
                     <th className="py-2.5 px-3">รายการสินค้า / วัตถุดิบ</th>
                     {targetLocation === 'STORE' ? (
                       <>
@@ -951,12 +887,12 @@ export default function AdminStockCountPage() {
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredModalIngredients.length === 0 ? (
                     <tr>
-                      <td colSpan={targetLocation === 'STORE' ? 8 : 5} className="py-12 text-center text-slate-400">
+                      <td colSpan={targetLocation === 'STORE' ? 9 : 6} className="py-12 text-center text-slate-400">
                         ไม่พบรายการสินค้าหรือวัตถุดิบที่ตรงกับการค้นหา
                       </td>
                     </tr>
                   ) : (
-                    filteredModalIngredients.map((ing) => {
+                    filteredModalIngredients.map((ing, idx) => {
                       let systemQty = Number(ing.currentStock);
                       let openingQty = 0;
                       let inboundQty = 0;
@@ -1002,6 +938,11 @@ export default function AdminStockCountPage() {
 
                       return (
                         <tr key={ing.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
+                          {/* Row Number */}
+                          <td className="py-2.5 px-3 text-center text-xs text-slate-400 font-mono">
+                            {idx + 1}
+                          </td>
+
                           {/* Name & Details */}
                           <td className="py-2.5 px-3">
                             <div className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
@@ -1046,17 +987,20 @@ export default function AdminStockCountPage() {
                           <td className="py-2.5 px-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <input
-                                type="number"
-                                min="0"
-                                step="any"
+                                type="text"
+                                inputMode="decimal"
                                 value={inputValue}
-                                onChange={(e) =>
-                                  setCountInputs((prev) => ({
-                                    ...prev,
-                                    [ing.id]: e.target.value,
-                                  }))
-                                }
-                                placeholder={String(systemQty)}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                    setCountInputs((prev) => ({
+                                      ...prev,
+                                      [ing.id]: val,
+                                    }));
+                                  }
+                                }}
+                                onFocus={(e) => e.target.select()}
+                                placeholder="0"
                                 className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white shadow-2xs"
                               />
                               <span className="text-[11px] font-bold text-slate-600 w-8 text-left truncate">{ing.unit}</span>
@@ -1145,9 +1089,7 @@ export default function AdminStockCountPage() {
                       className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                     />
                     <span className="text-xs font-bold text-slate-800">
-                      {targetLocation === 'WAREHOUSE'
-                        ? '🔄 อัปเดตยอดคงเหลือในคลังกลางทันที (Auto-sync)'
-                        : '🔄 บันทึกผลการตรวจนับสต็อกหน้าร้าน (ไม่กระทบสต็อกคลังกลาง)'}
+                      🔄 บันทึกผลการตรวจนับสต็อกหน้าร้าน (ปรับปรุงยอดยกมาตามที่นับได้จริง)
                     </span>
                   </label>
                 </div>
