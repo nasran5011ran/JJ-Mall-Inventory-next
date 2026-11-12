@@ -347,7 +347,7 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    // ACTION: APPROVE (Fulfill Requisition & Transfer Stock)
+    // ACTION: APPROVE (Fulfill Requisition & Purchase Stock for Store)
     if (action === 'APPROVE') {
       // Allow custom approved quantities if passed
       const itemQtyMap = new Map<number, number>();
@@ -359,27 +359,7 @@ export async function PUT(req: NextRequest) {
         });
       }
 
-      // Check warehouse stock availability
-      for (const item of reqRecord.items) {
-        const approvedQty = itemQtyMap.has(item.id)
-          ? itemQtyMap.get(item.id)!
-          : Number(item.approvedQty ?? item.requestedQty);
-
-        if (approvedQty <= 0) continue;
-
-        const currentWarehouseStock = Number(item.ingredient.currentStock);
-        if (approvedQty > currentWarehouseStock) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: `วัตถุดิบ "${item.ingredient.name}" คงเหลือในคลังกลางเพียง ${currentWarehouseStock.toLocaleString()} ${item.ingredient.unit} ไม่เพียงพอสำหรับการจ่ายจำนวน ${approvedQty.toLocaleString()} ${item.ingredient.unit}`,
-            },
-            { status: 400 }
-          );
-        }
-      }
-
-      const destinationLabel = `เบิกจ่ายให้ร้าน: ${reqRecord.store.name} (@${reqRecord.store.username})`;
+      const destinationLabel = `อนุมัติซื้อเข้าสต็อกร้าน: ${reqRecord.store.name} (@${reqRecord.store.username})`;
 
       // Execute in atomic transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -395,28 +375,28 @@ export async function PUT(req: NextRequest) {
           });
 
           if (approvedQty > 0) {
-            // 2. Decrement ingredient stock in Central Warehouse
+            // 2. Increment ingredient stock in database
             const updatedIng = await tx.ingredient.update({
               where: { id: item.ingredientId },
               data: {
-                currentStock: { decrement: approvedQty },
+                currentStock: { increment: approvedQty },
               },
             });
 
-            // 3. Record StockTransaction (TRANSFER_OUT)
+            // 3. Record StockTransaction (PURCHASE_IN directly for this store)
             const txNumber = `TX-REQ-${reqRecord.requisitionNumber}-${updatedIng.code}-${Date.now().toString().slice(-4)}`;
             await tx.stockTransaction.create({
               data: {
                 transactionNumber: txNumber,
                 ingredientId: item.ingredientId,
-                type: TransactionType.TRANSFER_OUT,
-                quantityIn: 0,
-                quantityOut: approvedQty,
+                type: TransactionType.PURCHASE_IN,
+                quantityIn: approvedQty,
+                quantityOut: 0,
                 balanceAfter: updatedIng.currentStock,
-                refType: 'STORE_REQUISITION',
+                refType: 'PURCHASE_APPROVAL',
                 refId: reqRecord.requisitionNumber,
-                note: `${destinationLabel} • ตามใบขอเบิก ${reqRecord.requisitionNumber}${reqRecord.reason ? ' (' + reqRecord.reason + ')' : ''}`,
-                createdById: session.id,
+                note: `${destinationLabel} • ตามใบขอเบิกซื้อ ${reqRecord.requisitionNumber}${reqRecord.reason ? ' (' + reqRecord.reason + ')' : ''} [STORE_ID:${reqRecord.storeId}]`,
+                createdById: reqRecord.storeId,
               },
             });
           }
@@ -447,8 +427,8 @@ export async function PUT(req: NextRequest) {
             category: 'INVENTORY',
             type: 'STOCK_REQUISITION_APPROVED',
             severity: 'INFO',
-            title: `ใบขอเบิกสต็อก ${reqRecord.requisitionNumber} ได้รับการอนุมัติแล้ว`,
-            description: `ผู้ดูแลระบบได้อนุมัติและโอนวัตถุดิบเข้าหน้าร้าน ${reqRecord.store.name} เรียบร้อยแล้ว`,
+            title: `ใบขอเบิกซื้อ ${reqRecord.requisitionNumber} ได้รับการอนุมัติแล้ว`,
+            description: `ผู้ดูแลระบบได้อนุมัติงบซื้อและเพิ่มสต็อกเข้าหน้าร้าน ${reqRecord.store.name} เรียบร้อยแล้ว`,
             actionUrl: `/staff/stock-requests`,
             actionLabel: 'ตรวจเช็คสต็อก',
             storeId: reqRecord.storeId,
@@ -463,7 +443,7 @@ export async function PUT(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `อนุมัติและโอนวัตถุดิบเข้าหน้าร้าน "${reqRecord.store.name}" เรียบร้อยแล้ว`,
+        message: `อนุมัติเบิกซื้อและเพิ่มสต็อกเข้าหน้าร้าน "${reqRecord.store.name}" เรียบร้อยแล้ว`,
         requisition: result,
       });
     }

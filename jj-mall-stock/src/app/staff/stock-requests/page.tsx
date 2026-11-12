@@ -37,6 +37,7 @@ interface Ingredient {
   warehouseStock: number;
   storeStock: number | null;
   minStock: number;
+  costPerUnit?: number;
 }
 
 interface StoreIngredientBalance {
@@ -268,6 +269,16 @@ export default function StaffStockRequestsPage() {
     setFormItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  // Estimated budget requested
+  const totalEstimatedCost = useMemo(() => {
+    return formItems.reduce((sum, item) => {
+      const ing = ingredients.find((i) => i.id === Number(item.ingredientId));
+      const qty = parseFloat(item.requestedQty) || 0;
+      const cost = Number(ing?.costPerUnit || 0);
+      return sum + qty * cost;
+    }, 0);
+  }, [formItems, ingredients]);
+
   const handleItemChange = (index: number, field: 'ingredientId' | 'requestedQty', value: any) => {
     setFormItems((prev) => {
       const updated = [...prev];
@@ -351,9 +362,9 @@ export default function StaffStockRequestsPage() {
               <ArrowDownToLine className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">คลังวัตถุดิบหน้าร้าน & ใบขอเบิกสต็อก</h1>
+              <h1 className="text-xl font-black text-slate-900">อนุมัติเบิกซื้อวัตถุดิบ</h1>
               <p className="text-xs text-slate-500">
-                ตรวจสอบสต็อกคงเหลือของร้าน <strong>{user?.name}</strong> (@{user?.username}) และส่งใบขอเบิกเข้าคลังกลาง
+                ตรวจสอบสต็อกในร้าน <strong>{user?.name}</strong> (@{user?.username}) และส่งใบขอเบิกเงินซื้อวัตถุดิบ (รอแอดมินอนุมัติ)
               </p>
             </div>
           </div>
@@ -374,7 +385,7 @@ export default function StaffStockRequestsPage() {
             className="flex-1 md:flex-none px-4 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm shadow-sky-600/30 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ สร้างใบขอเบิกใหม่</span>
+            <span>+ สร้างใบขอเบิกซื้อใหม่</span>
           </button>
         </div>
       </div>
@@ -980,9 +991,9 @@ export default function StaffStockRequestsPage() {
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">สร้างใบขอเบิกสต็อกใหม่</h3>
+                  <h3 className="text-base font-black text-slate-900">ขอเบิกซื้อวัตถุดิบ</h3>
                   <p className="text-[11px] text-slate-500">
-                    ขอเบิกวัตถุดิบจากคลังสินค้าส่วนกลางเข้าสู่ร้าน <strong>{user?.name}</strong>
+                    ขอเบิกเงินซื้อวัตถุดิบเข้าสู่ร้าน <strong>{user?.name}</strong> (รอแอดมินอนุมัติ)
                   </p>
                 </div>
               </div>
@@ -1008,7 +1019,7 @@ export default function StaffStockRequestsPage() {
                   <input
                     type="text"
                     required
-                    placeholder="เช่น ขอเบิกสต็อกเปิดร้านใหม่, เติมสต็อกประจำสัปดาห์"
+                    placeholder="เช่น ขอเบิกซื้อวัตถุดิบเติมสต็อกประจำวัน"
                     value={formReason}
                     onChange={(e) => setFormReason(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
@@ -1019,7 +1030,7 @@ export default function StaffStockRequestsPage() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
                   <input
                     type="text"
-                    placeholder="ระบุเพิ่มเติม เช่น ขอด่วนก่อนเที่ยง"
+                    placeholder="ระบุเพิ่มเติม เช่น ขอด่วนก่อนเที่ยง, ซื้อที่แม็คโคร"
                     value={formNote}
                     onChange={(e) => setFormNote(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
@@ -1030,7 +1041,7 @@ export default function StaffStockRequestsPage() {
               {/* Items List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">รายการวัตถุดิบที่ต้องการขอเบิก</label>
+                  <label className="text-xs font-bold text-slate-700">รายการวัตถุดิบที่ต้องการขอเบิกซื้อ</label>
                   <button
                     type="button"
                     onClick={handleAddItemRow}
@@ -1057,7 +1068,7 @@ export default function StaffStockRequestsPage() {
                           >
                             {ingredients.map((ing) => (
                               <option key={ing.id} value={ing.id}>
-                                {ing.code} - {ing.name} (คลังกลางมี: {ing.warehouseStock.toLocaleString()} {ing.unit} | ในร้านเหลือ: {Number(ing.storeStock || 0).toLocaleString()} {ing.unit})
+                                {ing.code} - {ing.name} (ในร้านเหลือ: {Number(ing.storeStock || 0).toLocaleString()} {ing.unit} | ฿{Number(ing.costPerUnit || 0).toFixed(2)})
                               </option>
                             ))}
                           </select>
@@ -1094,6 +1105,14 @@ export default function StaffStockRequestsPage() {
                 </div>
               </div>
 
+              {/* Grand Total Estimated Cost */}
+              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-sky-900">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
+                <span className="font-mono font-black text-base text-sky-800">
+                  ฿{totalEstimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
               {/* Submit Buttons */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
@@ -1116,7 +1135,7 @@ export default function StaffStockRequestsPage() {
                   ) : (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      <span>ส่งใบขอเบิกสต็อก</span>
+                      <span>ส่งใบขอเบิกซื้อวัตถุดิบ</span>
                     </>
                   )}
                 </button>

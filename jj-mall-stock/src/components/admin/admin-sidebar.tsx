@@ -69,6 +69,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     {
       title: 'งานสต็อก & การอนุมัติ',
       items: [
+        { href: '/admin/stock-requests', label: 'อนุมัติเบิกซื้อวัตถุดิบ', icon: ArrowUpFromLine },
         { href: '/admin/stock-in', label: 'รับสินค้าเข้าสต็อก (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-adjustments', label: 'อนุมัติใบปรับปรุงสต็อก', icon: FileEdit },
         { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
@@ -181,6 +182,16 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      {/* 0. Pending requisitions badge (Amber) */}
+                      {isRequisition && pendingRequisitionsCount > 0 && (
+                        <span
+                          className="px-2 py-0.5 min-w-[20px] h-5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shadow-xs"
+                          title={`มีใบขอเบิกซื้อวัตถุดิบรออนุมัติ ${pendingRequisitionsCount} รายการ`}
+                        >
+                          {pendingRequisitionsCount > 99 ? '99+' : pendingRequisitionsCount}
+                        </span>
+                      )}
+
                       {/* 1. Pending adjustments badge (Red) */}
                       {isAdjustment && pendingAdjustmentsCount > 0 && (
                         <span

@@ -36,6 +36,7 @@ interface RequisitionItem {
     unit: string;
     category?: string | null;
     currentStock: number;
+    costPerUnit?: number;
   };
 }
 
@@ -241,9 +242,9 @@ export default function AdminStockRequestsPage() {
               <ArrowUpFromLine className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">อนุมัติใบขอเบิกสต็อกวัตถุดิบ</h1>
+              <h1 className="text-xl font-black text-slate-900">อนุมัติเบิกซื้อวัตถุดิบ</h1>
               <p className="text-xs text-slate-500">
-                ตรวจสอบคำขอเบิกวัตถุดิบจากหน้าร้าน / สาขา และอนุมัติเพื่อตัดจ่ายโอนเข้าสต็อกร้าน
+                ตรวจสอบคำขอเบิกเงินซื้อวัตถุดิบของร้านค้าสาขา (อนุมัติแล้วยอดสต็อกจะเพิ่มเข้าร้านค้าทันที)
               </p>
             </div>
           </div>
@@ -517,9 +518,9 @@ export default function AdminStockRequestsPage() {
                 <span className="font-mono font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-0.5 rounded-md">
                   {selectedRequisition.requisitionNumber}
                 </span>
-                <h3 className="text-base font-black text-slate-900 mt-1">อนุมัติและโอนวัตถุดิบเข้าหน้าร้าน</h3>
+                <h3 className="text-base font-black text-slate-900 mt-1">อนุมัติเบิกซื้อวัตถุดิบ</h3>
                 <p className="text-[11px] text-slate-500">
-                  โอนให้ร้าน: <strong>{selectedRequisition.store.name}</strong> (@{selectedRequisition.store.username})
+                  อนุมัติซื้อให้ร้าน: <strong>{selectedRequisition.store.name}</strong> (@{selectedRequisition.store.username})
                 </p>
               </div>
               <button
@@ -537,40 +538,39 @@ export default function AdminStockRequestsPage() {
               </div>
             )}
 
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                เมื่อกดยืนยัน ระบบจะตัดลดสต็อกคลังกลางทันที และเพิ่มยอดรับเข้าให้กับหน้าร้านนี้
+                เมื่อกดยืนยัน ระบบจะอนุมัติงบเบิกซื้อและเพิ่มยอดสต็อกวัตถุดิบให้กับหน้าร้านนี้ทันที พร้อมขายผ่าน POS
               </span>
             </div>
 
             {/* Items Table */}
             <div>
-              <h4 className="text-xs font-bold text-slate-700 mb-2">ตรวจสอบจำนวนที่อนุมัติ</h4>
+              <h4 className="text-xs font-bold text-slate-700 mb-2">ตรวจสอบรายการและจำนวนที่อนุมัติซื้อ</h4>
               <div className="border border-slate-200 rounded-2xl overflow-hidden">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-3">วัตถุดิบ</th>
-                      <th className="py-2.5 px-3 text-right">คงเหลือคลังกลาง</th>
-                      <th className="py-2.5 px-3 text-right">ร้านขอเบิก</th>
-                      <th className="py-2.5 px-3 text-right w-36">จำนวนที่อนุมัติ</th>
+                      <th className="py-2.5 px-3 text-right">ต้นทุน/หน่วย</th>
+                      <th className="py-2.5 px-3 text-right">ร้านขอซื้อ</th>
+                      <th className="py-2.5 px-3 text-right w-36">จำนวนที่อนุมัติซื้อ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {selectedRequisition.items.map((item, idx) => {
-                      const warehouseStock = Number(item.ingredient.currentStock || 0);
+                      const costPerUnit = Number(item.ingredient.costPerUnit || 0);
                       const currentApproved = approvalItems.find((it) => it.id === item.id)?.approvedQty || '0';
-                      const isInsufficient = parseFloat(currentApproved) > warehouseStock;
 
                       return (
-                        <tr key={item.id} className={isInsufficient ? 'bg-rose-50/60' : ''}>
+                        <tr key={item.id}>
                           <td className="py-2.5 px-3">
                             <div className="font-bold text-slate-900">{item.ingredient.name}</div>
                             <div className="text-[10px] font-mono text-slate-400">{item.ingredient.code}</div>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
-                            {warehouseStock.toLocaleString()} {item.ingredient.unit}
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-600">
+                            ฿{costPerUnit.toFixed(2)}/{item.ingredient.unit}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
                             {Number(item.requestedQty).toLocaleString()} {item.ingredient.unit}
@@ -588,19 +588,12 @@ export default function AdminStockRequestsPage() {
                                     prev.map((it) => (it.id === item.id ? { ...it, approvedQty: val } : it))
                                   );
                                 }}
-                                className={`w-24 px-2.5 py-1.5 rounded-xl border text-right text-xs font-bold ${
-                                  isInsufficient
-                                    ? 'border-rose-400 bg-rose-50 text-rose-700'
-                                    : 'border-slate-200 bg-slate-50 text-slate-900 focus:bg-white'
-                                }`}
+                                className="w-24 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white text-right text-xs font-bold"
                               />
                               <span className="text-[11px] font-semibold text-slate-500 w-8 text-left">
                                 {item.ingredient.unit}
                               </span>
                             </div>
-                            {isInsufficient && (
-                              <div className="text-[10px] text-rose-600 font-bold mt-0.5">คลังกลางไม่พอ!</div>
-                            )}
                           </td>
                         </tr>
                       );
@@ -632,7 +625,7 @@ export default function AdminStockRequestsPage() {
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>ยืนยันอนุมัติและโอนของ</span>
+                    <span>ยืนยันอนุมัติเบิกซื้อ & เพิ่มสต็อก</span>
                   </>
                 )}
               </button>
