@@ -606,7 +606,7 @@ export default function ProductsPage() {
       {/* Add / Edit Product Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[95vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -637,7 +637,7 @@ export default function ProductsPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 {/* Code */}
                 <div>

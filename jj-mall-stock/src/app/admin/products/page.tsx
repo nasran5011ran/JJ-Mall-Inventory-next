@@ -801,19 +801,19 @@ export default function ProductsPage() {
 
       {/* Add / Edit Product Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[95vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <Package className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Package className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">
+                  <h3 className="text-base font-bold text-slate-800">
                     {editingProduct ? 'แก้ไขข้อมูลสินค้า' : 'เพิ่มสินค้าใหม่'}
                   </h3>
-                  <p className="text-xs text-slate-400">กรอกข้อมูลและบันทึก เพื่อแสดงผลในตารางทันที</p>
+                  <p className="text-[11px] text-slate-400">กรอกข้อมูลและบันทึก เพื่อแสดงผลในตารางทันที</p>
                 </div>
               </div>
               <button
@@ -826,235 +826,232 @@ export default function ProductsPage() {
 
             {/* Error Message */}
             {formError && (
-              <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <div className="mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
                 <span>{formError}</span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              {/* Product Image Upload Dropzone */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>รูปภาพสินค้า / เมนู</span>
-                  </span>
-                  {formData.image && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, image: '' })}
-                      className="text-[11px] text-red-500 hover:underline font-bold cursor-pointer"
-                    >
-                      ลบรูปภาพออก
-                    </button>
-                  )}
-                </label>
-
-                {formData.image ? (
-                  <div className="relative group w-full h-44 rounded-2xl overflow-hidden border-2 border-emerald-500/30 bg-slate-50 flex items-center justify-center">
-                    <img
-                      src={formData.image}
-                      alt="Product preview"
-                      className="w-full h-full object-contain p-2"
-                    />
-                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer text-white text-xs font-bold">
-                      <Upload className="w-4 h-4" />
-                      <span>เปลี่ยนรูปภาพ</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
-                        disabled={uploadingImage}
-                      />
+            <form onSubmit={handleSubmit} className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                {/* Left Column: Image Upload & Store */}
+                <div className="md:col-span-5 space-y-3">
+                  {/* Image Upload */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>รูปภาพสินค้า / เมนู</span>
+                      </span>
+                      {formData.image && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image: '' })}
+                          className="text-[10px] text-red-500 hover:underline font-bold cursor-pointer"
+                        >
+                          ลบรูปภาพ
+                        </button>
+                      )}
                     </label>
-                  </div>
-                ) : (
-                  <label
-                    className={`w-full h-28 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-all text-center cursor-pointer ${
-                      uploadingImage
-                        ? 'border-emerald-500 bg-emerald-50/50'
-                        : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50/60'
-                    }`}
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage ? (
-                      <div className="flex flex-col items-center gap-2 py-2">
-                        <div className="w-7 h-7 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                        <span className="text-xs font-bold text-emerald-700">กำลังอัปโหลดรูปภาพ...</span>
+
+                    {formData.image ? (
+                      <div className="relative group w-full h-36 rounded-2xl overflow-hidden border-2 border-emerald-500/30 bg-slate-50 flex items-center justify-center">
+                        <img
+                          src={formData.image}
+                          alt="Product preview"
+                          className="w-full h-full object-contain p-2"
+                        />
+                        <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer text-white text-xs font-bold">
+                          <Upload className="w-4 h-4" />
+                          <span>เปลี่ยนรูปภาพ</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageUpload}
+                            disabled={uploadingImage}
+                          />
+                        </label>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center gap-2 py-1">
-                        <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
-                          <Upload className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-slate-800">คลิกเพื่ออัปโหลดรูปภาพสินค้า</span>
-                          <p className="text-[10px] text-slate-400 mt-0.5">รองรับไฟล์ JPG, PNG, WEBP, GIF (สูงสุด 5MB)</p>
-                        </div>
-                      </div>
-                    )}
-                  </label>
-                )}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Code */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    รหัสสินค้า <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    placeholder="เช่น PRD-MILO01"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                </div>
-
-                {/* Unit */}
-                <AutocompleteSuggest
-                  label="หน่วยนับ"
-                  required
-                  value={formData.unit}
-                  onChange={(val) => setFormData({ ...formData, unit: val })}
-                  suggestions={existingUnits}
-                  placeholder="เช่น แก้ว, ชิ้น, ขวด (หรือพิมพ์ใหม่)"
-                />
-              </div>
-
-              {/* Name */}
-              <AutocompleteSuggest
-                label="ชื่อสินค้า"
-                required
-                value={formData.name}
-                onChange={(val) => setFormData({ ...formData, name: val })}
-                suggestions={existingProductNames}
-                placeholder="เช่น น้ำไมโลเย็น 22oz (หรือพิมพ์ใหม่)"
-              />
-
-              {/* Store Owner */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  ร้านค้าเจ้าของเมนู / จุดขายประจำ
-                </label>
-                <select
-                  value={formData.storeId}
-                  onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium"
-                >
-                  <option value="">🏬 ส่วนกลาง (ใช้ได้ทุกร้านค้า)</option>
-                  {staffStores.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      🏪 {st.name} (@{st.username})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  เลือกเพื่อกำหนดว่าเมนูนี้เป็นของร้านค้าใด เช่น &quot;ร้าน กันเอง(Coffee)&quot; หรือเมนูส่วนกลาง
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Category */}
-                <AutocompleteSuggest
-                  label="หมวดหมู่สินค้า"
-                  direction="up"
-                  value={formData.category}
-                  onChange={(val) => setFormData({ ...formData, category: val })}
-                  suggestions={existingCategories}
-                  placeholder="เช่น เครื่องดื่มเย็น (หรือพิมพ์ใหม่)"
-                />
-
-                {/* Status */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    สถานะการจำหน่าย
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
-                  >
-                    <option value="ACTIVE">เปิดจำหน่าย (Active)</option>
-                    <option value="INACTIVE">ระงับการขาย (Inactive)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Price */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ราคาขาย (บาท) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="เช่น 35.00"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                </div>
-
-                {/* Cost */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      ต้นทุนสินค้า (บาท)
-                    </label>
-                    {editingProduct?.recipe && editingProduct.recipe.items?.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const bomSum = editingProduct.recipe!.items.reduce(
-                            (s, it) => s + it.quantity * Number(it.ingredient.costPerUnit || 0),
-                            0
-                          );
-                          setFormData({ ...formData, cost: bomSum.toFixed(2) });
-                        }}
-                        className="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer"
-                        title="คลิกเพื่อนำต้นทุนที่คำนวณจากสูตร BOM มาใส่"
+                      <label
+                        className={`w-full h-36 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1 transition-all text-center cursor-pointer ${
+                          uploadingImage
+                            ? 'border-emerald-500 bg-emerald-50/50'
+                            : 'border-slate-300 hover:border-emerald-500 hover:bg-emerald-50/20 bg-slate-50/60'
+                        }`}
                       >
-                        ⚡ ใช้ต้นทุนจาก BOM
-                      </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                        />
+                        {uploadingImage ? (
+                          <div className="flex flex-col items-center gap-1.5 py-2">
+                            <div className="w-6 h-6 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                            <span className="text-[11px] font-bold text-emerald-700">กำลังอัปโหลด...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 p-2">
+                            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-2xs">
+                              <Upload className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-slate-800">อัปโหลดรูปภาพ</span>
+                              <p className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WEBP (สูงสุด 5MB)</p>
+                            </div>
+                          </div>
+                        )}
+                      </label>
                     )}
                   </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.cost}
-                    onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                    placeholder="เช่น 12.00 หรือกำหนดเอง"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+
+                  {/* Store Owner */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      ร้านค้าเจ้าของเมนู
+                    </label>
+                    <select
+                      value={formData.storeId}
+                      onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+                      className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium"
+                    >
+                      <option value="">🏬 ส่วนกลาง (ทุกร้าน)</option>
+                      {staffStores.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          🏪 {st.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column: Fields */}
+                <div className="md:col-span-7 space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Code */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        รหัสสินค้า <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                        placeholder="เช่น PRD-MILO01"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      />
+                    </div>
+
+                    {/* Unit */}
+                    <AutocompleteSuggest
+                      label="หน่วยนับ"
+                      required
+                      value={formData.unit}
+                      onChange={(val) => setFormData({ ...formData, unit: val })}
+                      suggestions={existingUnits}
+                      placeholder="เช่น แก้ว, ชิ้น, ขวด"
+                    />
+                  </div>
+
+                  {/* Name */}
+                  <AutocompleteSuggest
+                    label="ชื่อสินค้า"
+                    required
+                    value={formData.name}
+                    onChange={(val) => setFormData({ ...formData, name: val })}
+                    suggestions={existingProductNames}
+                    placeholder="เช่น น้ำไมโลเย็น 22oz"
                   />
-                  {editingProduct?.recipe && editingProduct.recipe.items?.length > 0 && (
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
-                      สูตร BOM คำนวณได้ ~฿
-                      {editingProduct.recipe.items
-                        .reduce((s, it) => s + it.quantity * Number(it.ingredient.costPerUnit || 0), 0)
-                        .toFixed(2)}
-                    </span>
-                  )}
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Category */}
+                    <AutocompleteSuggest
+                      label="หมวดหมู่สินค้า"
+                      direction="up"
+                      value={formData.category}
+                      onChange={(val) => setFormData({ ...formData, category: val })}
+                      suggestions={existingCategories}
+                      placeholder="เช่น เครื่องดื่มเย็น"
+                    />
+
+                    {/* Status */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        สถานะการจำหน่าย
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                      >
+                        <option value="ACTIVE">เปิดจำหน่าย</option>
+                        <option value="INACTIVE">ระงับการขาย</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {/* Price */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        ราคาขาย (บาท) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        placeholder="เช่น 35.00"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      />
+                    </div>
+
+                    {/* Cost */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold text-slate-700">
+                          ต้นทุนสินค้า (บาท)
+                        </label>
+                        {editingProduct?.recipe && editingProduct.recipe.items?.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const bomSum = editingProduct.recipe!.items.reduce(
+                                (s, it) => s + it.quantity * Number(it.ingredient.costPerUnit || 0),
+                                0
+                              );
+                              setFormData({ ...formData, cost: bomSum.toFixed(2) });
+                            }}
+                            className="text-[10px] text-emerald-700 font-bold hover:underline cursor-pointer"
+                            title="คลิกเพื่อนำต้นทุนที่คำนวณจากสูตร BOM มาใส่"
+                          >
+                            ⚡ จาก BOM
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.cost}
+                        onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                        placeholder="เช่น 12.00"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="pt-3.5 border-t border-slate-100 mt-4 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
