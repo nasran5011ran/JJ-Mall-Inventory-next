@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
             balanceAfter: currWarehouseStock,
             refType: 'SALE',
             refId: saleNumber,
-            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber} (ร้าน: ${session.name})`,
+            note: `ตัดวัตถุดิบจากการขายบิล ${saleNumber} (ร้าน: ${session.name}) [STORE_ID:${session.id}]`,
             createdById: session.id,
           },
         });

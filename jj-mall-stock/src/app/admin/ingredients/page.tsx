@@ -178,46 +178,123 @@ export default function IngredientsPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showUnitMenu, setShowUnitMenu] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [showNameMenu, setShowNameMenu] = useState(false);
 
-  // Quick Stock-In Modal
+  // Stock-In Modal State (Multi-item batch purchase support for any/all ingredients)
   const [stockInModalOpen, setStockInModalOpen] = useState(false);
-  const [stockInIngredient, setStockInIngredient] = useState<IngredientItem | null>(null);
   const [stockInStoreId, setStockInStoreId] = useState<string>('');
-  const [stockInQty, setStockInQty] = useState<string>('');
-  const [stockInCost, setStockInCost] = useState<string>('');
   const [stockInSupplier, setStockInSupplier] = useState<string>('แม็คโคร (Makro)');
   const [stockInInvoice, setStockInInvoice] = useState<string>('');
   const [stockInNote, setStockInNote] = useState<string>('');
   const [stockInSubmitting, setStockInSubmitting] = useState(false);
   const [stockInError, setStockInError] = useState<string | null>(null);
+  const [stockInItems, setStockInItems] = useState<{ ingredientId: string; quantity: string; costPerUnit: string }[]>([
+    { ingredientId: '', quantity: '', costPerUnit: '' },
+  ]);
 
-  const openQuickStockIn = (ing: IngredientItem, storeId?: string) => {
+  const openQuickStockIn = (ing?: IngredientItem | null, storeId?: string) => {
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     setStockInInvoice(`PO-${todayStr}-${randomSuffix}`);
-    setStockInIngredient(ing);
-    const targetStore = storeId || selectedStoreId || (staffStores[0]?.id ? String(staffStores[0].id) : '');
+    const targetStore = storeId || (selectedStoreId && selectedStoreId !== 'ALL' ? selectedStoreId : '') || (staffStores[0]?.id ? String(staffStores[0].id) : '');
     setStockInStoreId(targetStore);
-    setStockInQty('');
-    setStockInCost(String(ing.costPerUnit || '0'));
     setStockInSupplier('แม็คโคร (Makro)');
     setStockInNote('');
     setStockInError(null);
+
+    if (ing) {
+      setStockInItems([
+        {
+          ingredientId: String(ing.id),
+          quantity: '',
+          costPerUnit: String(ing.costPerUnit || '0'),
+        },
+      ]);
+    } else {
+      const firstIng = filteredIngredients[0] || ingredients[0];
+      setStockInItems([
+        {
+          ingredientId: firstIng ? String(firstIng.id) : '',
+          quantity: '',
+          costPerUnit: firstIng ? String(firstIng.costPerUnit || '0') : '0',
+        },
+      ]);
+    }
     setStockInModalOpen(true);
+  };
+
+  const addStockInRow = () => {
+    const available = ingredients.find((i) => !stockInItems.some((it) => it.ingredientId === String(i.id))) || ingredients[0];
+    setStockInItems((prev) => [
+      ...prev,
+      {
+        ingredientId: available ? String(available.id) : '',
+        quantity: '',
+        costPerUnit: available ? String(available.costPerUnit || '0') : '0',
+      },
+    ]);
+  };
+
+  const addAllIngredientsToStockIn = () => {
+    const allRows = ingredients.map((ing) => ({
+      ingredientId: String(ing.id),
+      quantity: '',
+      costPerUnit: String(ing.costPerUnit || '0'),
+    }));
+    setStockInItems(allRows);
+  };
+
+  const removeStockInRow = (index: number) => {
+    setStockInItems((prev) => {
+      if (prev.length <= 1) {
+        const first = ingredients[0];
+        return [{ ingredientId: first ? String(first.id) : '', quantity: '', costPerUnit: first ? String(first.costPerUnit || '0') : '0' }];
+      }
+      return prev.filter((_, idx) => idx !== index);
+    });
+  };
+
+  const updateStockInItem = (index: number, field: 'ingredientId' | 'quantity' | 'costPerUnit', value: string) => {
+    setStockInItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      if (field === 'ingredientId') {
+        const found = ingredients.find((i) => String(i.id) === value);
+        if (found) {
+          next[index].costPerUnit = String(found.costPerUnit || '0');
+        }
+      }
+      return next;
+    });
+  };
+
+  const getStoreBalanceForItem = (ingredientId: number, storeIdStr: string) => {
+    const storeIdNum = Number(storeIdStr || (selectedStoreId !== 'ALL' ? selectedStoreId : '') || staffStores[0]?.id || 0);
+    const list = storeBalances[storeIdNum] || [];
+    const found = list.find((b) => b.ingredientId === ingredientId);
+    if (found && found.expectedStock !== undefined) {
+      return Number(found.expectedStock);
+    }
+    return 0;
   };
 
   const handleQuickStockInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stockInIngredient) return;
     if (!stockInStoreId) {
       setStockInError('กรุณาเลือกร้านค้า / จุดขาย');
       return;
     }
-    const qty = parseFloat(stockInQty);
-    if (!qty || qty <= 0 || isNaN(qty)) {
-      setStockInError('กรุณาระบุจำนวนที่รับเข้ามากกว่า 0');
+
+    const validItems = stockInItems.filter((item) => {
+      const qty = parseFloat(item.quantity);
+      return !isNaN(qty) && qty > 0 && item.ingredientId;
+    });
+
+    if (validItems.length === 0) {
+      setStockInError('กรุณาระบุจำนวนที่รับเข้าอย่างน้อย 1 รายการ (ต้องมากกว่า 0)');
       return;
     }
+
     setStockInSubmitting(true);
     setStockInError(null);
     try {
@@ -230,41 +307,44 @@ export default function IngredientsPage() {
           supplier: stockInSupplier.trim(),
           invoiceNumber: stockInInvoice.trim(),
           note: stockInNote.trim(),
-          items: [
-            {
-              ingredientId: stockInIngredient.id,
-              quantity: qty,
-              costPerUnit: stockInCost ? parseFloat(stockInCost) : undefined,
-            },
-          ],
+          items: validItems.map((it) => ({
+            ingredientId: Number(it.ingredientId),
+            quantity: parseFloat(it.quantity),
+            costPerUnit: it.costPerUnit ? parseFloat(it.costPerUnit) : undefined,
+          })),
         }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'บันทึกรับเข้าไม่สำเร็จ');
       }
-      showToast(`บันทึกรับเข้า ${stockInIngredient.name} เรียบร้อยแล้ว`);
-      await mutate();
-      setHighlightId(stockInIngredient.id);
+
+      const storeObj = staffStores.find((s) => s.id === Number(stockInStoreId));
+      const storeName = storeObj ? storeObj.name : 'ร้านค้า';
+
       setStockInModalOpen(false);
+      await mutate();
+      globalMutate('/api/recipes');
+      globalMutate('/api/products');
+      globalMutate('/api/stock-in');
+
+      if (validItems[0]) {
+        setHighlightId(Number(validItems[0].ingredientId));
+        setTimeout(() => setHighlightId(null), 2500);
+      }
+
+      const totalQty = validItems.reduce((acc, it) => acc + (parseFloat(it.quantity) || 0), 0);
+      await showSuccessAlert(
+        'บันทึกรับเข้าสต็อกสำเร็จ',
+        `รับเข้า ${validItems.length} รายการ (รวม ${totalQty.toLocaleString()} หน่วย) เข้าร้าน ${storeName} เรียบร้อยแล้ว`
+      );
     } catch (err: any) {
       setStockInError(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      await showErrorAlert('บันทึกรับเข้าไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setStockInSubmitting(false);
     }
   };
-
-  // Expected store balance of currently selected ingredient in Quick Stock-In modal
-  const quickStockInCurrentBalance = useMemo(() => {
-    if (!stockInIngredient) return 0;
-    const storeIdNum = Number(stockInStoreId || selectedStoreId || staffStores[0]?.id || 0);
-    const list = storeBalances[storeIdNum] || [];
-    const found = list.find((b) => b.ingredientId === stockInIngredient.id);
-    if (found && found.expectedStock !== undefined) {
-      return Number(found.expectedStock);
-    }
-    return Number(stockInIngredient.currentStock || 0);
-  }, [stockInIngredient, stockInStoreId, selectedStoreId, staffStores, storeBalances]);
 
   // Detail / Recipes modal
   const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
@@ -378,6 +458,7 @@ export default function IngredientsPage() {
 
   const openAddModal = () => {
     setEditingIngredient(null);
+    setShowNameMenu(false);
     setShowUnitMenu(false);
     setShowCategoryMenu(false);
     setFormData({
@@ -396,6 +477,7 @@ export default function IngredientsPage() {
 
   const openEditModal = (ing: IngredientItem) => {
     setEditingIngredient(ing);
+    setShowNameMenu(false);
     setShowUnitMenu(false);
     setShowCategoryMenu(false);
     setFormData({
@@ -433,10 +515,32 @@ export default function IngredientsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    const isEditing = Boolean(editingIngredient);
+    const trimmedName = formData.name.trim();
+    const trimmedCode = formData.code.trim().toUpperCase();
+
+    // Check duplicate code
+    const duplicateCode = ingredients.find(
+      (ing) => ing.code.toUpperCase() === trimmedCode && (!isEditing || ing.id !== editingIngredient!.id)
+    );
+    if (duplicateCode) {
+      setFormError(`รหัสวัตถุดิบ "${trimmedCode}" มีอยู่ในระบบแล้ว (${duplicateCode.name}) กรุณาใช้รหัสอื่น`);
+      return;
+    }
+
+    // Check duplicate name
+    const duplicateName = ingredients.find(
+      (ing) => ing.name.trim().toLowerCase() === trimmedName.toLowerCase() && (!isEditing || ing.id !== editingIngredient!.id)
+    );
+    if (duplicateName) {
+      setFormError(`ชื่อวัตถุดิบ "${trimmedName}" มีอยู่ในระบบแล้ว (รหัส: ${duplicateName.code}) ไม่สามารถเพิ่มซ้ำได้`);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const isEditing = Boolean(editingIngredient);
       const url = isEditing ? `/api/ingredients/${editingIngredient!.id}` : '/api/ingredients';
       const method = isEditing ? 'PUT' : 'POST';
 
@@ -458,10 +562,8 @@ export default function IngredientsPage() {
         setIngredients((prev) =>
           prev.map((item) => (item.id === returned.id ? returned : item))
         );
-        showToast(`อัปเดตวัตถุดิบ "${returned.name}" เรียบร้อยแล้ว`);
       } else {
         setIngredients((prev) => [returned, ...prev]);
-        showToast(`เพิ่มวัตถุดิบใหม่ "${returned.name}" เข้าสู่ตารางเรียบร้อย`);
       }
 
       setModalOpen(false);
@@ -573,14 +675,6 @@ export default function IngredientsPage() {
 
   return (
     <div className="space-y-6">
-        {/* Floating Toast Notification */}
-        {toastMessage && (
-          <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* Action Header */}
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-slate-500 hidden sm:block">
@@ -599,13 +693,15 @@ export default function IngredientsPage() {
 
             {isAdmin && (
               <>
-                <Link
-                  href="/admin/stock-in?returnUrl=/admin/ingredients"
-                  className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition-all"
+                <button
+                  type="button"
+                  onClick={() => openQuickStockIn(null, selectedStoreId !== 'ALL' ? selectedStoreId : undefined)}
+                  className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs transition-all cursor-pointer"
+                  title="บันทึกรับเข้าสต็อก"
                 >
                   <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
                   <span>รับเข้าสต็อก</span>
-                </Link>
+                </button>
 
                 <button
                   onClick={openAddModal}
@@ -620,62 +716,49 @@ export default function IngredientsPage() {
         </div>
 
         {/* Store Selection Tabs */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
-          <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center gap-1.5 shrink-0">
-            <Store className="w-4 h-4 text-emerald-700" />
-            <span>เลือกร้านค้า:</span>
-          </div>
+        <div className="flex">
+          <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+            <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+              <span>เลือกร้านค้า:</span>
+            </div>
 
-          {staffStores.map((st) => {
-            const isSelected = selectedStoreId === String(st.id);
-            const storeLow = storeLowCountMap[st.id] || 0;
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setSelectedStoreId(String(st.id))}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                <Store className="w-4 h-4" />
-                <span>🏪 สต็อกร้าน: {st.name}</span>
-                {storeLow > 0 && (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                      isSelected
-                        ? 'bg-rose-500 text-white ring-1 ring-white/30'
-                        : 'bg-rose-600 text-white'
-                    }`}
-                    title={`สต็อกร้านนี้ต่ำกว่าเกณฑ์ขั้นต่ำ (Min) ${storeLow} รายการ (ต้องซื้อเพิ่ม)`}
-                  >
-                    {storeLow}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+            {staffStores.map((st) => {
+              const isSelected = selectedStoreId === String(st.id);
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setSelectedStoreId(String(st.id))}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <span>สต็อกร้าน: {st.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Store Context Banner (when a store is selected) */}
         {currentSelectedStore && (
-          <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-emerald-950 animate-in fade-in">
-            <div className="flex items-center gap-2">
-              <Store className="w-4 h-4 text-emerald-700 shrink-0" />
+          <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs text-slate-700 font-normal animate-in fade-in">
+            <div className="flex items-center gap-1.5">
               <span>
-                กำลังดูสต็อกหน้าร้าน: <strong>{currentSelectedStore.name}</strong> (@{currentSelectedStore.username}) —
-                คำนวณจากสูตร: <code className="bg-emerald-100 px-1.5 py-0.5 rounded font-mono font-bold text-emerald-900">ยอดยกมา + รับเข้า (ซื้อมา) - ตัดขาย POS</code>
+                กำลังดูสต็อกหน้าร้าน: <span className="font-medium text-emerald-800">{currentSelectedStore.name}</span> <span className="text-slate-500 font-normal">(@{currentSelectedStore.username})</span> —{' '}
+                คำนวณจากสูตร: <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded font-mono font-normal text-emerald-800">ยอดยกมา + รับเข้า (ซื้อมา) - ตัดขาย POS</code>
               </span>
             </div>
-            <Link
-              href={`/admin/stock-in?storeId=${currentSelectedStore.id}&returnUrl=/admin/ingredients`}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs flex items-center gap-1.5 shrink-0"
+            <button
+              type="button"
+              onClick={() => openQuickStockIn(null, String(currentSelectedStore.id))}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs shadow-2xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
             >
               <ArrowDownToLine className="w-3.5 h-3.5" />
               <span>+ บันทึกรับเข้า (ซื้อมาให้ร้านนี้)</span>
-            </Link>
+            </button>
           </div>
         )}
 
@@ -768,7 +851,7 @@ export default function IngredientsPage() {
             >
               {staffStores.map((st) => (
                 <option key={st.id} value={st.id}>
-                  🏪 ร้าน: {st.name}
+                  ร้าน: {st.name}
                 </option>
               ))}
             </select>
@@ -824,12 +907,12 @@ export default function IngredientsPage() {
               <table className="w-full text-left text-xs">
                 <thead>
                   {isCentral ? (
-                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-900 font-bold text-xs">
+                      <th className="py-3 px-3 text-center w-12 text-slate-900 font-bold">#</th>
                       <th className="py-3 px-3.5">รหัสวัตถุดิบ</th>
                       <th className="py-3 px-3.5">ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3.5">หมวดหมู่</th>
-                      <th className="py-3 px-3.5 text-right">คงเหลือคลังกลาง</th>
+                      <th className="py-3 px-3.5 text-right">คงเหลือ</th>
                       <th className="py-3 px-3.5 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3 px-3.5 text-right">มูลค่ารวม</th>
                       <th className="py-3 px-3.5 text-center">สถานะ</th>
@@ -837,14 +920,14 @@ export default function IngredientsPage() {
                       <th className="py-3 px-3.5 text-center">จัดการ</th>
                     </tr>
                   ) : (
-                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-900 font-bold text-xs">
+                      <th className="py-3 px-3 text-center w-12 text-slate-900 font-bold">#</th>
                       <th className="py-3 px-3.5">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-3 px-3.5">หมวดหมู่</th>
                       <th className="py-3 px-3 text-right">ยอดยกมา</th>
-                      <th className="py-3 px-3 text-right">รับเข้า (+)</th>
+                      <th className="py-3 px-3 text-right">จำนวนที่เพิ่ม (+)</th>
                       <th className="py-3 px-3 text-right">ขาย POS (-)</th>
-                      <th className="py-3 px-3.5 text-right text-slate-800">คงเหลือในร้าน</th>
+                      <th className="py-3 px-3.5 text-right">คงเหลือ</th>
                       <th className="py-3 px-3.5 text-right">ต้นทุน/หน่วย</th>
                       <th className="py-3 px-3.5 text-right">มูลค่าในร้าน</th>
                       <th className="py-3 px-3.5 text-center">สถานะ</th>
@@ -888,7 +971,7 @@ export default function IngredientsPage() {
 
                             {/* Name */}
                             <td className="py-3 px-3.5">
-                              <div className="font-bold text-slate-900 text-xs">{ing.name}</div>
+                              <div className="font-normal text-slate-700 text-xs">{ing.name}</div>
                               <div className="text-[11px] text-slate-400 mt-0.5">หน่วย: {ing.unit}</div>
                             </td>
 
@@ -923,7 +1006,7 @@ export default function IngredientsPage() {
                             </td>
 
                             {/* Total Value */}
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 text-xs">
+                            <td className="py-3 px-3.5 text-right font-mono font-normal text-slate-700 text-xs tabular-nums">
                               ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
 
@@ -1006,7 +1089,7 @@ export default function IngredientsPage() {
 
                             {/* Store Mode: Name & Code */}
                             <td className="py-3 px-3.5">
-                              <div className="font-bold text-slate-900 text-xs">{ing.name}</div>
+                              <div className="font-normal text-slate-700 text-xs">{ing.name}</div>
                               <div className="text-[11px] font-mono text-slate-400 mt-0.5">{ing.code}</div>
                             </td>
 
@@ -1058,7 +1141,7 @@ export default function IngredientsPage() {
                             </td>
 
                             {/* Total Value */}
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 text-xs">
+                            <td className="py-3 px-3.5 text-right font-mono font-normal text-slate-700 text-xs tabular-nums">
                               ฿{totalIngValue.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </td>
 
@@ -1149,58 +1232,101 @@ export default function IngredientsPage() {
       {/* Add / Edit Ingredient Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  <Layers className="w-5 h-5" />
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <Layers className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800">
+                  <h3 className="text-base font-bold text-slate-800">
                     {editingIngredient ? 'แก้ไขข้อมูลวัตถุดิบ' : 'เพิ่มวัตถุดิบใหม่'}
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-400">กรอกข้อมูลพื้นฐานของวัตถุดิบ</p>
+                  <p className="text-[11px] text-slate-400">กรอกข้อมูลพื้นฐานของวัตถุดิบ</p>
                 </div>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Error Message */}
             {formError && (
-              <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+              <div className="mt-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
                 <span>{formError}</span>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              {/* Row 1: Name */}
-              <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+            <form onSubmit={handleSubmit} className="mt-4 space-y-3">
+              {/* Row 1: Name with Suggestions */}
+              <div className="relative">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   ชื่อวัตถุดิบ <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    setShowNameMenu(true);
+                  }}
+                  onFocus={() => setShowNameMenu(true)}
+                  onBlur={() => setTimeout(() => setShowNameMenu(false), 250)}
                   placeholder="เช่น ผงไมโลพรีเมียม, แก้ว 22oz"
-                  className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white placeholder:text-slate-400"
                 />
+                {showNameMenu && formData.name.trim() && (() => {
+                  const q = formData.name.trim().toLowerCase();
+                  const filtered = ingredients.filter((ing) =>
+                    ing.name.toLowerCase().includes(q)
+                  );
+                  // ถ้าพิมพ์คำใหม่ที่ไม่มีข้อมูลในระบบ ไม่ต้องแสดงกล่อง
+                  if (filtered.length === 0) return null;
+                  return (
+                    <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-44 overflow-y-auto py-1 divide-y divide-slate-100">
+                      {filtered.slice(0, 8).map((ing) => (
+                        <button
+                          key={ing.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormData((prev) => ({
+                              ...prev,
+                              name: ing.name,
+                              category: prev.category || ing.category || '',
+                              unit: prev.unit || ing.unit || '',
+                              costPerUnit: prev.costPerUnit || String(ing.costPerUnit || '0'),
+                            }));
+                            setShowNameMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
+                        >
+                          <div>
+                            <span className="font-medium text-slate-800">{ing.name}</span>
+                            <span className="text-[11px] text-slate-400 ml-1.5 font-mono">({ing.code})</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                            {ing.category} · {ing.unit}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Row 2: Category & Unit */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Category */}
                 <div className="relative">
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     หมวดหมู่วัตถุดิบ
                   </label>
                   <input
@@ -1213,13 +1339,17 @@ export default function IngredientsPage() {
                     onFocus={() => setShowCategoryMenu(true)}
                     onBlur={() => setTimeout(() => setShowCategoryMenu(false), 250)}
                     placeholder="พิมพ์หรือเลือกหมวดหมู่..."
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800 placeholder:text-slate-400"
                   />
-                  {showCategoryMenu && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1 divide-y divide-slate-100">
-                      {allAvailableCategories
-                        .filter((c) => !formData.category || c.toLowerCase().includes(formData.category.toLowerCase().trim()))
-                        .map((c) => (
+                  {showCategoryMenu && (() => {
+                    const filtered = allAvailableCategories.filter((c) =>
+                      !formData.category || c.toLowerCase().includes(formData.category.toLowerCase().trim())
+                    );
+                    // ถ้าพิมพ์คำใหม่ที่ไม่มีข้อมูลในระบบ ไม่ต้องแสดงกล่อง
+                    if (filtered.length === 0) return null;
+                    return (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-44 overflow-y-auto py-1 divide-y divide-slate-100">
+                        {filtered.map((c) => (
                           <button
                             key={c}
                             type="button"
@@ -1228,32 +1358,20 @@ export default function IngredientsPage() {
                               setFormData({ ...formData, category: c });
                               setShowCategoryMenu(false);
                             }}
-                            className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
                           >
                             <span className="font-medium">{c}</span>
                             {formData.category === c && <span className="text-xs text-emerald-600 font-bold">✓</span>}
                           </button>
                         ))}
-                      {formData.category.trim() && (
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setShowCategoryMenu(false);
-                          }}
-                          className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/70"
-                        >
-                          <span className="text-slate-500 font-normal">ใช้หมวดหมู่นี้:</span>
-                          <span className="underline decoration-emerald-500 font-black">"{formData.category.trim()}"</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Unit */}
                 <div className="relative">
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     หน่วยนับ <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1267,13 +1385,17 @@ export default function IngredientsPage() {
                     onFocus={() => setShowUnitMenu(true)}
                     onBlur={() => setTimeout(() => setShowUnitMenu(false), 250)}
                     placeholder="พิมพ์หรือเลือกหน่วยนับ..."
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800 placeholder:text-slate-400"
                   />
-                  {showUnitMenu && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1 divide-y divide-slate-100">
-                      {allAvailableUnits
-                        .filter((u) => !formData.unit || u.toLowerCase().includes(formData.unit.toLowerCase().trim()))
-                        .map((u) => (
+                  {showUnitMenu && (() => {
+                    const filtered = allAvailableUnits.filter((u) =>
+                      !formData.unit || u.toLowerCase().includes(formData.unit.toLowerCase().trim())
+                    );
+                    // ถ้าพิมพ์คำใหม่ที่ไม่มีข้อมูลในระบบ ไม่ต้องแสดงกล่อง
+                    if (filtered.length === 0) return null;
+                    return (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-44 overflow-y-auto py-1 divide-y divide-slate-100">
+                        {filtered.map((u) => (
                           <button
                             key={u}
                             type="button"
@@ -1282,35 +1404,23 @@ export default function IngredientsPage() {
                               setFormData({ ...formData, unit: u });
                               setShowUnitMenu(false);
                             }}
-                            className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
+                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition-colors flex items-center justify-between cursor-pointer"
                           >
                             <span>{u}</span>
                             {formData.unit === u && <span className="text-xs text-emerald-600 font-bold">✓</span>}
                           </button>
                         ))}
-                      {formData.unit.trim() && (
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setShowUnitMenu(false);
-                          }}
-                          className="w-full text-left px-3.5 py-2 text-xs sm:text-sm text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer font-bold bg-emerald-50/60"
-                        >
-                          <span className="text-slate-500 font-normal">ใช้หน่วยนับนี้:</span>
-                          <span className="underline decoration-emerald-500 font-black">"{formData.unit.trim()}"</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
               {/* Row 3: Code & Cost */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Code */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     รหัสวัตถุดิบ <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1319,13 +1429,13 @@ export default function IngredientsPage() {
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     placeholder="เช่น ING-MILO001"
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white placeholder:text-slate-400"
                   />
                 </div>
 
                 {/* Cost Per Unit */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     ต้นทุน/หน่วย (฿)
                   </label>
                   <input
@@ -1335,20 +1445,20 @@ export default function IngredientsPage() {
                     value={formData.costPerUnit}
                     onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
                     placeholder="0.00"
-                    className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white placeholder:text-slate-400"
                   />
                 </div>
               </div>
 
               {/* Row 4: Status */}
               <div>
-                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   สถานะการใช้งาน
                 </label>
                 <select
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full px-3.5 py-2.5 sm:text-sm text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white cursor-pointer"
                 >
                   <option value="ACTIVE">พร้อมใช้งาน (Active)</option>
                   <option value="INACTIVE">ระงับการใช้งาน (Inactive)</option>
@@ -1356,18 +1466,18 @@ export default function IngredientsPage() {
               </div>
 
               {/* Submit Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer transition-colors"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer transition-colors"
+                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 disabled:opacity-60 cursor-pointer transition-colors"
                 >
                   {submitting ? 'กำลังบันทึก...' : 'บันทึกวัตถุดิบ'}
                 </button>
@@ -1435,22 +1545,25 @@ export default function IngredientsPage() {
         </div>
       )}
 
-      {/* Quick Stock-In Modal */}
-      {stockInModalOpen && stockInIngredient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-lg shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] overflow-hidden">
+      {/* Stock-In Modal (Multi-item batch purchase for any/all ingredients) */}
+      {stockInModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 w-full max-w-4xl shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] h-[92vh] overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold shadow-xs">
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800">
-                    บันทึกรับเข้าสต็อก (ซื้อเข้า)
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span>บันทึกรับสินค้าเข้าสต็อก (ซื้อเข้า)</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      หน้าร้าน
+                    </span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    รับเข้าสต็อกหน้าร้านโดยตรง
+                    บันทึกการซื้อวัตถุดิบเข้าร้านโดยตรง สามารถเพิ่มได้หลายรายการในบิลเดียว
                   </p>
                 </div>
               </div>
@@ -1472,148 +1585,47 @@ export default function IngredientsPage() {
             )}
 
             {/* Form */}
-            <form onSubmit={handleQuickStockInSubmit} className="mt-4 space-y-3.5 overflow-y-auto pr-1 flex-1">
-              {/* Ingredient Card Banner */}
-              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between">
+            <form onSubmit={handleQuickStockInSubmit} className="mt-3 flex flex-col flex-1 min-h-0 overflow-hidden">
+              {/* Top Settings: Store, PO Number & Supplier */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 shrink-0 mb-3">
+                {/* Store Selection */}
                 <div>
-                  <div className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                    <span>{stockInIngredient.name}</span>
-                    {stockInIngredient.category && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white text-emerald-800 border border-emerald-200">
-                        {stockInIngredient.category}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-emerald-700 font-mono mt-0.5">
-                    รหัส: {stockInIngredient.code}
-                  </div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+                    <Store className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>ร้านค้าที่รับเข้า</span>
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={stockInStoreId}
+                    onChange={(e) => setStockInStoreId(e.target.value)}
+                    required
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    {staffStores.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        🏪 {st.name} (@{st.username})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-500">จำนวนคงเหลือ</div>
-                  <div className="text-xs font-bold text-slate-800 font-mono">
-                    {quickStockInCurrentBalance.toLocaleString()} {stockInIngredient.unit}
-                  </div>
-                </div>
-              </div>
 
-              {/* Target Store Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1.5">
-                  <Store className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>จุดขาย / ร้านค้าที่รับสต็อกเข้า</span>
-                  <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={stockInStoreId}
-                  onChange={(e) => setStockInStoreId(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                >
-                  {staffStores.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      🏪 {st.name} (@{st.username})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quantity and Cost */}
-              <div className="grid grid-cols-2 gap-3">
-                {/* Quantity */}
+                {/* PO Number */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    จำนวนที่รับเข้า <span className="text-red-500">*</span>
+                    <span>เลขที่ใบสั่งซื้อ / PO</span>
+                    <span className="text-red-500 ml-0.5">*</span>
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      required
-                      autoFocus
-                      value={stockInQty}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                          setStockInQty(val);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder="0"
-                      className="w-full px-3 py-2 pr-12 text-sm font-mono font-black rounded-xl border-2 border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 bg-white"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
-                      {stockInIngredient.unit}
-                    </span>
-                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={stockInInvoice}
+                    onChange={(e) => setStockInInvoice(e.target.value)}
+                    placeholder="PO-20261114-xxxx"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
                 </div>
 
-                {/* Cost per unit */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    ต้นทุน/หน่วย (฿)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={stockInCost}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                          setStockInCost(val);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      placeholder={String(stockInIngredient.costPerUnit || '0')}
-                      className="w-full px-3 py-2 pr-8 text-sm font-mono font-bold rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none">
-                      ฿
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* สรุปยอดสต็อก: ธรรมดาและสะอาด */}
-              {(() => {
-                const qtyIn = parseFloat(stockInQty) || 0;
-                const newBalance = quickStockInCurrentBalance + qtyIn;
-                return (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5">
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span>จำนวนคงเหลือ:</span>
-                      <span className="font-mono font-bold text-slate-800">
-                        {quickStockInCurrentBalance.toLocaleString()} {stockInIngredient.unit}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-600">
-                      <span>จำนวนที่รับเข้า:</span>
-                      <span className="font-mono font-bold text-emerald-700">
-                        +{qtyIn > 0 ? qtyIn.toLocaleString() : '0'} {stockInIngredient.unit}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-slate-800 font-bold border-t border-slate-200 pt-1.5 mt-1">
-                      <span>ยอดคงเหลือใหม่:</span>
-                      <span className="font-mono font-black text-sm text-emerald-700">
-                        {newBalance.toLocaleString()} {stockInIngredient.unit}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Total Cost live calculation */}
-              {parseFloat(stockInQty) > 0 && (
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between font-mono">
-                  <span className="text-slate-500 font-sans">รวมมูลค่ารับเข้าโดยประมาณ:</span>
-                  <span className="font-black text-emerald-700">
-                    ฿{((parseFloat(stockInQty) || 0) * (parseFloat(stockInCost) || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-              )}
-
-              {/* Supplier & PO */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* Supplier */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     แหล่งซื้อ / ผู้จัดจำหน่าย
@@ -1622,55 +1634,261 @@ export default function IngredientsPage() {
                     type="text"
                     value={stockInSupplier}
                     onChange={(e) => setStockInSupplier(e.target.value)}
-                    placeholder="เช่น แม็คโคร"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    เลขที่ใบเสร็จ / PO
-                  </label>
-                  <input
-                    type="text"
-                    value={stockInInvoice}
-                    onChange={(e) => setStockInInvoice(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="เช่น แม็คโคร (Makro)"
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   />
                 </div>
               </div>
 
-              {/* Note */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  หมายเหตุ (ถ้ามี)
-                </label>
+              {/* Items List Section Header & Quick Add Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800">
+                    รายการวัตถุดิบ ({stockInItems.length} รายการ)
+                  </span>
+                  {(() => {
+                    const validCount = stockInItems.filter((it) => (parseFloat(it.quantity) || 0) > 0 && it.ingredientId).length;
+                    return validCount > 0 ? (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        ระบุจำนวนแล้ว {validCount} รายการ
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={addStockInRow}
+                    className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1 cursor-pointer border border-emerald-200 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มแถว</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={addAllIngredientsToStockIn}
+                    className="px-2.5 py-1 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold text-xs flex items-center gap-1 cursor-pointer border border-sky-200 transition-colors"
+                    title="ดึงวัตถุดิบทั้งหมดที่มีในระบบลงในรายการ"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>+ ดึงวัตถุดิบทั้งหมด ({ingredients.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Table Column Headers (Desktop) */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0 mb-1.5">
+                <div className="col-span-1 text-center">#</div>
+                <div className="col-span-5">วัตถุดิบ (เลือกวัตถุดิบ)</div>
+                <div className="col-span-2 text-right">จำนวนที่เพิ่ม (ซื้อเข้า)</div>
+                <div className="col-span-2 text-right">ต้นทุน/หน่วย (฿)</div>
+                <div className="col-span-1 text-right">รวม (฿)</div>
+                <div className="col-span-1 text-center">ลบ</div>
+              </div>
+
+              {/* Scrollable Items Container */}
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-2.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
+                {stockInItems.map((item, idx) => {
+                  const selectedIng = ingredients.find((i) => String(i.id) === item.ingredientId);
+                  const currentBalance = selectedIng ? getStoreBalanceForItem(selectedIng.id, stockInStoreId) : 0;
+                  const qtyNum = parseFloat(item.quantity) || 0;
+                  const costNum = parseFloat(item.costPerUnit) || 0;
+                  const lineTotal = qtyNum * costNum;
+                  const newBalance = currentBalance + qtyNum;
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2.5 sm:p-3 rounded-2xl bg-white border border-slate-200 hover:border-emerald-300 transition-all text-xs shadow-2xs space-y-2"
+                    >
+                      <div className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:items-center">
+                        {/* Number Index */}
+                        <div className="hidden sm:flex col-span-1 justify-center">
+                          <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 font-mono font-bold text-xs flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                        </div>
+
+                        {/* Ingredient Dropdown */}
+                        <div className="col-span-5">
+                          <select
+                            value={item.ingredientId}
+                            onChange={(e) => updateStockInItem(idx, 'ingredientId', e.target.value)}
+                            required
+                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          >
+                            <option value="" disabled>-- เลือกวัตถุดิบ --</option>
+                            {ingredients.map((ing) => (
+                              <option key={ing.id} value={ing.id}>
+                                {ing.name} ({ing.code}) {ing.category ? `• [${ing.category}]` : ''} - หน่วย: {ing.unit}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="col-span-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                  updateStockInItem(idx, 'quantity', val);
+                                }
+                              }}
+                              placeholder="0"
+                              className="w-full px-2.5 py-1.5 pr-10 text-xs text-right font-mono font-bold rounded-xl border-2 border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                              {selectedIng?.unit || ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Cost per unit */}
+                        <div className="col-span-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.costPerUnit}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                  updateStockInItem(idx, 'costPerUnit', val);
+                                }
+                              }}
+                              placeholder={selectedIng ? String(selectedIng.costPerUnit || '0') : '0'}
+                              className="w-full px-2.5 py-1.5 pr-6 text-xs text-right font-mono rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
+                              ฿
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Row Subtotal */}
+                        <div className="col-span-1 text-right font-mono font-bold text-slate-700">
+                          {lineTotal > 0 ? `฿${lineTotal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '-'}
+                        </div>
+
+                        {/* Remove Row Button */}
+                        <div className="col-span-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeStockInRow(idx)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="ลบแถวนี้"
+                          >
+                            <Trash2 className="w-4 h-4 mx-auto" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Stock Summary Strip for this Item: แสดงจำนวนที่เพิ่ม และคงเหลือ */}
+                      {selectedIng && (
+                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-2.5 -mb-2.5 sm:-mx-3 sm:-mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
+                          <div className="flex items-center gap-1.5 text-slate-500">
+                            <span>หมวด: <span className="font-semibold text-slate-700">{selectedIng.category || 'ทั่วไป'}</span></span>
+                            <span>•</span>
+                            <span>ยอดคงเหลือเดิม:</span>
+                            <span className="font-mono font-bold text-slate-800">
+                              {currentBalance.toLocaleString()} {selectedIng.unit}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span>จำนวนที่เพิ่ม:</span>
+                              <span className="font-mono text-xs">+{qtyNum > 0 ? qtyNum.toLocaleString() : '0'}</span>
+                              <span>{selectedIng.unit}</span>
+                            </span>
+
+                            <span className="text-slate-300 font-bold">➔</span>
+
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold bg-emerald-600 text-white shadow-2xs">
+                              <span>คงเหลือ:</span>
+                              <span className="font-mono text-xs font-black">{newBalance.toLocaleString()}</span>
+                              <span className="text-emerald-100">{selectedIng.unit}</span>
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Note input */}
+              <div className="mt-2 shrink-0">
                 <input
                   type="text"
                   value={stockInNote}
                   onChange={(e) => setStockInNote(e.target.value)}
-                  placeholder="เช่น ซื้อเพิ่มรอบบ่าย"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="หมายเหตุเพิ่มเติม (ถ้ามี) เช่น สาขาแม็คโคร, บิลเงินสด..."
+                  className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 />
               </div>
 
-              {/* Modal Footer */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setStockInModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  disabled={stockInSubmitting || !stockInQty || parseFloat(stockInQty) <= 0}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
-                >
-                  <ArrowDownToLine className="w-4 h-4" />
-                  <span>{stockInSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกรับเข้า'}</span>
-                </button>
-              </div>
+              {/* Bottom Summary Bar & Actions */}
+              {(() => {
+                const validRows = stockInItems.filter((it) => (parseFloat(it.quantity) || 0) > 0 && it.ingredientId);
+                const totalAddedUnits = validRows.reduce((acc, it) => acc + (parseFloat(it.quantity) || 0), 0);
+                const grandTotal = stockInItems.reduce((acc, it) => {
+                  const q = parseFloat(it.quantity) || 0;
+                  const c = parseFloat(it.costPerUnit) || 0;
+                  return acc + (q * c);
+                }, 0);
+                const targetStore = staffStores.find((s) => String(s.id) === String(stockInStoreId));
+
+                return (
+                  <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <div className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 font-bold">
+                        รวม: <span className="text-emerald-700 font-mono text-sm">{validRows.length}</span> รายการ
+                      </div>
+                      <div className="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
+                        จำนวนที่เพิ่มทั้งหมด: <span className="text-emerald-700 font-mono text-sm">+{totalAddedUnits.toLocaleString()}</span> หน่วย
+                      </div>
+                      <div className="px-2.5 py-1 rounded-xl bg-emerald-100/80 border border-emerald-300 text-emerald-950 font-bold">
+                        ยอดรวม: <span className="font-mono text-sm text-emerald-800">฿{grandTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      {targetStore && (
+                        <div className="hidden md:inline-flex text-[11px] text-slate-500">
+                          เข้า: <span className="font-bold text-slate-700 ml-1">{targetStore.name}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setStockInModalOpen(false)}
+                        className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-xs cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={stockInSubmitting || validRows.length === 0}
+                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs shadow-md shadow-emerald-700/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                      >
+                        <ArrowDownToLine className="w-4 h-4" />
+                        <span>
+                          {stockInSubmitting
+                            ? 'กำลังบันทึก...'
+                            : `บันทึกรับเข้า (${validRows.length} รายการ)`}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </form>
           </div>
         </div>

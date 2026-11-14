@@ -27,6 +27,8 @@ import {
   Upload,
   Image as ImageIcon,
   Coffee,
+  Layers,
+  Calculator,
 } from 'lucide-react';
 
 interface StaffStore {
@@ -111,6 +113,169 @@ export default function ProductsPage() {
 
   // View Recipe Modal
   const [recipeModalProduct, setRecipeModalProduct] = useState<ProductItem | null>(null);
+
+  // Inline Recipe Editor Modal
+  const { data: ingredientsData } = useSWR('/api/ingredients');
+  const allIngredients: any[] = useMemo(() => {
+    return ingredientsData?.success && Array.isArray(ingredientsData.ingredients) ? ingredientsData.ingredients : [];
+  }, [ingredientsData]);
+
+  const [editRecipeProduct, setEditRecipeProduct] = useState<ProductItem | null>(null);
+  const [recipeStoreId, setRecipeStoreId] = useState<number | null>(null);
+
+  const currentRecipeStore = useMemo(() => {
+    if (!recipeStoreId) return null;
+    return staffStores.find((s) => s.id === recipeStoreId) || null;
+  }, [recipeStoreId, staffStores]);
+
+  const recipeStoreBalancesMap = useMemo(() => {
+    const map = new Map<number, { expectedStock: number; hasStockHistory: boolean; warehouseStock: number }>();
+    if (!recipeStoreId || !ingredientsData?.storeBalances) return map;
+    const list = ingredientsData.storeBalances[recipeStoreId] || [];
+    list.forEach((b: any) =>
+      map.set(Number(b.ingredientId), {
+        expectedStock: Number(b.expectedStock || 0),
+        hasStockHistory: Boolean(b.hasStockHistory),
+        warehouseStock: Number(b.warehouseStock || 0),
+      })
+    );
+    return map;
+  }, [recipeStoreId, ingredientsData]);
+
+  const getRecipeIngredientStock = (ing: any) => {
+    if (!ing) return 0;
+    const numId = Number(ing.id);
+    const storeItem = recipeStoreBalancesMap.get(numId);
+    return storeItem ? storeItem.expectedStock : 0;
+  };
+
+  const [recipeItems, setRecipeItems] = useState<
+    Array<{ ingredientId: string; quantity: string; unit: string }>
+  >([]);
+  const [recipeDescription, setRecipeDescription] = useState('');
+  const [recipeUpdateCost, setRecipeUpdateCost] = useState(true);
+  const [recipeSubmitting, setRecipeSubmitting] = useState(false);
+  const [recipeError, setRecipeError] = useState<string | null>(null);
+
+  const openRecipeEditor = (product: ProductItem) => {
+    setRecipeModalProduct(null);
+    setEditRecipeProduct(product);
+    const targetStoreId = (selectedStore && selectedStore !== 'ALL' ? Number(selectedStore) : null) || product.storeId || product.store?.id || (staffStores[0]?.id || null);
+    setRecipeStoreId(targetStoreId);
+    setRecipeDescription(product.recipe?.description || '');
+    setRecipeUpdateCost(true);
+    setRecipeError(null);
+
+    if (product.recipe && product.recipe.items && product.recipe.items.length > 0) {
+      setRecipeItems(
+        product.recipe.items.map((it) => ({
+          ingredientId: it.ingredient.id.toString(),
+          quantity: it.quantity.toString(),
+          unit: it.unit || it.ingredient.unit || '',
+        }))
+      );
+    } else {
+      const firstIng = allIngredients[0];
+      setRecipeItems([
+        {
+          ingredientId: firstIng?.id?.toString() || '',
+          quantity: '1',
+          unit: firstIng?.unit || '',
+        },
+      ]);
+    }
+  };
+
+  const addRecipeRow = () => {
+    const firstIng = allIngredients[0];
+    setRecipeItems((prev) => [
+      ...prev,
+      {
+        ingredientId: firstIng?.id?.toString() || '',
+        quantity: '1',
+        unit: firstIng?.unit || '',
+      },
+    ]);
+  };
+
+  const updateRecipeRow = (index: number, field: 'ingredientId' | 'quantity', value: string) => {
+    setRecipeItems((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      if (field === 'ingredientId') {
+        const found = allIngredients.find((ing: any) => ing.id.toString() === value);
+        if (found) {
+          copy[index].unit = found.unit;
+        }
+      }
+      return copy;
+    });
+  };
+
+  const removeRecipeRow = (index: number) => {
+    if (recipeItems.length <= 1) return;
+    setRecipeItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const previewBOMCost = useMemo(() => {
+    return recipeItems.reduce((sum, item) => {
+      const ing = allIngredients.find((i: any) => i.id.toString() === item.ingredientId);
+      const cost = Number(ing?.costPerUnit || 0);
+      const qty = Number(item.quantity || 0);
+      return sum + qty * cost;
+    }, 0);
+  }, [recipeItems, allIngredients]);
+
+  const handleSaveRecipe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRecipeProduct) return;
+    setRecipeError(null);
+    setRecipeSubmitting(true);
+
+    try {
+      const isEditing = Boolean(editRecipeProduct.recipe?.id);
+      const url = isEditing ? `/api/recipes/${editRecipeProduct.recipe!.id}` : '/api/recipes';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const payload = {
+        productId: editRecipeProduct.id,
+        description: recipeDescription,
+        updateProductCost: recipeUpdateCost,
+        items: recipeItems.map((it) => ({
+          ingredientId: Number(it.ingredientId),
+          quantity: Number(it.quantity),
+          unit: it.unit,
+        })),
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'บันทึกสูตรการผลิตไม่สำเร็จ');
+      }
+
+      await mutate();
+      globalMutate('/api/recipes');
+      globalMutate('/api/ingredients');
+      setEditRecipeProduct(null);
+      setHighlightId(editRecipeProduct.id);
+      setTimeout(() => setHighlightId(null), 2500);
+
+      await showSuccessAlert(
+        isEditing ? 'อัปเดตสูตรสำเร็จ' : 'บันทึกสูตรสำเร็จ',
+        `สูตรการผลิตของสินค้า "${editRecipeProduct.name}" ถูกบันทึกเรียบร้อยแล้ว`
+      );
+    } catch (err: any) {
+      setRecipeError(err.message || 'เกิดข้อผิดพลาดในการบันทึกสูตร');
+    } finally {
+      setRecipeSubmitting(false);
+    }
+  };
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -291,10 +456,36 @@ export default function ProductsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    const isEditing = Boolean(editingProduct);
+    const trimmedName = formData.name.trim();
+    const trimmedCode = formData.code.trim().toUpperCase();
+    const targetStoreId = formData.storeId ? String(formData.storeId) : '';
+
+    // Check duplicate code
+    const duplicateCode = products.find(
+      (p) => p.code.toUpperCase() === trimmedCode && (!isEditing || p.id !== editingProduct!.id)
+    );
+    if (duplicateCode) {
+      setFormError(`รหัสสินค้า "${trimmedCode}" มีอยู่ในระบบแล้ว (${duplicateCode.name}) กรุณาใช้รหัสอื่น`);
+      return;
+    }
+
+    // Check duplicate name
+    const duplicateName = products.find(
+      (p) =>
+        p.name.trim().toLowerCase() === trimmedName.toLowerCase() &&
+        (!isEditing || p.id !== editingProduct!.id) &&
+        (!targetStoreId || !p.storeId || String(p.storeId) === targetStoreId)
+    );
+    if (duplicateName) {
+      setFormError(`ชื่อสินค้า "${trimmedName}" มีอยู่ในระบบแล้ว (รหัส: ${duplicateName.code}) ไม่สามารถเพิ่มซ้ำได้`);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const isEditing = Boolean(editingProduct);
       const url = isEditing ? `/api/products/${editingProduct!.id}` : '/api/products';
       const method = isEditing ? 'PUT' : 'POST';
 
@@ -317,16 +508,21 @@ export default function ProductsPage() {
         setProducts((prev) =>
           prev.map((item) => (item.id === returnedProduct.id ? returnedProduct : item))
         );
-        showToast(`อัปเดตสินค้า "${returnedProduct.name}" เรียบร้อยแล้ว`);
       } else {
         setProducts((prev) => [returnedProduct, ...prev]);
-        showToast(`เพิ่มสินค้าใหม่ "${returnedProduct.name}" เข้าสู่ตารางเรียบร้อย`);
       }
 
       // Close modal immediately and highlight updated row
       setModalOpen(false);
       setHighlightId(returnedProduct.id);
       setTimeout(() => setHighlightId(null), 2500);
+
+      await showSuccessAlert(
+        isEditing ? 'อัปเดตสินค้าสำเร็จ' : 'เพิ่มสินค้าสำเร็จ',
+        isEditing
+          ? `อัปเดตข้อมูลสินค้า "${returnedProduct.name}" เรียบร้อยแล้ว`
+          : `เพิ่มสินค้าใหม่ "${returnedProduct.name}" เข้าสู่ระบบเรียบร้อยแล้ว`
+      );
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึก');
     } finally {
@@ -372,14 +568,6 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-        {/* Floating Toast Notification */}
-        {toastMessage && (
-          <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* Action Header */}
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-slate-500 hidden sm:block">
@@ -452,52 +640,54 @@ export default function ProductsPage() {
         </div>
 
         {/* Store Tabs Bar */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setSelectedStore('ALL')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              selectedStore === 'ALL'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-            }`}
-          >
-            <Store className="w-3.5 h-3.5" />
-            ร้านค้าทั้งหมด ({products.length})
-          </button>
+        <div className="flex">
+          <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setSelectedStore('ALL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                selectedStore === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Store className="w-3.5 h-3.5" />
+              ร้านค้าทั้งหมด ({products.length})
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setSelectedStore('CENTRAL')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-              selectedStore === 'CENTRAL'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-            }`}
-          >
-            <Warehouse className="w-3.5 h-3.5" />
-            เมนูส่วนกลาง ({products.filter((p) => !p.storeId).length})
-          </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStore('CENTRAL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                selectedStore === 'CENTRAL'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Warehouse className="w-3.5 h-3.5" />
+              เมนูส่วนกลาง ({products.filter((p) => !p.storeId).length})
+            </button>
 
-          {staffStores.map((st) => {
-            const count = products.filter((p) => p.storeId === st.id).length;
-            const isSelected = selectedStore === String(st.id);
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setSelectedStore(String(st.id))}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                }`}
-              >
-                <Store className="w-3.5 h-3.5" />
-                {st.name} ({count})
-              </button>
-            );
-          })}
+            {staffStores.map((st) => {
+              const count = products.filter((p) => p.storeId === st.id).length;
+              const isSelected = selectedStore === String(st.id);
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setSelectedStore(String(st.id))}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  {st.name} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Search & Filter Controls (Instant Client-side) */}
@@ -522,11 +712,11 @@ export default function ProductsPage() {
               onChange={(e) => setSelectedStore(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/50 text-emerald-900 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
-              <option value="ALL">🏪 ร้านค้าทั้งหมด ({staffStores.length + 1})</option>
-              <option value="CENTRAL">🏬 ส่วนกลาง (ทุกร้านค้า)</option>
+              <option value="ALL">ร้านค้าทั้งหมด ({staffStores.length + 1})</option>
+              <option value="CENTRAL">ส่วนกลาง (ทุกร้านค้า)</option>
               {staffStores.map((st) => (
                 <option key={st.id} value={st.id}>
-                  🏪 {st.name}
+                  {st.name}
                 </option>
               ))}
             </select>
@@ -580,22 +770,22 @@ export default function ProductsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
-                    <th className="py-3.5 px-4 text-center">รูปภาพ</th>
-                    <th className="py-3.5 px-4">รหัสสินค้า</th>
-                    <th className="py-3.5 px-4">ชื่อสินค้า</th>
-                    <th className="py-3.5 px-4">ร้านค้า</th>
-                    <th className="py-3.5 px-4">หมวดหมู่</th>
-                    <th className="py-3.5 px-4">หน่วยนับ</th>
-                    <th className="py-3.5 px-4 text-right">ราคาขาย</th>
-                    <th className="py-3.5 px-4 text-right">ต้นทุนสินค้า</th>
-                    <th className="py-3.5 px-4 text-center">สูตรการผลิต (BOM)</th>
-                    <th className="py-3.5 px-4 text-center">สถานะ</th>
-                    <th className="py-3.5 px-4 text-center">จัดการ</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-900 font-bold text-xs">
+                    <th className="py-3.5 px-3 text-center w-12 text-slate-900 font-bold">#</th>
+                    <th className="py-3.5 px-4 text-center font-bold">รูปภาพ</th>
+                    <th className="py-3.5 px-4 font-bold">รหัสสินค้า</th>
+                    <th className="py-3.5 px-4 font-bold">ชื่อสินค้า</th>
+                    <th className="py-3.5 px-4 font-bold">ร้านค้า</th>
+                    <th className="py-3.5 px-4 font-bold">หมวดหมู่</th>
+                    <th className="py-3.5 px-4 font-bold">หน่วยนับ</th>
+                    <th className="py-3.5 px-4 text-right font-bold">ราคาขาย</th>
+                    <th className="py-3.5 px-4 text-right font-bold">ต้นทุนสินค้า</th>
+                    <th className="py-3.5 px-4 text-center font-bold">สูตรการผลิต (BOM)</th>
+                    <th className="py-3.5 px-4 text-center font-bold">สถานะ</th>
+                    <th className="py-3.5 px-4 text-center font-bold">จัดการ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
+                <tbody className="divide-y divide-slate-100 font-normal text-slate-600">
                   {paginatedProducts.map((p, idx) => {
                     const rowNumber = (currentPage - 1) * pageSize + idx + 1;
                     const isHighlighted = highlightId === p.id;
@@ -615,12 +805,6 @@ export default function ProductsPage() {
                         ? bomCost
                         : null;
 
-                    const margin = displayCost !== null ? Number(p.price) - displayCost : null;
-                    const marginPercent =
-                      margin !== null && Number(p.price) > 0
-                        ? Math.round((margin / Number(p.price)) * 100)
-                        : null;
-
                     return (
                       <tr
                         key={p.id}
@@ -631,7 +815,7 @@ export default function ProductsPage() {
                         }`}
                       >
                         {/* Sequence Row Number */}
-                        <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        <td className="py-3 px-3 text-center text-slate-400 font-mono text-xs">
                           {rowNumber}
                         </td>
 
@@ -653,29 +837,24 @@ export default function ProductsPage() {
                         </td>
 
                         {/* Code */}
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-700">
+                        <td className="py-3 px-4 font-mono text-slate-600 text-xs">
                           {p.code}
                         </td>
 
                         {/* Name */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800 text-sm">{p.name}</div>
-                          {marginPercent !== null && (
-                            <div className="text-[11px] text-emerald-600 font-semibold">
-                              กำไรขั้นต้น: ~฿{margin?.toFixed(2)} ({marginPercent}%)
-                            </div>
-                          )}
+                        <td className="py-3 px-4">
+                          <div className="text-slate-700 text-xs sm:text-sm font-normal">{p.name}</div>
                         </td>
 
                         {/* Store Badge */}
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-4">
                           {p.store ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              <Store className="w-3 h-3 text-emerald-700" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                              <Store className="w-3 h-3 text-emerald-600" />
                               <span>{p.store.name}</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-slate-100 text-slate-600 border border-slate-200">
                               <Warehouse className="w-3 h-3 text-slate-400" />
                               <span>ส่วนกลาง</span>
                             </span>
@@ -683,36 +862,36 @@ export default function ProductsPage() {
                         </td>
 
                         {/* Category */}
-                        <td className="py-3.5 px-4">
-                          <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                        <td className="py-3 px-4">
+                          <span className="inline-block px-2.5 py-1 rounded-full text-xs font-normal bg-slate-100 text-slate-600">
                             {p.category}
                           </span>
                         </td>
 
                         {/* Unit */}
-                        <td className="py-3.5 px-4 text-slate-600 font-semibold">
+                        <td className="py-3 px-4 text-slate-600 font-normal">
                           {p.unit}
                         </td>
 
                         {/* Price */}
-                        <td className="py-3.5 px-4 text-right font-black text-slate-900 text-sm">
+                        <td className="py-3 px-4 text-right text-slate-700 text-xs sm:text-sm font-normal tabular-nums">
                           ฿{Number(p.price).toFixed(2)}
                         </td>
 
                         {/* Cost Display: Shows exact edited cost, with BOM reference if available */}
-                        <td className="py-3.5 px-4 text-right font-mono">
+                        <td className="py-3 px-4 text-right font-mono">
                           {displayCost !== null ? (
                             <div>
-                              <div className="font-bold text-slate-800 text-sm">
+                              <div className="text-slate-700 text-xs sm:text-sm font-normal tabular-nums">
                                 ฿{displayCost.toFixed(2)}
                               </div>
                               {hasRecipe && bomCost !== null && p.cost !== null && p.cost !== undefined && (
-                                <div className="text-[10px] text-slate-400">
+                                <div className="text-[10px] text-slate-400 font-normal">
                                   BOM: ฿{bomCost.toFixed(2)}
                                 </div>
                               )}
                               {!p.cost && bomCost !== null && (
-                                <div className="text-[10px] text-emerald-600 font-semibold">
+                                <div className="text-[10px] text-emerald-600 font-normal">
                                   (คำนวณจากสูตร)
                                 </div>
                               )}
@@ -723,33 +902,35 @@ export default function ProductsPage() {
                         </td>
 
                         {/* Recipe BOM Badge & Button */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3 px-4 text-center">
                           {hasRecipe ? (
                             <button
                               onClick={() => setRecipeModalProduct(p)}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
-                              title="คลิกเพื่อดูสูตร BOM"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-normal bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors cursor-pointer"
+                              title="คลิกเพื่อดูรายการวัตถุดิบและแก้ไขสูตร"
                             >
                               <ChefHat className="w-3.5 h-3.5" />
                               <span>{p.recipe!.items.length} วัตถุดิบ</span>
                               <Eye className="w-3 h-3 text-emerald-500" />
                             </button>
                           ) : (
-                            <Link
-                              href={`/recipes/new?productId=${p.id}`}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
+                            <button
+                              type="button"
+                              onClick={() => openRecipeEditor(p)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-normal bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors cursor-pointer"
                             >
-                              <span>+ เพิ่มสูตร</span>
-                            </Link>
+                              <Plus className="w-3 h-3" />
+                              <span>เพิ่มสูตร</span>
+                            </button>
                           )}
                         </td>
 
                         {/* Status */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3 px-4 text-center">
                           <span
-                            className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            className={`inline-block px-2.5 py-1 rounded-full text-xs font-normal ${
                               p.status === 'ACTIVE'
-                                ? 'bg-emerald-100/70 text-emerald-800 border border-emerald-200'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                                 : 'bg-slate-100 text-slate-500 border border-slate-200'
                             }`}
                           >
@@ -758,7 +939,7 @@ export default function ProductsPage() {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-center">
+                        <td className="py-3 px-4 text-center">
                           {isAdmin ? (
                             <div className="flex items-center justify-center gap-1.5">
                               <button
@@ -919,10 +1100,10 @@ export default function ProductsPage() {
                       onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
                       className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium"
                     >
-                      <option value="">🏬 ส่วนกลาง (ทุกร้าน)</option>
+                      <option value="">ส่วนกลาง (ทุกร้าน)</option>
                       {staffStores.map((st) => (
                         <option key={st.id} value={st.id}>
-                          🏪 {st.name}
+                          {st.name}
                         </option>
                       ))}
                     </select>
@@ -1101,30 +1282,45 @@ export default function ProductsPage() {
                 เมื่อขายสินค้า 1 {recipeModalProduct.unit} ระบบจะตัดวัตถุดิบดังนี้:
               </p>
               <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
-                {recipeModalProduct.recipe?.items?.map((item, idx) => (
-                  <div key={item.id} className="p-3 flex items-center justify-between text-xs bg-slate-50/50">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center">
-                        {idx + 1}
-                      </span>
-                      <span className="font-bold text-slate-800">{item.ingredient.name}</span>
+                {recipeModalProduct.recipe?.items?.map((item, idx) => {
+                  const targetStoreId = (selectedStore && selectedStore !== 'ALL' ? Number(selectedStore) : null) || recipeModalProduct.storeId || recipeModalProduct.store?.id || (staffStores[0]?.id || null);
+                  const storeList = (targetStoreId && ingredientsData?.storeBalances?.[targetStoreId]) || [];
+                  const storeItem = storeList.find((b: any) => b.ingredientId === item.ingredient.id);
+                  const inStoreStock = storeItem ? Number(storeItem.expectedStock) : 0;
+                  const storeObj = staffStores.find((s) => s.id === targetStoreId);
+
+                  return (
+                    <div key={item.id} className="p-3 flex items-center justify-between text-xs bg-slate-50/50">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <div className="font-bold text-slate-800">{item.ingredient.name}</div>
+                          <div className="text-[10px] text-emerald-700 font-semibold">
+                            คงเหลือ: {inStoreStock.toLocaleString()} {item.unit || item.ingredient.unit}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="font-black text-slate-700">
+                        {item.quantity} <span className="font-normal text-slate-500">{item.unit}</span>
+                      </div>
                     </div>
-                    <div className="font-black text-slate-700">
-                      {item.quantity} <span className="font-normal text-slate-500">{item.unit}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between">
-              <Link
-                href={`/recipes`}
-                className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => openRecipeEditor(recipeModalProduct)}
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1.5 cursor-pointer"
               >
-                <span>จัดการสูตร BOM ทั้งหมด</span>
+                <Edit2 className="w-3.5 h-3.5" />
+                <span>แก้ไขสูตรสินค้านี้</span>
                 <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              </button>
               <button
                 onClick={() => setRecipeModalProduct(null)}
                 className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs cursor-pointer"
@@ -1132,6 +1328,293 @@ export default function ProductsPage() {
                 ปิด
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Recipe Editor Modal (No page jump!) */}
+      {editRecipeProduct && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-3xl lg:max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  <ChefHat className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {editRecipeProduct.recipe?.id ? `แก้ไขสูตร: ${editRecipeProduct.name}` : `กำหนดสูตรสินค้าใหม่: ${editRecipeProduct.name}`}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    ระบุวัตถุดิบและปริมาณที่ต้องตัดสต็อกต่อการขาย 1 {editRecipeProduct.unit || 'แก้ว'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditRecipeProduct(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                title="ปิดหน้าต่าง"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {recipeError && (
+              <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+                <span>{recipeError}</span>
+              </div>
+            )}
+
+            {/* Form */}
+            <form onSubmit={handleSaveRecipe} className="mt-5 space-y-4">
+              {/* Product Info Card */}
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs flex flex-wrap items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
+                    <Coffee className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 text-sm">
+                      {editRecipeProduct.name}
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono">
+                      รหัส: {editRecipeProduct.code} {editRecipeProduct.category ? `• หมวดหมู่: ${editRecipeProduct.category}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {/* Store Badge / Selector */}
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-emerald-300 text-xs font-semibold text-emerald-800 shadow-2xs">
+                    <Store className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-slate-500 font-normal">ร้านค้า:</span>
+                    {staffStores.length > 1 ? (
+                      <select
+                        value={recipeStoreId || ''}
+                        onChange={(e) => setRecipeStoreId(Number(e.target.value))}
+                        className="bg-transparent font-bold text-emerald-900 border-none outline-none cursor-pointer pr-1"
+                      >
+                        {staffStores.map((st) => (
+                          <option key={st.id} value={st.id}>
+                            {st.name} (@{st.username})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="font-bold text-emerald-900">
+                        {currentRecipeStore?.name || 'หน้าร้าน'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-[10px] text-slate-400">ราคาขาย</div>
+                    <div className="font-bold text-emerald-700 font-mono text-sm">
+                      ฿{Number(editRecipeProduct.price || 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  คำอธิบายสูตร (ถ้ามี)
+                </label>
+                <input
+                  type="text"
+                  value={recipeDescription}
+                  onChange={(e) => setRecipeDescription(e.target.value)}
+                  placeholder="เช่น สูตรมาตรฐาน หวานปกติ"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                />
+              </div>
+
+              {/* Ingredients Section Container */}
+              <div className="rounded-2xl border-2 border-emerald-500/20 bg-slate-50/80 p-3.5 sm:p-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                        <span>วัตถุดิบและปริมาณต่อ 1 {editRecipeProduct.unit || 'แก้ว'}</span>
+                        <span className="text-red-500 font-bold">*</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        ระบุวัตถุดิบและปริมาณที่จะตัดสต็อกอัตโนมัติเมื่อขายสินค้านี้
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addRecipeRow}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>เพิ่มวัตถุดิบ</span>
+                  </button>
+                </div>
+
+                {/* Table */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                  <div className="overflow-x-auto max-h-80">
+                    <table className="w-full text-xs text-left border-collapse">
+                      <thead className="bg-slate-100/90 text-slate-700 font-bold text-[11px] border-b border-slate-200 sticky top-0 z-10">
+                        <tr>
+                          <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
+                          <th className="py-2.5 px-3">เลือกวัตถุดิบ (คงเหลือ)</th>
+                          <th className="py-2.5 px-3 w-28 text-center">ปริมาณที่ใช้</th>
+                          <th className="py-2.5 px-3 w-24 text-center">หน่วยนับ</th>
+                          <th className="py-2.5 px-3 w-24 text-right">ต้นทุน</th>
+                          <th className="py-2.5 px-3 w-12 text-center">ลบ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {recipeItems.map((item, idx) => {
+                          const selectedIng = allIngredients.find((i: any) => i.id.toString() === item.ingredientId);
+                          const itemCost = Number(item.quantity || 0) * Number(selectedIng?.costPerUnit || 0);
+
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                              {/* Row Number */}
+                              <td className="py-2.5 px-3 text-center font-bold text-slate-400 align-middle">
+                                {idx + 1}
+                              </td>
+
+                              {/* Ingredient Select */}
+                              <td className="py-2.5 px-3 align-middle">
+                                <select
+                                  required
+                                  value={item.ingredientId}
+                                  onChange={(e) => updateRecipeRow(idx, 'ingredientId', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-slate-800"
+                                >
+                                  <option value="">-- กรุณาเลือกวัตถุดิบ --</option>
+                                  {allIngredients.map((ing: any) => {
+                                    const inStoreStock = getRecipeIngredientStock(ing);
+                                    return (
+                                      <option key={ing.id} value={ing.id}>
+                                        {ing.name} ({ing.code}) — คงเหลือ {inStoreStock.toLocaleString()} {ing.unit}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                                {selectedIng && (() => {
+                                  const inStoreStock = getRecipeIngredientStock(selectedIng);
+                                  return (
+                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 pl-0.5">
+                                      <span className="font-bold text-slate-800">{selectedIng.name}</span>
+                                      <span className="text-slate-300">•</span>
+                                      <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
+                                        คงเหลือ: {inStoreStock.toLocaleString()} {selectedIng.unit}
+                                      </span>
+                                      <span className="text-slate-300">•</span>
+                                      <span className="text-slate-400 font-mono text-[10px]">
+                                        ต้นทุน: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+
+                              {/* Quantity */}
+                              <td className="py-2.5 px-3 w-28 align-middle">
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  min="0.001"
+                                  required
+                                  placeholder="0"
+                                  value={item.quantity}
+                                  onChange={(e) => updateRecipeRow(idx, 'quantity', e.target.value)}
+                                  className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                                />
+                              </td>
+
+                              {/* Unit: Read-only, NO box! (หน่วยนับ แก้ไม่ได้ ไม่ต้องทำกล่อง) */}
+                              <td className="py-2.5 px-3 w-24 text-center align-middle">
+                                <span className="font-semibold text-slate-700 text-xs">
+                                  {item.unit || selectedIng?.unit || '-'}
+                                </span>
+                              </td>
+
+                              {/* Cost */}
+                              <td className="py-2.5 px-3 w-24 text-right align-middle">
+                                <span className="font-mono text-xs font-bold text-emerald-700">
+                                  ฿{itemCost.toFixed(2)}
+                                </span>
+                              </td>
+
+                              {/* Delete button */}
+                              <td className="py-2.5 px-3 w-12 text-center align-middle">
+                                <button
+                                  type="button"
+                                  onClick={() => removeRecipeRow(idx)}
+                                  disabled={recipeItems.length <= 1}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-20 transition-colors cursor-pointer"
+                                  title="ลบรายการนี้"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Total BOM Calculation Summary inside Card */}
+                <div className="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300/80 flex items-center justify-between text-xs text-emerald-950">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="w-4 h-4 text-emerald-700" />
+                    <span className="font-bold">
+                      ต้นทุนวัตถุดิบ BOM รวม ({recipeItems.length} รายการ):
+                    </span>
+                  </div>
+                  <div className="text-base font-black font-mono text-emerald-800">
+                    ฿{previewBOMCost.toFixed(2)} / {editRecipeProduct.unit || 'แก้ว'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Checkbox: Auto-update Product Cost */}
+              <label className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={recipeUpdateCost}
+                  onChange={(e) => setRecipeUpdateCost(e.target.checked)}
+                  className="rounded text-emerald-600 focus:ring-emerald-500"
+                />
+                <span>อัปเดตต้นทุนสินค้า (Cost) ในหน้านี้ให้ตรงกับต้นทุน BOM นี้อัตโนมัติ</span>
+              </label>
+
+              {/* Submit Buttons */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditRecipeProduct(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={recipeSubmitting}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer"
+                >
+                  {recipeSubmitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

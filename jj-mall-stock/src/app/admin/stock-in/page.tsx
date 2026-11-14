@@ -176,9 +176,12 @@ export default function AdminStockInPage() {
       const qStoreId = urlParams.get('storeId');
       const qCode = urlParams.get('code');
       const qReturnUrl = urlParams.get('returnUrl');
-      if (qReturnUrl) setReturnUrl(qReturnUrl);
+      if (qReturnUrl) {
+        router.replace(qReturnUrl);
+        return;
+      }
 
-      if (qStoreId || qCode || qReturnUrl) {
+      if (qStoreId || qCode) {
         const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         setInvoiceNumber(`PO-${todayStr}-${randomSuffix}`);

@@ -89,8 +89,13 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
   const saleDeductTxs = await prisma.stockTransaction.findMany({
     where: {
       type: TransactionType.SALE_DEDUCT,
-      createdById: targetStore.id,
       createdAt: { gt: sinceDate },
+      OR: [
+        { createdById: targetStore.id },
+        { note: { contains: `@${targetStore.username}` } },
+        { note: { contains: targetStore.name } },
+        { note: { contains: `[STORE_ID:${targetStore.id}]` } },
+      ],
     },
   });
 
@@ -103,11 +108,13 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
   // Adjustments for this store since last count (waste, damage, manual adjustment)
   const adjustmentTxs = await prisma.stockTransaction.findMany({
     where: {
-      type: { in: [TransactionType.ADJUST_SUB, TransactionType.ADJUST_ADD] },
+      type: { in: [TransactionType.ADJUST_SUB, TransactionType.ADJUST_ADD, TransactionType.DAMAGE_OUT] },
       createdAt: { gt: sinceDate },
       OR: [
+        { createdById: targetStore.id },
         { note: { contains: `[STORE_ID:${targetStore.id}]` } },
         { note: { contains: `@${targetStore.username}` } },
+        { note: { contains: targetStore.name } },
       ],
     },
   });
@@ -115,7 +122,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
   const adjustmentDiffMap = new Map<number, number>();
   for (const tx of adjustmentTxs) {
     const prev = adjustmentDiffMap.get(tx.ingredientId) || 0;
-    if (tx.type === TransactionType.ADJUST_SUB) {
+    if (tx.type === TransactionType.ADJUST_SUB || tx.type === TransactionType.DAMAGE_OUT) {
       adjustmentDiffMap.set(tx.ingredientId, prev - Number(tx.quantityOut));
     } else if (tx.type === TransactionType.ADJUST_ADD) {
       adjustmentDiffMap.set(tx.ingredientId, prev + Number(tx.quantityIn));

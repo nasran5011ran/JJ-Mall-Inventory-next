@@ -150,6 +150,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check duplicate name
+    const trimmedName = name.trim();
+    const existingName = await prisma.product.findFirst({
+      where: {
+        name: trimmedName,
+        ...(targetStoreId !== null ? { storeId: targetStoreId } : {}),
+      },
+    });
+
+    if (existingName) {
+      return NextResponse.json(
+        { success: false, message: `มีสินค้าชื่อ "${trimmedName}" (รหัส: ${existingName.code}) อยู่ในระบบแล้ว ไม่สามารถเพิ่มชื่อซ้ำได้` },
+        { status: 409 }
+      );
+    }
+
     const product = await prisma.product.create({
       data: {
         code: code.trim().toUpperCase(),

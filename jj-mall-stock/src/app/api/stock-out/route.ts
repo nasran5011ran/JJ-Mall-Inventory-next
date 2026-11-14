@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
             balanceAfter: updatedIng.currentStock,
             refType: 'STORE_REQUISITION',
             refId: slipNumber,
-            note: `${destinationLabel} ${note ? '• ' + note.trim() : ''}`,
+            note: `${destinationLabel} ${note ? '• ' + note.trim() : ''} [STORE_ID:${targetStore.id}]`,
             createdById: session.id,
           },
           include: {

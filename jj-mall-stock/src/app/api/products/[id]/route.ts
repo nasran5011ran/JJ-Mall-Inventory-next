@@ -97,6 +97,25 @@ export async function PUT(
       }
     }
 
+    // Check name collision if name changed
+    if (name) {
+      const trimmedName = name.trim();
+      const existingName = await prisma.product.findFirst({
+        where: {
+          name: trimmedName,
+          id: { not: productId },
+          ...(currentProduct.storeId ? { storeId: currentProduct.storeId } : {}),
+        },
+      });
+
+      if (existingName) {
+        return NextResponse.json(
+          { success: false, message: `ชื่อสินค้า "${trimmedName}" ถูกใช้โดยสินค้าอื่นแล้ว (รหัส: ${existingName.code}) ไม่สามารถใช้ชื่อซ้ำได้` },
+          { status: 409 }
+        );
+      }
+    }
+
     const updateData: any = {
       ...(code && { code: code.trim().toUpperCase() }),
       ...(name && { name: name.trim() }),

@@ -95,6 +95,23 @@ export async function PUT(
       }
     }
 
+    // Check name collision
+    if (name) {
+      const existingName = await prisma.ingredient.findFirst({
+        where: {
+          name: name.trim(),
+          id: { not: ingredientId },
+        },
+      });
+
+      if (existingName) {
+        return NextResponse.json(
+          { success: false, message: `ชื่อวัตถุดิบ "${name.trim()}" ถูกใช้งานโดยวัตถุดิบอื่นแล้ว (รหัส: ${existingName.code}) ไม่สามารถใช้ชื่อซ้ำได้` },
+          { status: 409 }
+        );
+      }
+    }
+
     const updated = await prisma.ingredient.update({
       where: { id: ingredientId },
       data: {

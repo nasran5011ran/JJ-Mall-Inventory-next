@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET /api/recipes - List all recipes with ingredients and calculations
 export async function GET(req: NextRequest) {
@@ -19,17 +20,38 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const productId = searchParams.get('productId');
+    const storeIdParam = searchParams.get('storeId');
+    const requestedStoreId = storeIdParam ? parseInt(storeIdParam, 10) : null;
 
     const where: any = {};
     if (productId) {
       where.productId = parseInt(productId, 10);
     }
 
+    // Fetch active staff stores for store-level stock calculations
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, name: true, username: true },
+      orderBy: { id: 'asc' },
+    });
+
+    // Compute store balances for each store
+    const storeBalances: Record<number, any[]> = {};
+    for (const store of staffStores) {
+      storeBalances[store.id] = await calculateStoreReconciliation(store.id);
+    }
+
     const recipes = await prisma.recipe.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        product: true,
+        product: {
+          include: {
+            store: {
+              select: { id: true, name: true, username: true },
+            },
+          },
+        },
         items: {
           include: {
             ingredient: true,
@@ -38,27 +60,37 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Compute metrics for each recipe
+    // Compute metrics for each recipe based on store inventory
     const enrichedRecipes = recipes.map((recipe) => {
       let totalBOMCost = 0;
       let minMaxCups = Infinity;
       let limitingIngredient: any = null;
 
+      // Determine store balance map: prioritize requested store, product store, or first staff store
+      const storeId = requestedStoreId || recipe.product.storeId || recipe.product.store?.id || (staffStores[0]?.id ?? null);
+      const storeList = storeId && storeBalances[storeId] ? storeBalances[storeId] : null;
+      const storeStockMap = new Map<number, number>();
+      if (storeList) {
+        storeList.forEach((b: any) =>
+          storeStockMap.set(b.ingredientId, Number(b.expectedStock || 0))
+        );
+      }
+
       recipe.items.forEach((item) => {
         const itemCost = Number(item.quantity) * Number(item.ingredient.costPerUnit || 0);
         totalBOMCost += itemCost;
 
-        // Calculate max cups this ingredient can support
-        const currentStock = Number(item.ingredient.currentStock);
+        // Use strictly in-store stock matching the shop (no central warehouse)
+        const inStoreStock = storeStockMap.get(item.ingredient.id) ?? 0;
         const qtyPerCup = Number(item.quantity);
         if (qtyPerCup > 0) {
-          const maxCups = Math.floor(currentStock / qtyPerCup);
+          const maxCups = Math.floor(inStoreStock / qtyPerCup);
           if (maxCups < minMaxCups) {
             minMaxCups = maxCups;
             limitingIngredient = {
               name: item.ingredient.name,
               code: item.ingredient.code,
-              currentStock,
+              currentStock: inStoreStock,
               qtyPerCup,
               unit: item.unit,
             };
@@ -94,6 +126,10 @@ export async function GET(req: NextRequest) {
         category: true,
         unit: true,
         price: true,
+        storeId: true,
+        store: {
+          select: { id: true, name: true, username: true },
+        },
       },
     });
 
@@ -112,11 +148,32 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Get all products for name/code resolution in modals
+    const allProducts = await prisma.product.findMany({
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        category: true,
+        unit: true,
+        price: true,
+        cost: true,
+        storeId: true,
+        store: {
+          select: { id: true, name: true, username: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
     return NextResponse.json({
       success: true,
       recipes: enrichedRecipes,
       productsWithoutRecipe,
+      allProducts,
       ingredients,
+      staffStores,
+      storeBalances,
     });
   } catch (error: any) {
     console.error('Error fetching recipes:', error);

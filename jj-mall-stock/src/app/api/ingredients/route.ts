@@ -122,6 +122,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check duplicate name
+    const existingName = await prisma.ingredient.findFirst({
+      where: { name: name.trim() },
+    });
+
+    if (existingName) {
+      return NextResponse.json(
+        { success: false, message: `ชื่อวัตถุดิบ "${name.trim()}" มีอยู่ในระบบแล้ว (รหัส: ${existingName.code}) ไม่สามารถเพิ่มซ้ำได้` },
+        { status: 409 }
+      );
+    }
+
     const initialStock = currentStock !== undefined && currentStock !== '' ? Number(currentStock) : 0;
     const safetyStock = minStock !== undefined && minStock !== '' ? Number(minStock) : 0;
     const unitCost = costPerUnit !== undefined && costPerUnit !== '' ? Number(costPerUnit) : 0;
