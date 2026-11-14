@@ -76,8 +76,8 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState({
     code: '',
     name: '',
-    category: 'เครื่องดื่มเย็น',
-    unit: 'แก้ว',
+    category: '',
+    unit: '',
     price: '',
     cost: '',
     minStock: '10',
@@ -123,6 +123,37 @@ export default function ProductsPage() {
     return Array.from(set);
   }, [products]);
 
+  // Distinct suggestions for Autocomplete / Combobox
+  const existingProductNames = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.name?.trim()) set.add(p.name.trim());
+    });
+    return Array.from(set);
+  }, [products]);
+
+  const existingCategories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.category?.trim()) set.add(p.category.trim());
+    });
+    ['เครื่องดื่มเย็น', 'เครื่องดื่มร้อน', 'เบเกอรี่', 'ของหวาน', 'ของทานเล่น', 'อาหารจานเดียว', 'สินค้าทั่วไป'].forEach(
+      (c) => set.add(c)
+    );
+    return Array.from(set);
+  }, [products]);
+
+  const existingUnits = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (p.unit?.trim()) set.add(p.unit.trim());
+    });
+    ['แก้ว', 'ขวด', 'ชิ้น', 'กล่อง', 'ถุง', 'จาน', 'ชุด', 'กิโลกรัม', 'กรัม', 'ลิตร', 'มิลลิลิตร', 'กระป๋อง', 'ซอง', 'แพ็ค'].forEach(
+      (u) => set.add(u)
+    );
+    return Array.from(set);
+  }, [products]);
+
   // Fast client-side filtering (0ms latency, zero flickering)
   const filteredProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -145,8 +176,8 @@ export default function ProductsPage() {
     setFormData({
       code: `PRD-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
-      category: 'เครื่องดื่มเย็น',
-      unit: 'แก้ว',
+      category: '',
+      unit: '',
       price: '',
       cost: '',
       minStock: '10',
@@ -161,8 +192,8 @@ export default function ProductsPage() {
     setFormData({
       code: p.code,
       name: p.name,
-      category: p.category || 'เครื่องดื่มเย็น',
-      unit: p.unit || 'แก้ว',
+      category: p.category || '',
+      unit: p.unit || '',
       price: p.price.toString(),
       cost: p.cost ? p.cost.toString() : '',
       minStock: p.minStock.toString(),
@@ -574,7 +605,7 @@ export default function ProductsPage() {
       {/* Add / Edit Product Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[95vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -623,50 +654,36 @@ export default function ProductsPage() {
                 </div>
 
                 {/* Unit */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    หน่วยนับ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="เช่น แก้ว, ชิ้น, ขวด"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                </div>
-              </div>
-
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  ชื่อสินค้า <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
+                <AutocompleteSuggest
+                  label="หน่วยนับ"
                   required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="เช่น น้ำไมโลเย็น 22oz"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                  value={formData.unit}
+                  onChange={(val) => setFormData({ ...formData, unit: val })}
+                  suggestions={existingUnits}
+                  placeholder="เช่น แก้ว, ชิ้น, ขวด (หรือพิมพ์ใหม่)"
                 />
               </div>
 
+              {/* Name */}
+              <AutocompleteSuggest
+                label="ชื่อสินค้า"
+                required
+                value={formData.name}
+                onChange={(val) => setFormData({ ...formData, name: val })}
+                suggestions={existingProductNames}
+                placeholder="เช่น น้ำไมโลเย็น 22oz (หรือพิมพ์ใหม่)"
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 {/* Category */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    หมวดหมู่สินค้า
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    placeholder="เช่น เครื่องดื่มเย็น"
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                </div>
+                <AutocompleteSuggest
+                  label="หมวดหมู่สินค้า"
+                  direction="up"
+                  value={formData.category}
+                  onChange={(val) => setFormData({ ...formData, category: val })}
+                  suggestions={existingCategories}
+                  placeholder="เช่น เครื่องดื่มเย็น (หรือพิมพ์ใหม่)"
+                />
 
                 {/* Status */}
                 <div>
