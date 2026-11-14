@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DashboardLayout from '@/components/layout/dashboard-layout';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
+import AutocompleteSuggest from '@/components/ui/autocomplete-suggest';
 import {
   Package,
   Search,
