@@ -185,8 +185,6 @@ function RecipesContent() {
     return storeBalancesMap.get(numId) ?? 0;
   };
 
-  // Preset units for custom ingredient creation
-  const PRESET_UNITS = ['กรัม', 'มล.', 'ชิ้น', 'ใบ', 'ฟอง', 'ออนซ์', 'กิโลกรัม', 'ลิตร', 'แก้ว'];
 
   // Recipe Modal Scrolling, Highlighting & Active Combobox Index
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
@@ -413,10 +411,20 @@ function RecipesContent() {
       const url = isEditing ? `/api/recipes/${editingRecipe!.id}` : '/api/recipes';
       const method = isEditing ? 'PUT' : 'POST';
 
+      // ตรวจสอบว่าวัตถุดิบทุกแถวต้องเป็นวัตถุดิบที่มีอยู่ในระบบเท่านั้น (ห้ามสร้างใหม่หน้านี้)
+      const invalidRow = recipeFormItems.find(
+        (it) => (it.customName || it.quantity) && (!it.ingredientId || !allIngredients.some((ing: any) => ing.id.toString() === it.ingredientId))
+      );
+      if (invalidRow) {
+        throw new Error(
+          invalidRow.customName
+            ? `วัตถุดิบ "${invalidRow.customName}" ไม่มีในระบบ ไม่สามารถเพิ่มวัตถุดิบใหม่จากหน้านี้ได้ กรุณาเลือกวัตถุดิบที่มีในระบบเท่านั้น`
+            : 'กรุณาเลือกวัตถุดิบจากระบบให้ครบถ้วน'
+        );
+      }
+
       const filledItems = recipeFormItems.filter(
-        (it) =>
-          (it.ingredientId || (it.customName && it.customName.trim())) &&
-          Number(it.quantity) > 0
+        (it) => it.ingredientId && Number(it.quantity) > 0
       );
       if (filledItems.length === 0) {
         throw new Error('กรุณาระบุวัตถุดิบและปริมาณที่ใช้อย่างน้อย 1 รายการ');
@@ -1071,49 +1079,19 @@ function RecipesContent() {
                                           </button>
                                         </div>
 
-                                        {/* Option to use custom typed name */}
-                                        {searchKeyword && !isExactExisting && (
-                                          <div
-                                            onMouseDown={(e) => {
-                                              e.preventDefault();
-                                              setRecipeFormItems((prev) => {
-                                                const copy = [...prev];
-                                                copy[idx] = {
-                                                  ...copy[idx],
-                                                  ingredientId: '',
-                                                  customName: item.customName!.trim(),
-                                                  unit: copy[idx].unit || 'กรัม',
-                                                };
-                                                return copy;
-                                              });
-                                              setActiveRecipeSearchIdx(null);
-                                            }}
-                                            className="p-2.5 bg-blue-50/80 hover:bg-blue-100 transition-colors flex items-center justify-between gap-2 cursor-pointer border-b border-blue-200 shrink-0"
-                                          >
-                                            <div>
-                                              <div className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
-                                                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                                                <span>ใช้วัตถุดิบใหม่นี้:</span>
-                                                <span className="font-black underline">&ldquo;{item.customName!.trim()}&rdquo;</span>
-                                              </div>
-                                              <div className="text-[10px] text-blue-600 mt-0.5">
-                                                (จะบันทึกเป็นวัตถุดิบใหม่เข้าระบบให้อัตโนมัติเมื่อกดบันทึกสูตร)
-                                              </div>
-                                            </div>
-                                            <span className="text-[10px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-lg shrink-0">
-                                              + ใช้ชื่อนี้
-                                            </span>
-                                          </div>
-                                        )}
-
                                         {/* Scrollable list of ingredients (Comfortable compact height) */}
                                         <div className="max-h-48 sm:max-h-52 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-50 [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
                                           {filtered.length === 0 ? (
-                                            <div className="p-5 text-center text-xs text-slate-500">
-                                              ไม่พบวัตถุดิบในระบบที่ตรงกับ &ldquo;{item.customName}&rdquo;
-                                              <div className="text-xs text-emerald-700 font-bold mt-1.5">
-                                                คลิก "+ ใช้ชื่อนี้" ด้านบนเพื่อสร้างเป็นวัตถุดิบใหม่
+                                            <div className="p-6 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
+                                              <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 shadow-2xs">
+                                                <AlertCircle className="w-5 h-5" />
                                               </div>
+                                              <div className="font-bold text-slate-800 text-sm">
+                                                ไม่มีชื่อวัตถุดิบนี้ในระบบ
+                                              </div>
+                                              <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                                                ไม่พบวัตถุดิบ &ldquo;<strong className="text-slate-700">{item.customName || searchKeyword}</strong>&rdquo; ในระบบ (ไม่สามารถเพิ่มวัตถุดิบใหม่จากหน้านี้ได้)
+                                              </p>
                                             </div>
                                           ) : (
                                             filtered.map((ing: any) => {
@@ -1182,20 +1160,11 @@ function RecipesContent() {
                                     </span>
                                   </div>
                                 ) : item.customName && item.customName.trim() ? (
-                                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
-                                      <Sparkles className="w-3 h-3 text-blue-600" />
-                                      <span>กำหนดเอง: &ldquo;{item.customName.trim()}&rdquo;</span>
+                                  <div className="flex items-center gap-1.5 mt-1.5">
+                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 shadow-2xs">
+                                      <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                      <span>ไม่มีชื่อวัตถุดิบนี้ในระบบ (กรุณาเลือกวัตถุดิบที่มีในระบบ)</span>
                                     </span>
-                                    <select
-                                      value={item.unit || 'กรัม'}
-                                      onChange={(e) => updateIngredientRow(idx, 'unit', e.target.value)}
-                                      className="text-[10px] font-bold bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none"
-                                    >
-                                      {PRESET_UNITS.map((u) => (
-                                        <option key={u} value={u}>หน่วย: {u}</option>
-                                      ))}
-                                    </select>
                                   </div>
                                 ) : null}
                               </td>
