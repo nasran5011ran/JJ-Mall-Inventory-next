@@ -192,6 +192,28 @@ function RecipesContent() {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
   const [highlightRowIdx, setHighlightRowIdx] = useState<number | null>(null);
   const [activeRecipeSearchIdx, setActiveRecipeSearchIdx] = useState<number | null>(null);
+  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
+
+  const updateSearchDirection = (idx: number, el?: HTMLElement | null) => {
+    const target = el || (typeof document !== 'undefined' ? document.getElementById('recipe-ing-input-' + idx) : null);
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // If space below is less than 300px and space above is greater, open upwards (Drop-up)
+      if (spaceBelow < 300 && rect.top > spaceBelow) {
+        setDropdownDirection('up');
+      } else {
+        setDropdownDirection('down');
+      }
+    } else {
+      setDropdownDirection(idx > 0 ? 'up' : 'down');
+    }
+  };
+
+  const openSearchForIdx = (idx: number, el?: HTMLElement | null) => {
+    updateSearchDirection(idx, el);
+    setActiveRecipeSearchIdx(idx);
+  };
 
   // Simulation Tool Modal
   const [simRecipe, setSimRecipe] = useState<RecipeData | null>(null);
@@ -208,6 +230,17 @@ function RecipesContent() {
       document.body.style.overflow = 'unset';
     };
   }, [modalOpen, simRecipe]);
+
+  // Auto scroll row into view when search dropdown opens
+  useEffect(() => {
+    if (activeRecipeSearchIdx !== null) {
+      updateSearchDirection(activeRecipeSearchIdx);
+      const el = document.getElementById('recipe-ing-input-' + activeRecipeSearchIdx);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [activeRecipeSearchIdx]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -916,6 +949,7 @@ function RecipesContent() {
                               <td className="py-2.5 px-3 align-top relative min-w-[280px]">
                                 <div className="relative flex items-center">
                                   <input
+                                    id={'recipe-ing-input-' + idx}
                                     type="text"
                                     value={displayName}
                                     title={displayName}
@@ -949,9 +983,9 @@ function RecipesContent() {
                                           return copy;
                                         });
                                       }
-                                      setActiveRecipeSearchIdx(idx);
+                                      openSearchForIdx(idx, e.currentTarget);
                                     }}
-                                    onFocus={() => setActiveRecipeSearchIdx(idx)}
+                                    onFocus={(e) => openSearchForIdx(idx, e.currentTarget)}
                                     placeholder="พิมพ์ชื่อวัตถุดิบเพื่อค้นหาในระบบ..."
                                     className="w-full pl-8 pr-14 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                                   />
@@ -967,7 +1001,7 @@ function RecipesContent() {
                                             copy[idx] = { ...copy[idx], ingredientId: '', customName: '', unit: '', quantity: '' };
                                             return copy;
                                           });
-                                          setActiveRecipeSearchIdx(idx);
+                                          openSearchForIdx(idx);
                                         }}
                                         className="text-slate-400 hover:text-slate-600 p-1 rounded cursor-pointer"
                                         title="ล้างข้อมูลเพื่อเลือกใหม่"
@@ -977,13 +1011,166 @@ function RecipesContent() {
                                     )}
                                     <button
                                       type="button"
-                                      onClick={() => setActiveRecipeSearchIdx(activeRecipeSearchIdx === idx ? null : idx)}
+                                      onClick={(e) => {
+                                        if (activeRecipeSearchIdx === idx) {
+                                          setActiveRecipeSearchIdx(null);
+                                        } else {
+                                          openSearchForIdx(idx, e.currentTarget);
+                                        }
+                                      }}
                                       className="text-slate-400 hover:text-slate-600 p-1 rounded cursor-pointer"
                                       title="แสดงรายการวัตถุดิบในระบบ"
                                     >
                                       <ChevronDown className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
+
+                                  {/* Dropdown Suggestions Popover (Attached to input with Smart Up/Down Direction) */}
+                                  {activeRecipeSearchIdx === idx && (() => {
+                                    const hasExactIdMatch = Boolean(item.ingredientId && selectedIng && item.customName === selectedIng.name);
+                                    const searchKeyword = hasExactIdMatch ? '' : (item.customName || '').trim().toLowerCase();
+
+                                    const filtered = allIngredients.filter(
+                                      (ing: any) =>
+                                        !searchKeyword ||
+                                        ing.name.toLowerCase().includes(searchKeyword) ||
+                                        ing.code.toLowerCase().includes(searchKeyword) ||
+                                        (ing.category && ing.category.toLowerCase().includes(searchKeyword))
+                                    );
+                                    const isExactExisting = allIngredients.some(
+                                      (ing: any) => ing.name.trim().toLowerCase() === searchKeyword
+                                    );
+
+                                    return (
+                                      <div
+                                        className={'absolute ' +
+                                          (dropdownDirection === 'up'
+                                            ? 'bottom-full mb-1.5 origin-bottom'
+                                            : 'top-full mt-1.5 origin-top') +
+                                          ' left-0 w-[460px] sm:w-[540px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5'}
+                                      >
+                                        {/* Header */}
+                                        <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-600 flex items-center justify-between shrink-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-[11px] font-black text-slate-700">รายการวัตถุดิบในระบบ</span>
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold font-mono">
+                                              {filtered.length} รายการ
+                                            </span>
+                                            {searchKeyword && (
+                                              <span className="text-[10px] text-slate-400 font-normal truncate max-w-[140px]">
+                                                (ค้นหา: "{searchKeyword}")
+                                              </span>
+                                            )}
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => setActiveRecipeSearchIdx(null)}
+                                            className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded cursor-pointer text-[11px]"
+                                          >
+                                            ✕ ปิด
+                                          </button>
+                                        </div>
+
+                                        {/* Option to use custom typed name */}
+                                        {searchKeyword && !isExactExisting && (
+                                          <div
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              setRecipeFormItems((prev) => {
+                                                const copy = [...prev];
+                                                copy[idx] = {
+                                                  ...copy[idx],
+                                                  ingredientId: '',
+                                                  customName: item.customName!.trim(),
+                                                  unit: copy[idx].unit || 'กรัม',
+                                                };
+                                                return copy;
+                                              });
+                                              setActiveRecipeSearchIdx(null);
+                                            }}
+                                            className="p-2.5 bg-blue-50/80 hover:bg-blue-100 transition-colors flex items-center justify-between gap-2 cursor-pointer border-b border-blue-200 shrink-0"
+                                          >
+                                            <div>
+                                              <div className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
+                                                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                                                <span>ใช้วัตถุดิบใหม่นี้:</span>
+                                                <span className="font-black underline">&ldquo;{item.customName!.trim()}&rdquo;</span>
+                                              </div>
+                                              <div className="text-[10px] text-blue-600 mt-0.5">
+                                                (จะบันทึกเป็นวัตถุดิบใหม่เข้าระบบให้อัตโนมัติเมื่อกดบันทึกสูตร)
+                                              </div>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-lg shrink-0">
+                                              + ใช้ชื่อนี้
+                                            </span>
+                                          </div>
+                                        )}
+
+                                        {/* Scrollable list of ingredients (Comfortable compact height) */}
+                                        <div className="max-h-48 sm:max-h-52 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-50 [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                          {filtered.length === 0 ? (
+                                            <div className="p-5 text-center text-xs text-slate-500">
+                                              ไม่พบวัตถุดิบในระบบที่ตรงกับ &ldquo;{item.customName}&rdquo;
+                                              <div className="text-xs text-emerald-700 font-bold mt-1.5">
+                                                คลิก "+ ใช้ชื่อนี้" ด้านบนเพื่อสร้างเป็นวัตถุดิบใหม่
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            filtered.map((ing: any) => {
+                                              const inStoreStock = getEffectiveStock(ing);
+                                              const isSelected = item.ingredientId === ing.id.toString();
+                                              return (
+                                                <div
+                                                  key={ing.id}
+                                                  onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    updateIngredientRow(idx, 'ingredientId', ing.id.toString());
+                                                    setActiveRecipeSearchIdx(null);
+                                                  }}
+                                                  className={'p-2.5 sm:p-3 hover:bg-emerald-50/80 transition-colors flex items-start justify-between gap-3 cursor-pointer ' +
+                                                    (isSelected ? 'bg-emerald-50/90 border-l-4 border-emerald-600' : '')}
+                                                >
+                                                  <div className="flex-1 min-w-0">
+                                                    {/* Full Name */}
+                                                    <div className="font-bold text-xs sm:text-sm text-slate-900 break-words whitespace-normal leading-snug">
+                                                      {ing.name}
+                                                    </div>
+
+                                                    {/* Code, Category & Cost Badges */}
+                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
+                                                      <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
+                                                        {ing.code}
+                                                      </span>
+                                                      {ing.category && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200/60 text-[10px]">
+                                                          {ing.category}
+                                                        </span>
+                                                      )}
+                                                      <span className="text-slate-500 text-[10px]">
+                                                        ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)} / {ing.unit}
+                                                      </span>
+                                                      {isSelected && (
+                                                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-auto">
+                                                          ✓ เลือกอยู่
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+
+                                                  {/* Current Stock */}
+                                                  <div className="text-right shrink-0 pt-0.5">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                                      คงเหลือ: {inStoreStock.toLocaleString()} {ing.unit}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })
+                                          )}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
 
                                 {/* Status Indicator with FULL NAME */}
@@ -1011,148 +1198,6 @@ function RecipesContent() {
                                     </select>
                                   </div>
                                 ) : null}
-
-                                {/* Dropdown Suggestions Popover */}
-                                {activeRecipeSearchIdx === idx && (() => {
-                                  const hasExactIdMatch = Boolean(item.ingredientId && selectedIng && item.customName === selectedIng.name);
-                                  const searchKeyword = hasExactIdMatch ? '' : (item.customName || '').trim().toLowerCase();
-
-                                  const filtered = allIngredients.filter(
-                                    (ing: any) =>
-                                      !searchKeyword ||
-                                      ing.name.toLowerCase().includes(searchKeyword) ||
-                                      ing.code.toLowerCase().includes(searchKeyword) ||
-                                      (ing.category && ing.category.toLowerCase().includes(searchKeyword))
-                                  );
-                                  const isExactExisting = allIngredients.some(
-                                    (ing: any) => ing.name.trim().toLowerCase() === searchKeyword
-                                  );
-
-                                  return (
-                                    <div className="absolute top-full left-0 mt-2 w-[440px] sm:w-[520px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5">
-                                      {/* Header */}
-                                      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-600 flex items-center justify-between shrink-0">
-                                        <div className="flex items-center gap-2">
-                                          <span>รายการวัตถุดิบในระบบ</span>
-                                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold font-mono">
-                                            {filtered.length} รายการ
-                                          </span>
-                                          {searchKeyword && (
-                                            <span className="text-[11px] text-slate-400 font-normal">
-                                              (ค้นหา: "{searchKeyword}")
-                                            </span>
-                                          )}
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => setActiveRecipeSearchIdx(null)}
-                                          className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded cursor-pointer"
-                                        >
-                                          ✕ ปิด
-                                        </button>
-                                      </div>
-
-                                      {/* Option to use custom typed name */}
-                                      {searchKeyword && !isExactExisting && (
-                                        <div
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            setRecipeFormItems((prev) => {
-                                              const copy = [...prev];
-                                              copy[idx] = {
-                                                ...copy[idx],
-                                                ingredientId: '',
-                                                customName: item.customName!.trim(),
-                                                unit: copy[idx].unit || 'กรัม',
-                                              };
-                                              return copy;
-                                            });
-                                            setActiveRecipeSearchIdx(null);
-                                          }}
-                                          className="p-3 bg-blue-50/80 hover:bg-blue-100 transition-colors flex items-center justify-between gap-2 cursor-pointer border-b border-blue-200 shrink-0"
-                                        >
-                                          <div>
-                                            <div className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
-                                              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                                              <span>ใช้วัตถุดิบใหม่นี้:</span>
-                                              <span className="font-black underline">&ldquo;{item.customName!.trim()}&rdquo;</span>
-                                            </div>
-                                            <div className="text-[10px] text-blue-600 mt-0.5">
-                                              (จะบันทึกเป็นวัตถุดิบใหม่เข้าระบบให้อัตโนมัติเมื่อกดบันทึกสูตร)
-                                            </div>
-                                          </div>
-                                          <span className="text-[10px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-lg shrink-0">
-                                            + ใช้ชื่อนี้
-                                          </span>
-                                        </div>
-                                      )}
-
-                                      {/* Scrollable list of ingredients */}
-                                      <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-50 [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
-                                        {filtered.length === 0 ? (
-                                          <div className="p-5 text-center text-xs text-slate-500">
-                                            ไม่พบวัตถุดิบในระบบที่ตรงกับ &ldquo;{item.customName}&rdquo;
-                                            <div className="text-xs text-emerald-700 font-bold mt-1.5">
-                                              คลิก "+ ใช้ชื่อนี้" ด้านบนเพื่อสร้างเป็นวัตถุดิบใหม่
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          filtered.map((ing: any) => {
-                                            const inStoreStock = getEffectiveStock(ing);
-                                            const isSelected = item.ingredientId === ing.id.toString();
-                                            return (
-                                              <div
-                                                key={ing.id}
-                                                onMouseDown={(e) => {
-                                                  e.preventDefault();
-                                                  updateIngredientRow(idx, 'ingredientId', ing.id.toString());
-                                                  setActiveRecipeSearchIdx(null);
-                                                }}
-                                                className={`p-3 sm:p-3.5 hover:bg-emerald-50/80 transition-colors flex items-start justify-between gap-3 cursor-pointer ${
-                                                  isSelected ? 'bg-emerald-50/90 border-l-4 border-emerald-600' : ''
-                                                }`}
-                                              >
-                                                <div className="flex-1 min-w-0">
-                                                  {/* Full Name - No truncate! Wrapped cleanly so full name is clearly visible */}
-                                                  <div className="font-bold text-xs sm:text-sm text-slate-900 break-words whitespace-normal leading-snug">
-                                                    {ing.name}
-                                                  </div>
-
-                                                  {/* Code, Category & Cost Badges */}
-                                                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
-                                                    <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
-                                                      {ing.code}
-                                                    </span>
-                                                    {ing.category && (
-                                                      <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200/60 text-[10px]">
-                                                        {ing.category}
-                                                      </span>
-                                                    )}
-                                                    <span className="text-slate-500">
-                                                      ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)} / {ing.unit}
-                                                    </span>
-                                                    {isSelected && (
-                                                      <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-auto">
-                                                        ✓ เลือกอยู่
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                </div>
-
-                                                {/* Current Stock */}
-                                                <div className="text-right shrink-0 pt-0.5">
-                                                  <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                                    คงเหลือ: {inStoreStock.toLocaleString()} {ing.unit}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            );
-                                          })
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
                               </td>
 
                               {/* Quantity */}
