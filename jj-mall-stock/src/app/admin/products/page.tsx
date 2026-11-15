@@ -257,7 +257,7 @@ export default function ProductsPage() {
     ]);
     setHighlightRowIdx(newIdx);
 
-    // เลื่อนหน้าจอไปยังรายการใหม่ที่เพิ่งเพิ่ม
+    // เลื่อนหน้าจอไปยังรายการใหม่ที่เพิ่งเพิ่ม (ไม่เปิดกล่องค้นหา ให้ผู้ใช้กดเอง)
     setTimeout(() => {
       if (recipeTableContainerRef.current) {
         recipeTableContainerRef.current.scrollTo({
@@ -265,7 +265,6 @@ export default function ProductsPage() {
           behavior: 'smooth',
         });
       }
-      setActiveRecipeSearchIdx(newIdx);
     }, 100);
   };
 
@@ -1602,8 +1601,8 @@ export default function ProductsPage() {
                 {/* Table Column Headers (Desktop) */}
                 <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0">
                   <div className="col-span-1 text-center">#</div>
-                  <div className="col-span-5">วัตถุดิบ (เลือกวัตถุดิบ)</div>
-                  <div className="col-span-3 text-right">ปริมาณที่ใช้ (ต่อ 1 {editRecipeProduct.unit || 'แก้ว'})</div>
+                  <div className="col-span-6">วัตถุดิบ (เลือกวัตถุดิบ)</div>
+                  <div className="col-span-2 text-right">ปริมาณที่ใช้ (ต่อ 1 {editRecipeProduct.unit || 'แก้ว'})</div>
                   <div className="col-span-2 text-right">ต้นทุน BOM (฿)</div>
                   <div className="col-span-1 text-center">ลบ</div>
                 </div>
@@ -1661,7 +1660,7 @@ export default function ProductsPage() {
                           </div>
 
                           {/* Searchable & Writeable Combobox */}
-                          <div className="col-span-5 relative" data-recipe-combobox={idx}>
+                          <div className="col-span-6 relative" data-recipe-combobox={idx}>
                             <label className="block sm:hidden text-[10px] font-bold text-slate-500 mb-1">
                               วัตถุดิบ #{idx + 1}
                             </label>
@@ -1669,6 +1668,7 @@ export default function ProductsPage() {
                               <input
                                 type="text"
                                 value={displayName}
+                                title={displayName}
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   const exactMatch = allIngredients.find(
@@ -1739,15 +1739,8 @@ export default function ProductsPage() {
                               </div>
                             </div>
 
-                            {/* Status Indicator: Shows ingredient name if matched in system, or new ingredient tag */}
-                            {selectedIng ? (
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                  <span>ในระบบ: {selectedIng.name}</span>
-                                </span>
-                              </div>
-                            ) : item.customName && item.customName.trim() ? (
+                            {/* Status Indicator: Only show tag when creating new custom ingredient */}
+                            {!selectedIng && item.customName && item.customName.trim() ? (
                               <div className="flex items-center gap-1.5 mt-1">
                                 <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                                   <Sparkles className="w-3 h-3 text-blue-600" />
@@ -1894,7 +1887,7 @@ export default function ProductsPage() {
                           </div>
 
                           {/* Quantity with Unit */}
-                          <div className="col-span-3">
+                          <div className="col-span-2">
                             <label className="block sm:hidden text-[10px] font-bold text-slate-500 mb-1">
                               ปริมาณที่ใช้ (ต่อ 1 {editRecipeProduct.unit || 'แก้ว'})
                             </label>
