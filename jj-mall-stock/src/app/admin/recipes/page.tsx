@@ -1153,15 +1153,8 @@ function RecipesContent() {
                                   })()}
                                 </div>
 
-                                {/* Status Indicator with FULL NAME */}
-                                {selectedIng ? (
-                                  <div className="flex items-center gap-1.5 mt-1.5">
-                                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shadow-2xs break-words max-w-full">
-                                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                                      <span className="leading-snug">ในระบบ: <strong className="text-emerald-950 font-black">{selectedIng.name}</strong> ({selectedIng.code})</span>
-                                    </span>
-                                  </div>
-                                ) : item.customName && item.customName.trim() ? (
+                                {/* Warning only if not in system */}
+                                {!selectedIng && item.customName && item.customName.trim() ? (
                                   <div className="flex items-center gap-1.5 mt-1.5">
                                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 shadow-2xs">
                                       <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
@@ -1251,33 +1244,22 @@ function RecipesContent() {
                 );
 
                 return (
-                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
-                    {hasInvalidIngredient ? (
-                      <span className="text-xs text-rose-600 font-bold flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200">
-                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                        <span>มีวัตถุดิบที่ไม่มีในระบบ กรุณาเลือกวัตถุดิบในระบบก่อนบันทึก</span>
-                      </span>
-                    ) : (
-                      <div />
-                    )}
-
-                    <div className="flex items-center gap-2.5 ml-auto">
-                      <button
-                        type="button"
-                        onClick={handleCloseModal}
-                        className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                      >
-                        ยกเลิก
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={submitting || hasInvalidIngredient}
-                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                        title={hasInvalidIngredient ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้' : undefined}
-                      >
-                        {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
-                      </button>
-                    </div>
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleCloseModal}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                    >
+                      ยกเลิก
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting || hasInvalidIngredient}
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      title={hasInvalidIngredient ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้' : undefined}
+                    >
+                      {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
+                    </button>
                   </div>
                 );
               })()}
