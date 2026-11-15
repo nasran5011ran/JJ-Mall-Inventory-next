@@ -83,14 +83,56 @@ export async function PUT(
       return NextResponse.json({ success: false, message: 'กรุณาระบุวัตถุดิบอย่างน้อย 1 รายการ' }, { status: 400 });
     }
 
+    // Validate that all items specify a valid existing ingredientId
+    for (const it of items) {
+      const ingId = Number(it.ingredientId);
+      if (!ingId || isNaN(ingId) || ingId <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `พบวัตถุดิบที่ไม่มีในระบบ ("${it.name || it.customName || 'ไม่ระบุ'}") ไม่สามารถบันทึกได้ กรุณาเลือกเฉพาะวัตถุดิบที่มีในระบบเท่านั้น`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const validItems = items.filter(
       (it: any) => it.ingredientId && Number(it.quantity) > 0
     );
 
-    // Delete existing recipe items and recreate
+    if (validItems.length === 0) {
+      return NextResponse.json({ success: false, message: 'กรุณาระบุวัตถุดิบอย่างน้อย 1 รายการ' }, { status: 400 });
+    }
+
+    // Verify all ingredient IDs exist in database
+    const ingredientIds = validItems.map((it: any) => Number(it.ingredientId));
+    const existingIngs = await prisma.ingredient.findMany({
+      where: { id: { in: ingredientIds } },
+      select: { id: true, unit: true },
+    });
+    if (existingIngs.length !== ingredientIds.length) {
+      return NextResponse.json(
+        { success: false, message: 'มีวัตถุดิบบางรายการที่ไม่มีอยู่ในระบบ ไม่สามารถเพิ่มวัตถุดิบใหม่จากหน้านี้ได้' },
+        { status: 400 }
+      );
+    }
+    const ingMap = new Map(existingIngs.map((i) => [i.id, i]));
+
+    // Delete existing recipe items and recreate (Strict existing ingredients only)
     await prisma.$transaction(async (tx) => {
       await tx.recipeItem.deleteMany({
         where: { recipeId },
+      });
+
+      const resolvedItems = validItems.map((it: any) => {
+        const ingId = Number(it.ingredientId);
+        const ing = ingMap.get(ingId);
+        return {
+          ingredientId: ingId,
+          quantity: Number(it.quantity),
+          unit: it.unit?.trim() || ing?.unit || 'กรัม',
+        };
       });
 
       await tx.recipe.update({
@@ -98,11 +140,7 @@ export async function PUT(
         data: {
           description: description?.trim() || null,
           items: {
-            create: validItems.map((it: any) => ({
-              ingredientId: Number(it.ingredientId),
-              quantity: Number(it.quantity),
-              unit: it.unit?.trim() || 'หน่วย',
-            })),
+            create: resolvedItems,
           },
         },
       });

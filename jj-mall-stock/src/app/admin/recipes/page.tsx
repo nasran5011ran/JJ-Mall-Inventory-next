@@ -411,16 +411,18 @@ function RecipesContent() {
       const url = isEditing ? `/api/recipes/${editingRecipe!.id}` : '/api/recipes';
       const method = isEditing ? 'PUT' : 'POST';
 
-      // ตรวจสอบว่าวัตถุดิบทุกแถวต้องเป็นวัตถุดิบที่มีอยู่ในระบบเท่านั้น (ห้ามสร้างใหม่หน้านี้)
+      // ตรวจสอบว่าวัตถุดิบทุกแถวต้องเป็นวัตถุดิบที่มีอยู่ในระบบเท่านั้น (ห้ามสร้างใหม่หน้านี้เด็ดขาด)
       const invalidRow = recipeFormItems.find(
         (it) => (it.customName || it.quantity) && (!it.ingredientId || !allIngredients.some((ing: any) => ing.id.toString() === it.ingredientId))
       );
       if (invalidRow) {
-        throw new Error(
-          invalidRow.customName
-            ? `วัตถุดิบ "${invalidRow.customName}" ไม่มีในระบบ ไม่สามารถเพิ่มวัตถุดิบใหม่จากหน้านี้ได้ กรุณาเลือกวัตถุดิบที่มีในระบบเท่านั้น`
-            : 'กรุณาเลือกวัตถุดิบจากระบบให้ครบถ้วน'
-        );
+        const errorMsg = invalidRow.customName
+          ? `วัตถุดิบ "${invalidRow.customName}" ไม่มีในระบบ ไม่สามารถบันทึกได้! กรุณาเลือกวัตถุดิบที่มีในระบบเท่านั้น`
+          : 'กรุณาเลือกวัตถุดิบจากระบบให้ครบถ้วน';
+        setFormError(errorMsg);
+        await showErrorAlert('ไม่สามารถบันทึกได้', errorMsg);
+        setSubmitting(false);
+        return;
       }
 
       const filledItems = recipeFormItems.filter(
@@ -1243,22 +1245,42 @@ function RecipesContent() {
               </label>
 
               {/* Submit Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
-                >
-                  ยกเลิก
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer"
-                >
-                  {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
-                </button>
-              </div>
+              {(() => {
+                const hasInvalidIngredient = recipeFormItems.some(
+                  (it) => it.customName && (!it.ingredientId || !allIngredients.some((ing: any) => ing.id.toString() === it.ingredientId))
+                );
+
+                return (
+                  <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
+                    {hasInvalidIngredient ? (
+                      <span className="text-xs text-rose-600 font-bold flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200">
+                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                        <span>มีวัตถุดิบที่ไม่มีในระบบ กรุณาเลือกวัตถุดิบในระบบก่อนบันทึก</span>
+                      </span>
+                    ) : (
+                      <div />
+                    )}
+
+                    <div className="flex items-center gap-2.5 ml-auto">
+                      <button
+                        type="button"
+                        onClick={handleCloseModal}
+                        className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                      >
+                        ยกเลิก
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitting || hasInvalidIngredient}
+                        className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        title={hasInvalidIngredient ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้' : undefined}
+                      >
+                        {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
             </form>
           </div>
         </div>

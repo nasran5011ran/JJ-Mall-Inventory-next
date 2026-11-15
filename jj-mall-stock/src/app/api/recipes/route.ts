@@ -221,7 +221,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Filter valid items
+    // Validate that all items specify a valid existing ingredientId
+    for (const it of items) {
+      const ingId = Number(it.ingredientId);
+      if (!ingId || isNaN(ingId) || ingId <= 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `พบวัตถุดิบที่ไม่มีในระบบ ("${it.name || it.customName || 'ไม่ระบุ'}") ไม่สามารถบันทึกได้ กรุณาเลือกเฉพาะวัตถุดิบที่มีในระบบเท่านั้น`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const validItems = items.filter(
       (it: any) => it.ingredientId && Number(it.quantity) > 0
     );
@@ -233,27 +246,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create recipe and items in transaction
-    const newRecipe = await prisma.recipe.create({
-      data: {
-        productId: Number(productId),
-        description: description?.trim() || null,
-        items: {
-          create: validItems.map((it: any) => ({
-            ingredientId: Number(it.ingredientId),
-            quantity: Number(it.quantity),
-            unit: it.unit?.trim() || 'หน่วย',
-          })),
-        },
-      },
-      include: {
-        product: true,
-        items: {
-          include: {
-            ingredient: true,
+    // Verify all ingredient IDs exist in database
+    const ingredientIds = validItems.map((it: any) => Number(it.ingredientId));
+    const existingIngs = await prisma.ingredient.findMany({
+      where: { id: { in: ingredientIds } },
+      select: { id: true, unit: true },
+    });
+    if (existingIngs.length !== ingredientIds.length) {
+      return NextResponse.json(
+        { success: false, message: 'มีวัตถุดิบบางรายการที่ไม่มีอยู่ในระบบ ไม่สามารถเพิ่มวัตถุดิบใหม่จากหน้านี้ได้' },
+        { status: 400 }
+      );
+    }
+    const ingMap = new Map(existingIngs.map((i) => [i.id, i]));
+
+    // Create recipe and items in transaction (Strict existing ingredients only)
+    const newRecipe = await prisma.$transaction(async (tx) => {
+      const resolvedItems = validItems.map((it: any) => {
+        const ingId = Number(it.ingredientId);
+        const ing = ingMap.get(ingId);
+        return {
+          ingredientId: ingId,
+          quantity: Number(it.quantity),
+          unit: it.unit?.trim() || ing?.unit || 'กรัม',
+        };
+      });
+
+      return await tx.recipe.create({
+        data: {
+          productId: Number(productId),
+          description: description?.trim() || null,
+          items: {
+            create: resolvedItems,
           },
         },
-      },
+        include: {
+          product: true,
+          items: {
+            include: {
+              ingredient: true,
+            },
+          },
+        },
+      });
     });
 
     // Optionally calculate and update product cost
