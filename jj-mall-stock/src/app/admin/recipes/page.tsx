@@ -30,6 +30,8 @@ import {
   Sparkles,
   ChevronDown,
   Info,
+  Store,
+  Warehouse,
 } from 'lucide-react';
 
 interface RecipeItemDetail {
@@ -60,6 +62,12 @@ interface RecipeData {
     unit: string;
     price: number;
     cost: number | null;
+    storeId?: number | null;
+    store?: {
+      id: number;
+      name: string;
+      username: string;
+    } | null;
   };
   items: RecipeItemDetail[];
   totalBOMCost: number;
@@ -93,10 +101,12 @@ function RecipesContent() {
   const { user: currentUser, isAdmin } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
   const [recipes, setRecipes] = useState<RecipeData[]>([]);
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('ALL');
 
   // Instant SWR Cache: Shows cached recipes immediately upon clicking
-  const swrUrl = selectedStoreId ? `/api/recipes?storeId=${selectedStoreId}` : '/api/recipes';
+  const swrUrl = selectedStoreId && selectedStoreId !== 'ALL' && selectedStoreId !== 'CENTRAL'
+    ? `/api/recipes?storeId=${selectedStoreId}`
+    : '/api/recipes';
   const { data: swrData, isLoading, isValidating, mutate } = useSWR(swrUrl);
 
   const staffStores: any[] = useMemo(() => {
@@ -104,10 +114,10 @@ function RecipesContent() {
   }, [swrData]);
 
   useEffect(() => {
-    if (staffStores.length > 0 && !selectedStoreId) {
-      setSelectedStoreId(String(staffStores[0].id));
+    if (!selectedStoreId) {
+      setSelectedStoreId('ALL');
     }
-  }, [staffStores, selectedStoreId]);
+  }, [selectedStoreId]);
 
   useEffect(() => {
     if (swrData?.success && Array.isArray(swrData.recipes)) {
@@ -163,13 +173,17 @@ function RecipesContent() {
   }, [editingRecipe, selectedProductId, productsWithoutRecipe, allProductsList, recipes]);
 
   const currentActiveStoreId = useMemo(() => {
-    return Number(selectedStoreId || currentSelectedProduct?.storeId || staffStores[0]?.id || 0);
+    if (selectedStoreId && selectedStoreId !== 'ALL' && selectedStoreId !== 'CENTRAL') {
+      return Number(selectedStoreId);
+    }
+    return Number(currentSelectedProduct?.storeId || staffStores[0]?.id || 0);
   }, [selectedStoreId, currentSelectedProduct, staffStores]);
 
   const activeStoreName = useMemo(() => {
+    if (selectedStoreId === 'CENTRAL') return 'คลังส่วนกลาง';
     if (!currentActiveStoreId) return null;
     return staffStores.find((s) => s.id === currentActiveStoreId)?.name || currentSelectedProduct?.store?.name || null;
-  }, [currentActiveStoreId, staffStores, currentSelectedProduct]);
+  }, [selectedStoreId, currentActiveStoreId, staffStores, currentSelectedProduct]);
 
   const storeBalancesMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -251,20 +265,26 @@ function RecipesContent() {
     await mutate();
   };
 
-  // Filtered recipes
+  // Filtered recipes (Search & Store Filter)
   const filteredRecipes = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return recipes;
     return recipes.filter((r) => {
-      const matchProduct =
+      const matchSearch =
+        !q ||
         r.product.name.toLowerCase().includes(q) ||
-        r.product.code.toLowerCase().includes(q);
-      const matchIngredient = r.items.some((it) =>
-        it.ingredient.name.toLowerCase().includes(q)
-      );
-      return matchProduct || matchIngredient;
+        r.product.code.toLowerCase().includes(q) ||
+        r.items.some((it) => it.ingredient.name.toLowerCase().includes(q));
+
+      const matchStore =
+        !selectedStoreId ||
+        selectedStoreId === 'ALL' ||
+        (selectedStoreId === 'CENTRAL' && !r.product.storeId) ||
+        String(r.product.storeId) === String(selectedStoreId) ||
+        (!r.product.storeId && selectedStoreId !== 'CENTRAL');
+
+      return matchSearch && matchStore;
     });
-  }, [recipes, search]);
+  }, [recipes, search, selectedStoreId]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -565,6 +585,60 @@ function RecipesContent() {
           </div>
         )}
 
+        {/* Store Selection Tabs */}
+        <div className="flex">
+          <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+            <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+              <span>เลือกร้านค้า:</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedStoreId('ALL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                selectedStoreId === 'ALL'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              สูตรทั้งหมด ({recipes.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedStoreId('CENTRAL')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                selectedStoreId === 'CENTRAL'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+              }`}
+            >
+              <Warehouse className="w-3.5 h-3.5" />
+              เมนูส่วนกลาง ({recipes.filter((r) => !r.product.storeId).length})
+            </button>
+
+            {staffStores.map((st) => {
+              const count = recipes.filter((r) => r.product.storeId === st.id || !r.product.storeId).length;
+              const isSelected = selectedStoreId === String(st.id);
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setSelectedStoreId(String(st.id))}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  {st.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Search & Store Filter Bar */}
         <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="relative w-full max-w-md">
@@ -586,6 +660,8 @@ function RecipesContent() {
                 onChange={(e) => setSelectedStoreId(e.target.value)}
                 className="px-3.5 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/70 text-emerald-950 font-bold focus:outline-none cursor-pointer"
               >
+                <option value="ALL">สูตรทั้งหมด ({recipes.length})</option>
+                <option value="CENTRAL">เมนูส่วนกลาง ({recipes.filter((r) => !r.product.storeId).length})</option>
                 {staffStores.map((st) => (
                   <option key={st.id} value={st.id}>
                     ร้าน: {st.name}
@@ -636,16 +712,22 @@ function RecipesContent() {
                   <div className="p-5 sm:p-5.5 border-b border-slate-100 bg-slate-50/50">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono text-xs font-bold text-slate-400">
                             {recipe.product.code}
                           </span>
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/70 text-slate-600">
                             {recipe.product.category}
                           </span>
-                          {activeStoreName && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              ร้าน: {activeStoreName}
+                          {recipe.product.store ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                              <Store className="w-3 h-3 text-amber-600" />
+                              <span>เฉพาะร้าน: {recipe.product.store.name}</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-1">
+                              <Warehouse className="w-3 h-3 text-blue-600" />
+                              <span>เมนูส่วนกลาง</span>
                             </span>
                           )}
                         </div>
@@ -840,7 +922,20 @@ function RecipesContent() {
                   </div>
                 ) : editingRecipe ? (
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 text-xs flex items-center justify-between">
-                    <span>{editingRecipe.product.name} ({editingRecipe.product.code})</span>
+                    <div className="flex items-center gap-2">
+                      <span>{editingRecipe.product.name} ({editingRecipe.product.code})</span>
+                      {editingRecipe.product.store ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                          <Store className="w-3 h-3 text-amber-600" />
+                          <span>เฉพาะร้าน: {editingRecipe.product.store.name}</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-1">
+                          <Warehouse className="w-3 h-3 text-blue-600" />
+                          <span>เมนูส่วนกลาง</span>
+                        </span>
+                      )}
+                    </div>
                     <span className="text-emerald-700">฿{Number(editingRecipe.product.price).toFixed(2)}</span>
                   </div>
                 ) : (
@@ -853,7 +948,7 @@ function RecipesContent() {
                     <option value="">-- กรุณาเลือกสินค้า --</option>
                     {productsWithoutRecipe.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({p.code}) - ฿{Number(p.price).toFixed(2)}
+                        {p.name} ({p.code}) - ฿{Number(p.price).toFixed(2)} {p.store ? `[เฉพาะร้าน: ${p.store.name}]` : '[เมนูส่วนกลาง]'}
                       </option>
                     ))}
                     {selectedProductId && !productsWithoutRecipe.some((p) => p.id?.toString() === selectedProductId) && (
