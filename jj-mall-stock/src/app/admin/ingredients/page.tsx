@@ -26,6 +26,8 @@ import {
   Store,
   Warehouse,
   ArrowUpFromLine,
+  ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 
 interface StaffStore {
@@ -113,7 +115,7 @@ export default function IngredientsPage() {
   const refreshing = isValidating;
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [selectedStockStatus, setSelectedStockStatus] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
 
   const staffStores: StaffStore[] = useMemo(() => {
@@ -188,9 +190,16 @@ export default function IngredientsPage() {
   const [stockInNote, setStockInNote] = useState<string>('');
   const [stockInSubmitting, setStockInSubmitting] = useState(false);
   const [stockInError, setStockInError] = useState<string | null>(null);
-  const [stockInItems, setStockInItems] = useState<{ ingredientId: string; quantity: string; costPerUnit: string }[]>([
-    { ingredientId: '', quantity: '', costPerUnit: '' },
-  ]);
+  const [activeStockInSearchIdx, setActiveStockInSearchIdx] = useState<number | null>(null);
+  const [stockInItems, setStockInItems] = useState<
+    Array<{
+      ingredientId: string;
+      customName?: string;
+      unit?: string;
+      quantity: string;
+      costPerUnit: string;
+    }>
+  >([{ ingredientId: '', customName: '', unit: '', quantity: '', costPerUnit: '' }]);
 
   const openQuickStockIn = (ing?: IngredientItem | null, storeId?: string) => {
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -202,21 +211,25 @@ export default function IngredientsPage() {
     setStockInNote('');
     setStockInError(null);
 
+    setActiveStockInSearchIdx(null);
     if (ing) {
       setStockInItems([
         {
           ingredientId: String(ing.id),
+          customName: ing.name,
+          unit: ing.unit,
           quantity: '',
           costPerUnit: String(ing.costPerUnit || '0'),
         },
       ]);
     } else {
-      const firstIng = filteredIngredients[0] || ingredients[0];
       setStockInItems([
         {
-          ingredientId: firstIng ? String(firstIng.id) : '',
+          ingredientId: '',
+          customName: '',
+          unit: '',
           quantity: '',
-          costPerUnit: firstIng ? String(firstIng.costPerUnit || '0') : '0',
+          costPerUnit: '',
         },
       ]);
     }
@@ -224,13 +237,14 @@ export default function IngredientsPage() {
   };
 
   const addStockInRow = () => {
-    const available = ingredients.find((i) => !stockInItems.some((it) => it.ingredientId === String(i.id))) || ingredients[0];
     setStockInItems((prev) => [
       ...prev,
       {
-        ingredientId: available ? String(available.id) : '',
+        ingredientId: '',
+        customName: '',
+        unit: '',
         quantity: '',
-        costPerUnit: available ? String(available.costPerUnit || '0') : '0',
+        costPerUnit: '',
       },
     ]);
   };
@@ -238,6 +252,8 @@ export default function IngredientsPage() {
   const addAllIngredientsToStockIn = () => {
     const allRows = ingredients.map((ing) => ({
       ingredientId: String(ing.id),
+      customName: ing.name,
+      unit: ing.unit,
       quantity: '',
       costPerUnit: String(ing.costPerUnit || '0'),
     }));
@@ -247,20 +263,28 @@ export default function IngredientsPage() {
   const removeStockInRow = (index: number) => {
     setStockInItems((prev) => {
       if (prev.length <= 1) {
-        const first = ingredients[0];
-        return [{ ingredientId: first ? String(first.id) : '', quantity: '', costPerUnit: first ? String(first.costPerUnit || '0') : '0' }];
+        return [{ ingredientId: '', customName: '', unit: '', quantity: '', costPerUnit: '' }];
       }
       return prev.filter((_, idx) => idx !== index);
     });
+    if (activeStockInSearchIdx === index) {
+      setActiveStockInSearchIdx(null);
+    }
   };
 
-  const updateStockInItem = (index: number, field: 'ingredientId' | 'quantity' | 'costPerUnit', value: string) => {
+  const updateStockInItem = (
+    index: number,
+    field: 'ingredientId' | 'customName' | 'unit' | 'quantity' | 'costPerUnit',
+    value: string
+  ) => {
     setStockInItems((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], [field]: value };
       if (field === 'ingredientId') {
         const found = ingredients.find((i) => String(i.id) === value);
         if (found) {
+          next[index].customName = found.name;
+          next[index].unit = found.unit;
           next[index].costPerUnit = String(found.costPerUnit || '0');
         }
       }
@@ -287,11 +311,12 @@ export default function IngredientsPage() {
 
     const validItems = stockInItems.filter((item) => {
       const qty = parseFloat(item.quantity);
-      return !isNaN(qty) && qty > 0 && item.ingredientId;
+      const hasIngredient = Boolean(item.ingredientId || (item.customName && item.customName.trim()));
+      return !isNaN(qty) && qty > 0 && hasIngredient;
     });
 
     if (validItems.length === 0) {
-      setStockInError('กรุณาระบุจำนวนที่รับเข้าอย่างน้อย 1 รายการ (ต้องมากกว่า 0)');
+      setStockInError('กรุณาระบุวัตถุดิบและจำนวนที่รับเข้าอย่างน้อย 1 รายการ (ต้องมากกว่า 0)');
       return;
     }
 
@@ -308,7 +333,9 @@ export default function IngredientsPage() {
           invoiceNumber: stockInInvoice.trim(),
           note: stockInNote.trim(),
           items: validItems.map((it) => ({
-            ingredientId: Number(it.ingredientId),
+            ingredientId: it.ingredientId ? Number(it.ingredientId) : undefined,
+            name: it.customName ? it.customName.trim() : undefined,
+            unit: it.unit ? it.unit.trim() : undefined,
             quantity: parseFloat(it.quantity),
             costPerUnit: it.costPerUnit ? parseFloat(it.costPerUnit) : undefined,
           })),
@@ -414,33 +441,10 @@ export default function IngredientsPage() {
 
       const matchCategory = selectedCategory === 'ALL' || ing.category === selectedCategory;
 
-      let stock = Number(ing.currentStock);
-      let isStockedInStore = true;
-      if (!isCentral) {
-        const b = selectedStoreBalancesMap.get(ing.id);
-        stock = b ? Number(b.expectedStock) : 0;
-        isStockedInStore = Boolean(b?.hasStockHistory);
-      }
-      const min = Number(ing.minStock);
-
-      let matchStock = true;
-      if (!isCentral && !isStockedInStore) {
-        if (selectedStockStatus === 'SAFE' || selectedStockStatus === 'LOW' || selectedStockStatus === 'OUT') {
-          matchStock = false;
-        }
-      } else {
-        if (selectedStockStatus === 'SAFE') {
-          matchStock = stock > min;
-        } else if (selectedStockStatus === 'LOW') {
-          matchStock = stock > 0 && stock <= min;
-        } else if (selectedStockStatus === 'OUT') {
-          matchStock = stock <= 0;
-        }
-      }
-
-      return matchSearch && matchCategory && matchStock;
+      const matchStatus = selectedStatus === 'ALL' || ing.status === selectedStatus;
+      return matchSearch && matchCategory && matchStatus;
     });
-  }, [ingredients, search, selectedCategory, selectedStockStatus, isCentral, selectedStoreBalancesMap]);
+  }, [ingredients, search, selectedCategory, selectedStatus]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -448,7 +452,7 @@ export default function IngredientsPage() {
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory, selectedStockStatus, selectedStoreId]);
+  }, [search, selectedCategory, selectedStatus, selectedStoreId]);
 
   // Paginated items (10 items per page)
   const paginatedIngredients = useMemo(() => {
@@ -646,31 +650,24 @@ export default function IngredientsPage() {
 
   // Metrics
   const totalCount = ingredients.length;
-  let safeCount = 0;
-  let lowCount = 0;
-  let outCount = 0;
+  let activeCount = 0;
+  let inactiveCount = 0;
   let totalValue = 0;
 
   ingredients.forEach((ing) => {
     let s = Number(ing.currentStock);
-    let isStockedInStore = true;
     if (!isCentral) {
       const b = selectedStoreBalancesMap.get(ing.id);
       s = b ? Number(b.expectedStock) : 0;
-      isStockedInStore = Boolean(b?.hasStockHistory);
     }
-    const m = Number(ing.minStock);
     const cost = Number(ing.costPerUnit || 0);
     totalValue += s * cost;
 
-    if (!isCentral && !isStockedInStore) {
-      // Store has never requested or stocked this item - don't count as low or out
-      return;
+    if (ing.status === 'ACTIVE') {
+      activeCount++;
+    } else {
+      inactiveCount++;
     }
-
-    if (s <= 0) outCount++;
-    else if (s <= m) lowCount++;
-    else safeCount++;
   });
 
   return (
@@ -751,14 +748,16 @@ export default function IngredientsPage() {
                 คำนวณจากสูตร: <code className="bg-emerald-100/70 px-1.5 py-0.5 rounded font-mono font-normal text-emerald-800">ยอดยกมา + รับเข้า (ซื้อมา) - ตัดขาย POS</code>
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => openQuickStockIn(null, String(currentSelectedStore.id))}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs shadow-2xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all"
-            >
-              <ArrowDownToLine className="w-3.5 h-3.5" />
-              <span>+ บันทึกรับเข้า (ซื้อมาให้ร้านนี้)</span>
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => openQuickStockIn(null, String(currentSelectedStore.id))}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium text-xs shadow-2xs flex items-center gap-1.5 shrink-0 cursor-pointer transition-all self-end sm:self-auto"
+              >
+                <ArrowDownToLine className="w-3.5 h-3.5" />
+                <span>+ บันทึกรับเข้า (ซื้อมาให้ร้านนี้)</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -775,11 +774,16 @@ export default function IngredientsPage() {
           </div>
         )}
 
-        {/* 5 Summary Stat Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        {/* 4 Summary Stat Cards (Matching table status & clean layout) */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* Total Items */}
           <div
-            onClick={() => setSelectedStockStatus('ALL')}
-            className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs cursor-pointer hover:border-slate-300 transition-all"
+            onClick={() => setSelectedStatus('ALL')}
+            className={`bg-white p-4 rounded-3xl border shadow-2xs cursor-pointer transition-all ${
+              selectedStatus === 'ALL'
+                ? 'border-slate-800 ring-2 ring-slate-800/10'
+                : 'border-slate-200 hover:border-slate-300'
+            }`}
           >
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">วัตถุดิบทั้งหมด</div>
             <div className="text-2xl font-black text-slate-800 mt-1">
@@ -787,37 +791,38 @@ export default function IngredientsPage() {
             </div>
           </div>
 
+          {/* Active Items */}
           <div
-            onClick={() => setSelectedStockStatus('SAFE')}
-            className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs cursor-pointer hover:border-emerald-300 transition-all"
+            onClick={() => setSelectedStatus('ACTIVE')}
+            className={`bg-white p-4 rounded-3xl border shadow-2xs cursor-pointer transition-all ${
+              selectedStatus === 'ACTIVE'
+                ? 'border-emerald-600 ring-2 ring-emerald-600/10'
+                : 'border-slate-200 hover:border-emerald-300'
+            }`}
           >
-            <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">สต็อกเพียงพอ</div>
+            <div className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">พร้อมใช้งาน</div>
             <div className="text-2xl font-black text-emerald-700 mt-1">
-              {safeCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+              {activeCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
             </div>
           </div>
 
+          {/* Inactive Items */}
           <div
-            onClick={() => setSelectedStockStatus('LOW')}
-            className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs cursor-pointer hover:border-amber-300 transition-all"
+            onClick={() => setSelectedStatus('INACTIVE')}
+            className={`bg-white p-4 rounded-3xl border shadow-2xs cursor-pointer transition-all ${
+              selectedStatus === 'INACTIVE'
+                ? 'border-red-600 ring-2 ring-red-600/10'
+                : 'border-slate-200 hover:border-red-300'
+            }`}
           >
-            <div className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">ใกล้หมด (ต่ำกว่าขั้นต่ำ)</div>
-            <div className="text-2xl font-black text-amber-600 mt-1">
-              {lowCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
-            </div>
-          </div>
-
-          <div
-            onClick={() => setSelectedStockStatus('OUT')}
-            className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs cursor-pointer hover:border-red-300 transition-all"
-          >
-            <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider">หมดสต็อก (0)</div>
+            <div className="text-[11px] font-bold text-red-600 uppercase tracking-wider">ระงับใช้งาน</div>
             <div className="text-2xl font-black text-red-600 mt-1">
-              {outCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+              {inactiveCount} <span className="text-xs font-semibold text-slate-500">รายการ</span>
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
+          {/* Store Total Value */}
+          <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-2 lg:col-span-1">
             <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
               มูลค่าสต็อกร้าน: {currentSelectedStore?.name || ''}
             </div>
@@ -870,16 +875,15 @@ export default function IngredientsPage() {
               ))}
             </select>
 
-            {/* Stock Status Filter */}
+            {/* Status Filter (Matching table status & admin/products) */}
             <select
-              value={selectedStockStatus}
-              onChange={(e) => setSelectedStockStatus(e.target.value)}
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 font-medium focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
-              <option value="ALL">ทุกสถานะสต็อก</option>
-              <option value="SAFE">🟢 สต็อกเพียงพอ</option>
-              <option value="LOW">🟠 ใกล้หมด (เหลือน้อยกว่าขั้นต่ำ)</option>
-              <option value="OUT">🔴 หมดสต็อก (0)</option>
+              <option value="ALL">ทุกสถานะ</option>
+              <option value="ACTIVE">🟢 พร้อมใช้งาน (Active)</option>
+              <option value="INACTIVE">🔴 ระงับใช้งาน (Inactive)</option>
             </select>
           </div>
         </div>
@@ -982,23 +986,13 @@ export default function IngredientsPage() {
                               </span>
                             </td>
 
-                            {/* Current Stock */}
+                            {/* Current Stock (Black Font across all statuses) */}
                             <td className="py-3 px-3.5 text-right font-bold text-xs">
-                              <span
-                                className={
-                                  isOutOfStock
-                                    ? 'text-red-600'
-                                    : isLowStock
-                                    ? 'text-amber-600'
-                                    : 'text-slate-900'
-                                }
-                              >
+                              <span className="text-black font-bold font-mono text-xs">
                                 {stock.toLocaleString()}
                               </span>{' '}
                               <span className="text-[11px] font-normal text-slate-500 ml-0.5">{ing.unit}</span>
                             </td>
-
-                            
 
                             {/* Cost Per Unit */}
                             <td className="py-3 px-3.5 text-right font-mono text-slate-700 text-xs font-medium">
@@ -1115,25 +1109,13 @@ export default function IngredientsPage() {
                               {(b && Number(b.salesQuantity) > 0) ? `-${Number(b.salesQuantity).toLocaleString()}` : '0'} <span className="text-[11px] text-slate-400">{ing.unit}</span>
                             </td>
 
-                            {/* Expected In-Store Stock */}
+                            {/* Expected In-Store Stock (Black Font across all statuses) */}
                             <td className="py-3 px-3.5 text-right bg-slate-50/60 font-bold text-xs font-mono">
-                              <span
-                                className={
-                                  !b?.hasStockHistory
-                                    ? 'text-slate-400 font-normal'
-                                    : isOutOfStock
-                                    ? 'text-red-600'
-                                    : isLowStock
-                                    ? 'text-amber-600'
-                                    : 'text-slate-900'
-                                }
-                              >
+                              <span className="text-black font-bold font-mono text-xs">
                                 {stock.toLocaleString()}
                               </span>{' '}
                               <span className="text-[11px] font-normal text-slate-500 ml-0.5">{ing.unit}</span>
                             </td>
-
-                            
 
                             {/* Cost */}
                             <td className="py-3 px-3.5 text-right font-mono text-slate-700 text-xs font-medium">
@@ -1681,7 +1663,7 @@ export default function IngredientsPage() {
               {/* Table Column Headers (Desktop) */}
               <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0 mb-1.5">
                 <div className="col-span-1 text-center">#</div>
-                <div className="col-span-5">วัตถุดิบ (เลือกวัตถุดิบ)</div>
+                <div className="col-span-5">วัตถุดิบ (เลือกจากระบบ หรือพิมพ์เองได้)</div>
                 <div className="col-span-2 text-right">จำนวนที่เพิ่ม (ซื้อเข้า)</div>
                 <div className="col-span-2 text-right">ต้นทุน/หน่วย (฿)</div>
                 <div className="col-span-1 text-right">รวม (฿)</div>
@@ -1691,7 +1673,13 @@ export default function IngredientsPage() {
               {/* Scrollable Items Container */}
               <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-2.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400">
                 {stockInItems.map((item, idx) => {
-                  const selectedIng = ingredients.find((i) => String(i.id) === item.ingredientId);
+                  const selectedIng = ingredients.find(
+                    (i) => (item.ingredientId && String(i.id) === item.ingredientId) ||
+                           (item.customName && i.name.trim().toLowerCase() === item.customName.trim().toLowerCase())
+                  );
+                  const displayName = typeof item.customName === 'string'
+                    ? item.customName
+                    : (selectedIng ? selectedIng.name : '');
                   const currentBalance = selectedIng ? getStoreBalanceForItem(selectedIng.id, stockInStoreId) : 0;
                   const qtyNum = parseFloat(item.quantity) || 0;
                   const costNum = parseFloat(item.costPerUnit) || 0;
@@ -1701,7 +1689,9 @@ export default function IngredientsPage() {
                   return (
                     <div
                       key={idx}
-                      className="p-2.5 sm:p-3 rounded-2xl bg-white border border-slate-200 hover:border-emerald-300 transition-all text-xs shadow-2xs space-y-2"
+                      className={`p-2.5 sm:p-3 rounded-2xl bg-white border border-slate-200 hover:border-emerald-300 transition-all text-xs shadow-2xs space-y-2 relative ${
+                        activeStockInSearchIdx === idx ? 'z-50 ring-2 ring-emerald-500/30' : 'z-0'
+                      }`}
                     >
                       <div className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:items-center">
                         {/* Number Index */}
@@ -1711,21 +1701,222 @@ export default function IngredientsPage() {
                           </span>
                         </div>
 
-                        {/* Ingredient Dropdown */}
-                        <div className="col-span-5">
-                          <select
-                            value={item.ingredientId}
-                            onChange={(e) => updateStockInItem(idx, 'ingredientId', e.target.value)}
-                            required
-                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                          >
-                            <option value="" disabled>-- เลือกวัตถุดิบ --</option>
-                            {ingredients.map((ing) => (
-                              <option key={ing.id} value={ing.id}>
-                                {ing.name} ({ing.code}) {ing.category ? `• [${ing.category}]` : ''} - หน่วย: {ing.unit}
-                              </option>
-                            ))}
-                          </select>
+                        {/* Searchable / Writeable Ingredient Combobox */}
+                        <div className="col-span-5 relative">
+                          <div className="relative flex items-center">
+                            <input
+                              type="text"
+                              value={displayName}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const exactMatch = ingredients.find(
+                                  (ing) =>
+                                    ing.name.trim().toLowerCase() === val.trim().toLowerCase() ||
+                                    ing.code.trim().toLowerCase() === val.trim().toLowerCase()
+                                );
+                                if (exactMatch) {
+                                  setStockInItems((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = {
+                                      ...next[idx],
+                                      ingredientId: String(exactMatch.id),
+                                      customName: exactMatch.name,
+                                      unit: exactMatch.unit || next[idx].unit || 'ชิ้น',
+                                      costPerUnit: String(exactMatch.costPerUnit || '0'),
+                                    };
+                                    return next;
+                                  });
+                                } else {
+                                  setStockInItems((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = {
+                                      ...next[idx],
+                                      ingredientId: '',
+                                      customName: val,
+                                      unit: next[idx].unit || 'ชิ้น',
+                                    };
+                                    return next;
+                                  });
+                                }
+                                setActiveStockInSearchIdx(idx);
+                              }}
+                              onFocus={() => setActiveStockInSearchIdx(idx)}
+                              placeholder="พิมพ์ชื่อวัตถุดิบ หรือคลิกเลือกจากระบบ..."
+                              className="w-full pl-8 pr-14 py-1.5 text-xs rounded-xl border border-slate-300 font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                            />
+
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              {item.customName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStockInItems((prev) => {
+                                      const next = [...prev];
+                                      next[idx] = { ...next[idx], ingredientId: '', customName: '', unit: '', costPerUnit: '' };
+                                      return next;
+                                    });
+                                  }}
+                                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                  title="ล้างข้อมูล"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setActiveStockInSearchIdx(activeStockInSearchIdx === idx ? null : idx)}
+                                className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                title="แสดงรายการวัตถุดิบในระบบ"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Status Indicator: Shows ingredient name if matched in system, or new ingredient tag */}
+                          {selectedIng ? (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span>ในระบบ: {selectedIng.name}</span>
+                              </span>
+                            </div>
+                          ) : item.customName && item.customName.trim() ? (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                                <Sparkles className="w-3 h-3 text-blue-600" />
+                                <span>วัตถุดิบใหม่: &ldquo;{item.customName.trim()}&rdquo;</span>
+                              </span>
+                              <select
+                                value={item.unit || 'ชิ้น'}
+                                onChange={(e) => updateStockInItem(idx, 'unit', e.target.value)}
+                                className="text-[10px] font-bold bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none"
+                              >
+                                {PRESET_UNITS.map((u) => (
+                                  <option key={u} value={u}>หน่วย: {u}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null}
+
+                          {/* Dropdown Suggestions Popover */}
+                          {activeStockInSearchIdx === idx && (() => {
+                            const q = (item.customName || '').trim().toLowerCase();
+                            const filtered = ingredients.filter(
+                              (ing) =>
+                                !q ||
+                                ing.name.toLowerCase().includes(q) ||
+                                ing.code.toLowerCase().includes(q) ||
+                                (ing.category && ing.category.toLowerCase().includes(q))
+                            );
+                            const isExactExisting = ingredients.some(
+                              (ing) => ing.name.trim().toLowerCase() === q
+                            );
+
+                            return (
+                              <div className="absolute top-full left-0 w-[420px] sm:w-[500px] max-w-[90vw] mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99] max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 ring-4 ring-black/5">
+                                {/* Option to use typed text as new ingredient */}
+                                {q && !isExactExisting && (
+                                  <div
+                                    onClick={() => {
+                                      setStockInItems((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = {
+                                          ...next[idx],
+                                          ingredientId: '',
+                                          customName: item.customName!.trim(),
+                                          unit: next[idx].unit || 'ชิ้น',
+                                        };
+                                        return next;
+                                      });
+                                      setActiveStockInSearchIdx(null);
+                                    }}
+                                    className="p-2.5 bg-emerald-50/90 hover:bg-emerald-100 transition-colors flex items-center justify-between gap-2 cursor-pointer border-b border-emerald-200"
+                                  >
+                                    <div>
+                                      <div className="font-bold text-xs text-emerald-900 flex items-center gap-1">
+                                        <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>ใช้ชื่อนี้:</span>
+                                        <span className="underline decoration-emerald-500 font-black">"{item.customName}"</span>
+                                      </div>
+                                      <div className="text-[10px] text-emerald-700 mt-0.5">
+                                        จะบันทึกเป็นวัตถุดิบใหม่เข้าคลังร้านและระบบอัตโนมัติ
+                                      </div>
+                                    </div>
+                                    <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg shrink-0">
+                                      + ใช้ชื่อนี้
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Header */}
+                                <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 flex items-center justify-between">
+                                  <span>วัตถุดิบในระบบ ({filtered.length})</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveStockInSearchIdx(null)}
+                                    className="text-slate-400 hover:text-slate-600 font-bold"
+                                  >
+                                    ปิด ✕
+                                  </button>
+                                </div>
+
+                                {/* Ingredients List */}
+                                {filtered.length === 0 ? (
+                                  <div className="p-3 text-center text-xs text-slate-400">
+                                    ไม่พบวัตถุดิบในระบบที่ตรงกับ &ldquo;{item.customName}&rdquo;
+                                    <div className="text-[11px] text-emerald-700 font-bold mt-1">
+                                      คลิก "+ ใช้ชื่อนี้" ด้านบนเพื่อเพิ่มวัตถุดิบใหม่เข้าระบบ
+                                    </div>
+                                  </div>
+                                ) : (
+                                  filtered.map((ing) => {
+                                    const storeStock = getStoreBalanceForItem(ing.id, stockInStoreId);
+                                    const isSelected = String(ing.id) === item.ingredientId;
+                                    return (
+                                      <div
+                                        key={ing.id}
+                                        onClick={() => {
+                                          updateStockInItem(idx, 'ingredientId', String(ing.id));
+                                          setActiveStockInSearchIdx(null);
+                                        }}
+                                        className={`p-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                                          isSelected ? 'bg-emerald-50/70' : ''
+                                        }`}
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-bold text-xs sm:text-sm text-slate-900 break-words whitespace-normal leading-snug">
+                                            {ing.name}
+                                            {isSelected && (
+                                              <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-2">
+                                                ✓ เลือกอยู่
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                                            {ing.category && (
+                                              <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200/60 text-[10px]">
+                                                {ing.category}
+                                              </span>
+                                            )}
+                                            <span className="text-slate-500 text-[10px]">
+                                              ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)} / {ing.unit}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="text-right shrink-0 pt-0.5">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                            ในร้าน: {storeStock.toLocaleString()} {ing.unit}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {/* Quantity */}
@@ -1745,7 +1936,7 @@ export default function IngredientsPage() {
                               className="w-full px-2.5 py-1.5 pr-10 text-xs text-right font-mono font-bold rounded-xl border-2 border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white"
                             />
                             <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                              {selectedIng?.unit || ''}
+                              {item.unit || selectedIng?.unit || ''}
                             </span>
                           </div>
                         </div>
@@ -1791,7 +1982,7 @@ export default function IngredientsPage() {
                       </div>
 
                       {/* Stock Summary Strip for this Item: แสดงจำนวนที่เพิ่ม และคงเหลือ */}
-                      {selectedIng && (
+                      {selectedIng ? (
                         <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-2.5 -mb-2.5 sm:-mx-3 sm:-mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
                           <div className="flex items-center gap-1.5 text-slate-500">
                             <span>หมวด: <span className="font-semibold text-slate-700">{selectedIng.category || 'ทั่วไป'}</span></span>
@@ -1818,7 +2009,33 @@ export default function IngredientsPage() {
                             </span>
                           </div>
                         </div>
-                      )}
+                      ) : (item.customName && item.customName.trim()) ? (
+                        <div className="pt-2 border-t border-emerald-100 flex flex-wrap items-center justify-between gap-2 bg-emerald-50/50 -mx-2.5 -mb-2.5 sm:-mx-3 sm:-mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
+                          <div className="flex items-center gap-1.5 text-emerald-800">
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="font-bold">วัตถุดิบใหม่:</span>
+                            <span className="font-semibold">{item.customName}</span>
+                            <span>•</span>
+                            <span>ยอดยกมา: <strong className="font-mono">0</strong> {item.unit || 'ชิ้น'}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span>รับเข้าใหม่:</span>
+                              <span className="font-mono text-xs">+{qtyNum > 0 ? qtyNum.toLocaleString() : '0'}</span>
+                              <span>{item.unit || 'ชิ้น'}</span>
+                            </span>
+
+                            <span className="text-emerald-300 font-bold">➔</span>
+
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-bold bg-emerald-600 text-white shadow-2xs">
+                              <span>คงเหลือในร้าน:</span>
+                              <span className="font-mono text-xs font-black">{qtyNum.toLocaleString()}</span>
+                              <span className="text-emerald-100">{item.unit || 'ชิ้น'}</span>
+                            </span>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
