@@ -197,6 +197,18 @@ function RecipesContent() {
   const [simRecipe, setSimRecipe] = useState<RecipeData | null>(null);
   const [simCups, setSimCups] = useState<number>(10);
 
+  // Prevent background page scroll when modal is open (removes double scrollbars)
+  useEffect(() => {
+    if (modalOpen || simRecipe) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [modalOpen, simRecipe]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -719,7 +731,7 @@ function RecipesContent() {
       {/* Add / Edit Recipe Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-3xl lg:max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -823,10 +835,10 @@ function RecipesContent() {
                 />
               </div>
 
-              {/* Ingredients Section Container */}
-              <div className="rounded-2xl border-2 border-emerald-500/20 bg-slate-50/80 p-3.5 sm:p-4 space-y-3">
+              {/* Ingredients Section */}
+              <div className="space-y-3 pt-2">
                 {/* Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
+                <div className="flex items-center justify-between pb-1">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                       <Layers className="w-4 h-4" />
@@ -1191,8 +1203,8 @@ function RecipesContent() {
                   </div>
                 </div>
 
-                {/* Total BOM Calculation Summary inside Card */}
-                <div className="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300/80 flex items-center justify-between text-xs text-emerald-950">
+                {/* Total BOM Calculation Summary */}
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs text-emerald-950">
                   <div className="flex items-center gap-2">
                     <Calculator className="w-4 h-4 text-emerald-700" />
                     <span className="font-bold">
