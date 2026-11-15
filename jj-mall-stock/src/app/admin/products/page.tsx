@@ -259,11 +259,9 @@ export default function ProductsPage() {
 
     // เลื่อนหน้าจอไปยังรายการใหม่ที่เพิ่งเพิ่ม (ไม่เปิดกล่องค้นหา ให้ผู้ใช้กดเอง)
     setTimeout(() => {
-      if (recipeTableContainerRef.current) {
-        recipeTableContainerRef.current.scrollTo({
-          top: recipeTableContainerRef.current.scrollHeight,
-          behavior: 'smooth',
-        });
+      const rowEl = document.getElementById('product-recipe-row-' + newIdx);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 100);
   };
@@ -1607,10 +1605,10 @@ export default function ProductsPage() {
                   <div className="col-span-1 text-center">ลบ</div>
                 </div>
 
-                {/* Scrollable Items Container (Card List) */}
+                {/* Items Container (Card List) */}
                 <div
                   ref={recipeTableContainerRef}
-                  className="max-h-96 overflow-y-auto pr-1 space-y-2.5 scroll-smooth [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400"
+                  className="space-y-2.5 overflow-visible"
                 >
                   {recipeItems.map((item, idx) => {
                     const selectedIng = allIngredients.find(
@@ -1641,6 +1639,7 @@ export default function ProductsPage() {
                     return (
                       <div
                         key={idx}
+                        id={'product-recipe-row-' + idx}
                         className={`p-3 rounded-2xl bg-white border transition-all text-xs shadow-2xs space-y-2.5 relative ${
                           activeRecipeSearchIdx === idx ? 'z-50 ring-2 ring-emerald-500/30' : 'z-0'
                         } ${
@@ -1943,8 +1942,6 @@ export default function ProductsPage() {
                         <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-3 -mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
                           {selectedIng ? (
                             <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                              <span className="font-bold text-slate-700">{selectedIng.name}</span>
-                              <span>•</span>
                               <span>หมวด: <span className="font-semibold text-slate-600">{selectedIng.category || 'ทั่วไป'}</span></span>
                               <span>•</span>
                               <span>คงเหลือในสต็อก:</span>
@@ -1958,7 +1955,6 @@ export default function ProductsPage() {
                             </div>
                           ) : item.customName && item.customName.trim() ? (
                             <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                              <span className="font-bold text-blue-700">วัตถุดิบ: {item.customName.trim()}</span>
                               <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                                 (กำหนดใหม่ - บันทึกเป็นวัตถุดิบใหม่อัตโนมัติเมื่อกดบันทึก)
                               </span>
