@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import {
   ArrowDownToLine,
@@ -232,6 +232,35 @@ export default function StaffStockInPage() {
       costPerUnit: string;
     }>
   >([{ ingredientId: 0, customName: '', unit: '', quantity: '', costPerUnit: '' }]);
+
+  // Close stock-in suggestions popover when clicking anywhere outside or pressing Escape
+  useEffect(() => {
+    if (activeSearchIdx === null) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const activeCombobox = document.querySelector(`[data-stock-in-combobox="${activeSearchIdx}"]`);
+      if (activeCombobox && activeCombobox.contains(target)) {
+        return;
+      }
+      setActiveSearchIdx(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveSearchIdx(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeSearchIdx]);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -928,7 +957,7 @@ export default function StaffStockInPage() {
                           activeSearchIdx === idx ? 'z-50 ring-2 ring-emerald-500/30' : 'z-0'
                         }`}
                       >
-                        <div className="flex-1 w-full sm:w-auto relative">
+                        <div className="flex-1 w-full sm:w-auto relative" data-stock-in-combobox={idx}>
                           <div className="relative flex items-center">
                             <input
                               type="text"

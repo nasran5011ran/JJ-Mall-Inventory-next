@@ -181,11 +181,45 @@ export async function POST(req: NextRequest) {
       const results: any[] = [];
 
       for (const item of items) {
-        const ingId = Number(item.ingredientId);
+        let ingId = Number(item.ingredientId);
         const qtyIn = parseFloat(item.quantity);
         const unitCost = item.costPerUnit ? parseFloat(item.costPerUnit) : undefined;
 
         if (isNaN(qtyIn) || qtyIn <= 0) continue;
+
+        // Support custom written ingredient name (เขียนชื่อวัตถุดิบเอง บันทึกเข้าเป็นวัตถุดิบในระบบ)
+        if (!ingId || isNaN(ingId) || ingId <= 0) {
+          const rawName = (item.name || item.ingredientName || item.customName || '').trim();
+          if (!rawName) continue;
+
+          // Check if ingredient exists by name
+          let existingIng = await tx.ingredient.findFirst({
+            where: { name: rawName },
+          });
+
+          if (!existingIng) {
+            let finalCode = `ING-${Math.floor(100 + Math.random() * 900)}`;
+            let counter = 1;
+            while (await tx.ingredient.findUnique({ where: { code: finalCode } })) {
+              finalCode = `ING-${Date.now().toString().slice(-4)}${counter++}`;
+            }
+
+            existingIng = await tx.ingredient.create({
+              data: {
+                code: finalCode,
+                name: rawName,
+                category: item.category?.trim() || 'ทั่วไป',
+                unit: item.unit?.trim() || 'ชิ้น',
+                currentStock: 0,
+                minStock: 0,
+                costPerUnit: unitCost || 0,
+                status: 'ACTIVE',
+              },
+            });
+          }
+
+          ingId = existingIng.id;
+        }
 
         // 1. Update ingredient stock and cost in database
         const updateData: any = {

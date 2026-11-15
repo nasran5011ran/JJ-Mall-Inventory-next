@@ -201,6 +201,35 @@ export default function IngredientsPage() {
     }>
   >([{ ingredientId: '', customName: '', unit: '', quantity: '', costPerUnit: '' }]);
 
+  // Close stock-in suggestions popover when clicking anywhere outside or pressing Escape
+  useEffect(() => {
+    if (activeStockInSearchIdx === null) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const activeCombobox = document.querySelector(`[data-stock-in-combobox="${activeStockInSearchIdx}"]`);
+      if (activeCombobox && activeCombobox.contains(target)) {
+        return;
+      }
+      setActiveStockInSearchIdx(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveStockInSearchIdx(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeStockInSearchIdx]);
+
   const openQuickStockIn = (ing?: IngredientItem | null, storeId?: string) => {
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -1702,7 +1731,7 @@ export default function IngredientsPage() {
                         </div>
 
                         {/* Searchable / Writeable Ingredient Combobox */}
-                        <div className="col-span-5 relative">
+                        <div className="col-span-5 relative" data-stock-in-combobox={idx}>
                           <div className="relative flex items-center">
                             <input
                               type="text"

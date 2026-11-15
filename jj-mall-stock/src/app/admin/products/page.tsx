@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useAuth } from '@/context/auth-context';
 import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 import Pagination from '@/components/Pagination';
@@ -29,7 +29,25 @@ import {
   Coffee,
   Layers,
   Calculator,
+  ChevronDown,
 } from 'lucide-react';
+
+const PRESET_UNITS = [
+  'กรัม',
+  'กิโลกรัม',
+  'มิลลิลิตร',
+  'ลิตร',
+  'ชิ้น',
+  'ใบ',
+  'ฟอง',
+  'แก้ว',
+  'ขวด',
+  'กระป๋อง',
+  'ซอง',
+  'ถุง',
+  'แพ็ค',
+  'กล่อง',
+];
 
 interface StaffStore {
   id: number;
@@ -74,6 +92,7 @@ interface ProductItem {
 
 export default function ProductsPage() {
   const { user: currentUser, isAdmin } = useAuth();
+  const { mutate: globalMutate } = useSWRConfig();
   const [products, setProducts] = useState<ProductItem[]>([]);
 
   // Instant SWR Cache: Shows cached products immediately & auto-refreshes in real-time
@@ -149,13 +168,21 @@ export default function ProductsPage() {
     return storeItem ? storeItem.expectedStock : 0;
   };
 
+  const [activeRecipeSearchIdx, setActiveRecipeSearchIdx] = useState<number | null>(null);
   const [recipeItems, setRecipeItems] = useState<
-    Array<{ ingredientId: string; quantity: string; unit: string }>
+    Array<{
+      ingredientId: string;
+      customName?: string;
+      quantity: string;
+      unit: string;
+    }>
   >([]);
   const [recipeDescription, setRecipeDescription] = useState('');
   const [recipeUpdateCost, setRecipeUpdateCost] = useState(true);
   const [recipeSubmitting, setRecipeSubmitting] = useState(false);
   const [recipeError, setRecipeError] = useState<string | null>(null);
+  const recipeTableContainerRef = React.useRef<HTMLDivElement>(null);
+  const [highlightRowIdx, setHighlightRowIdx] = useState<number | null>(null);
 
   const openRecipeEditor = (product: ProductItem) => {
     setRecipeModalProduct(null);
@@ -165,61 +192,109 @@ export default function ProductsPage() {
     setRecipeDescription(product.recipe?.description || '');
     setRecipeUpdateCost(true);
     setRecipeError(null);
+    setActiveRecipeSearchIdx(null);
 
     if (product.recipe && product.recipe.items && product.recipe.items.length > 0) {
       setRecipeItems(
         product.recipe.items.map((it) => ({
           ingredientId: it.ingredient.id.toString(),
+          customName: it.ingredient.name,
           quantity: it.quantity.toString(),
           unit: it.unit || it.ingredient.unit || '',
         }))
       );
     } else {
-      const firstIng = allIngredients[0];
       setRecipeItems([
         {
-          ingredientId: firstIng?.id?.toString() || '',
-          quantity: '1',
-          unit: firstIng?.unit || '',
+          ingredientId: '',
+          customName: '',
+          quantity: '',
+          unit: '',
         },
       ]);
     }
   };
 
   const addRecipeRow = () => {
-    const firstIng = allIngredients[0];
+    const newIdx = recipeItems.length;
     setRecipeItems((prev) => [
       ...prev,
       {
-        ingredientId: firstIng?.id?.toString() || '',
-        quantity: '1',
-        unit: firstIng?.unit || '',
+        ingredientId: '',
+        customName: '',
+        quantity: '',
+        unit: '',
       },
     ]);
+    setHighlightRowIdx(newIdx);
+
+    // เลื่อนหน้าจอไปยังรายการใหม่ที่เพิ่งเพิ่ม
+    setTimeout(() => {
+      if (recipeTableContainerRef.current) {
+        recipeTableContainerRef.current.scrollTo({
+          top: recipeTableContainerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+      setActiveRecipeSearchIdx(newIdx);
+    }, 100);
   };
 
-  const updateRecipeRow = (index: number, field: 'ingredientId' | 'quantity', value: string) => {
+  const updateRecipeRow = (
+    index: number,
+    field: 'ingredientId' | 'customName' | 'quantity' | 'unit',
+    value: string
+  ) => {
     setRecipeItems((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: value };
       if (field === 'ingredientId') {
         const found = allIngredients.find((ing: any) => ing.id.toString() === value);
         if (found) {
+          copy[index].customName = found.name;
           copy[index].unit = found.unit;
+        } else {
+          copy[index].unit = '';
         }
       }
       return copy;
     });
   };
 
+  const mergeRowWithEarlier = (fromIdx: number, toIdx: number) => {
+    setRecipeItems((prev) => {
+      const copy = [...prev];
+      const addedQty = Number(copy[fromIdx]?.quantity || 0);
+      const oldQty = Number(copy[toIdx]?.quantity || 0);
+      copy[toIdx] = {
+        ...copy[toIdx],
+        quantity: Number((oldQty + addedQty).toFixed(4)).toString(),
+      };
+      copy.splice(fromIdx, 1);
+      return copy;
+    });
+    setHighlightRowIdx(toIdx);
+    setTimeout(() => setHighlightRowIdx(null), 2000);
+  };
+
   const removeRecipeRow = (index: number) => {
-    if (recipeItems.length <= 1) return;
+    if (recipeItems.length <= 1) {
+      setRecipeItems([{ ingredientId: '', customName: '', quantity: '', unit: '' }]);
+      return;
+    }
     setRecipeItems((prev) => prev.filter((_, i) => i !== index));
+    if (activeRecipeSearchIdx === index) {
+      setActiveRecipeSearchIdx(null);
+    }
   };
 
   const previewBOMCost = useMemo(() => {
     return recipeItems.reduce((sum, item) => {
-      const ing = allIngredients.find((i: any) => i.id.toString() === item.ingredientId);
+      if (!item.quantity) return sum;
+      let ing = item.ingredientId ? allIngredients.find((i: any) => i.id.toString() === item.ingredientId) : null;
+      if (!ing && item.customName) {
+        ing = allIngredients.find((i: any) => i.name.trim().toLowerCase() === item.customName!.trim().toLowerCase());
+      }
       const cost = Number(ing?.costPerUnit || 0);
       const qty = Number(item.quantity || 0);
       return sum + qty * cost;
@@ -230,6 +305,25 @@ export default function ProductsPage() {
     e.preventDefault();
     if (!editRecipeProduct) return;
     setRecipeError(null);
+
+    // ตรวจสอบข้อมูลวัตถุดิบ (ทั้งที่มีรหัสในระบบ หรือที่พิมพ์ชื่อเอง)
+    const filledItems = recipeItems.filter(
+      (it) => (it.ingredientId && it.ingredientId.trim() !== '') || (it.customName && it.customName.trim() !== '')
+    );
+
+    if (filledItems.length === 0) {
+      setRecipeError('กรุณาเลือกหรือพิมพ์ชื่อวัตถุดิบ และระบุปริมาณอย่างน้อย 1 รายการ');
+      return;
+    }
+
+    const invalidQtyItem = filledItems.find(
+      (it) => !it.quantity || isNaN(Number(it.quantity)) || Number(it.quantity) <= 0
+    );
+    if (invalidQtyItem) {
+      setRecipeError('กรุณาระบุปริมาณที่ใช้ให้ถูกต้อง (มากกว่า 0)');
+      return;
+    }
+
     setRecipeSubmitting(true);
 
     try {
@@ -237,15 +331,29 @@ export default function ProductsPage() {
       const url = isEditing ? `/api/recipes/${editRecipeProduct.recipe!.id}` : '/api/recipes';
       const method = isEditing ? 'PUT' : 'POST';
 
+      // รวมยอดวัตถุดิบที่ซ้ำกัน (ของเก่า + ที่เพิ่มใหม่)
+      const combinedMap = new Map<string, { ingredientId?: number; name?: string; quantity: number; unit: string }>();
+      for (const it of filledItems) {
+        const key = it.ingredientId ? `id:${it.ingredientId}` : `name:${it.customName?.trim().toLowerCase()}`;
+        const qty = Number(it.quantity);
+        if (combinedMap.has(key)) {
+          const prev = combinedMap.get(key)!;
+          prev.quantity = Number((prev.quantity + qty).toFixed(4));
+        } else {
+          combinedMap.set(key, {
+            ingredientId: it.ingredientId ? Number(it.ingredientId) : undefined,
+            name: it.customName ? it.customName.trim() : undefined,
+            quantity: qty,
+            unit: it.unit || 'กรัม',
+          });
+        }
+      }
+
       const payload = {
         productId: editRecipeProduct.id,
         description: recipeDescription,
         updateProductCost: recipeUpdateCost,
-        items: recipeItems.map((it) => ({
-          ingredientId: Number(it.ingredientId),
-          quantity: Number(it.quantity),
-          unit: it.unit,
-        })),
+        items: Array.from(combinedMap.values()),
       };
 
       const res = await fetch(url, {
@@ -1462,114 +1570,408 @@ export default function ProductsPage() {
                   </button>
                 </div>
 
-                {/* Table */}
-                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-                  <div className="overflow-x-auto max-h-80">
-                    <table className="w-full text-xs text-left border-collapse">
-                      <thead className="bg-slate-100/90 text-slate-700 font-bold text-[11px] border-b border-slate-200 sticky top-0 z-10">
-                        <tr>
-                          <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
-                          <th className="py-2.5 px-3">เลือกวัตถุดิบ (คงเหลือ)</th>
-                          <th className="py-2.5 px-3 w-28 text-center">ปริมาณที่ใช้</th>
-                          <th className="py-2.5 px-3 w-24 text-center">หน่วยนับ</th>
-                          <th className="py-2.5 px-3 w-24 text-right">ต้นทุน</th>
-                          <th className="py-2.5 px-3 w-12 text-center">ลบ</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {recipeItems.map((item, idx) => {
-                          const selectedIng = allIngredients.find((i: any) => i.id.toString() === item.ingredientId);
-                          const itemCost = Number(item.quantity || 0) * Number(selectedIng?.costPerUnit || 0);
+                {/* Table Column Headers (Desktop) */}
+                <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0">
+                  <div className="col-span-1 text-center">#</div>
+                  <div className="col-span-5">วัตถุดิบ (เลือกวัตถุดิบ)</div>
+                  <div className="col-span-3 text-right">ปริมาณที่ใช้ (ต่อ 1 {editRecipeProduct.unit || 'แก้ว'})</div>
+                  <div className="col-span-2 text-right">ต้นทุน BOM (฿)</div>
+                  <div className="col-span-1 text-center">ลบ</div>
+                </div>
 
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
-                              {/* Row Number */}
-                              <td className="py-2.5 px-3 text-center font-bold text-slate-400 align-middle">
-                                {idx + 1}
-                              </td>
+                {/* Scrollable Items Container (Card List) */}
+                <div
+                  ref={recipeTableContainerRef}
+                  className="max-h-96 overflow-y-auto pr-1 space-y-2.5 scroll-smooth [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400"
+                >
+                  {recipeItems.map((item, idx) => {
+                    const selectedIng = allIngredients.find(
+                      (i: any) => (item.ingredientId && i.id.toString() === item.ingredientId) ||
+                                  (item.customName && i.name.trim().toLowerCase() === item.customName.trim().toLowerCase())
+                    );
+                    const displayName = typeof item.customName === 'string'
+                      ? item.customName
+                      : (selectedIng ? selectedIng.name : '');
+                    const itemCost = Number(item.quantity || 0) * Number(selectedIng?.costPerUnit || 0);
 
-                              {/* Ingredient Select */}
-                              <td className="py-2.5 px-3 align-middle">
-                                <select
-                                  required
-                                  value={item.ingredientId}
-                                  onChange={(e) => updateRecipeRow(idx, 'ingredientId', e.target.value)}
-                                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-slate-800"
-                                >
-                                  <option value="">-- กรุณาเลือกวัตถุดิบ --</option>
-                                  {allIngredients.map((ing: any) => {
-                                    const inStoreStock = getRecipeIngredientStock(ing);
-                                    return (
-                                      <option key={ing.id} value={ing.id}>
-                                        {ing.name} ({ing.code}) — คงเหลือ {inStoreStock.toLocaleString()} {ing.unit}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                                {selectedIng && (() => {
-                                  const inStoreStock = getRecipeIngredientStock(selectedIng);
-                                  return (
-                                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 pl-0.5">
-                                      <span className="font-bold text-slate-800">{selectedIng.name}</span>
-                                      <span className="text-slate-300">•</span>
-                                      <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                                        คงเหลือ: {inStoreStock.toLocaleString()} {selectedIng.unit}
-                                      </span>
-                                      <span className="text-slate-300">•</span>
-                                      <span className="text-slate-400 font-mono text-[10px]">
-                                        ต้นทุน: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
-                                      </span>
-                                    </div>
+                    // ตรวจสอบว่าวัตถุดิบนี้ซ้ำกับรายการก่อนหน้าในตารางหรือไม่
+                    const currentKey = item.ingredientId ? `id:${item.ingredientId}` : (item.customName ? `name:${item.customName.trim().toLowerCase()}` : '');
+                    const earlierIdx = recipeItems.findIndex(
+                      (other, otherIdx) => {
+                        if (otherIdx >= idx || !currentKey) return false;
+                        const otherKey = other.ingredientId ? `id:${other.ingredientId}` : (other.customName ? `name:${other.customName.trim().toLowerCase()}` : '');
+                        return otherKey === currentKey;
+                      }
+                    );
+                    const isDuplicateOfEarlier = earlierIdx !== -1 && Boolean(currentKey);
+                    const earlierItem = isDuplicateOfEarlier ? recipeItems[earlierIdx] : null;
+                    const earlierQty = earlierItem ? Number(earlierItem.quantity || 0) : 0;
+                    const currentQty = Number(item.quantity || 0);
+                    const combinedQty = Number((earlierQty + currentQty).toFixed(4));
+                    const inStoreStock = selectedIng ? getRecipeIngredientStock(selectedIng) : 0;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-2xl bg-white border transition-all text-xs shadow-2xs space-y-2.5 relative ${
+                          activeRecipeSearchIdx === idx ? 'z-50 ring-2 ring-emerald-500/30' : 'z-0'
+                        } ${
+                          highlightRowIdx === idx
+                            ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20'
+                            : isDuplicateOfEarlier
+                            ? 'border-amber-300 bg-amber-50/20 hover:border-amber-400'
+                            : 'border-slate-200 hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:grid sm:grid-cols-12 gap-2.5 sm:items-center">
+                          {/* Number Index */}
+                          <div className="hidden sm:flex col-span-1 justify-center">
+                            <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 font-mono font-bold text-xs flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                          </div>
+
+                          {/* Searchable & Writeable Combobox */}
+                          <div className="col-span-5 relative">
+                            <label className="block sm:hidden text-[10px] font-bold text-slate-500 mb-1">
+                              วัตถุดิบ #{idx + 1}
+                            </label>
+                            <div className="relative flex items-center">
+                              <input
+                                type="text"
+                                value={displayName}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const exactMatch = allIngredients.find(
+                                    (ing: any) =>
+                                      ing.name.trim().toLowerCase() === val.trim().toLowerCase() ||
+                                      ing.code.trim().toLowerCase() === val.trim().toLowerCase()
                                   );
-                                })()}
-                              </td>
+                                  if (exactMatch) {
+                                    setRecipeItems((prev) => {
+                                      const copy = [...prev];
+                                      copy[idx] = {
+                                        ...copy[idx],
+                                        ingredientId: String(exactMatch.id),
+                                        customName: exactMatch.name,
+                                        unit: exactMatch.unit || copy[idx].unit || 'กรัม',
+                                      };
+                                      return copy;
+                                    });
+                                  } else {
+                                    setRecipeItems((prev) => {
+                                      const copy = [...prev];
+                                      copy[idx] = {
+                                        ...copy[idx],
+                                        ingredientId: '',
+                                        customName: val,
+                                        unit: copy[idx].unit || 'กรัม',
+                                      };
+                                      return copy;
+                                    });
+                                  }
+                                  setActiveRecipeSearchIdx(idx);
+                                }}
+                                onFocus={() => setActiveRecipeSearchIdx(idx)}
+                                placeholder="พิมพ์ชื่อวัตถุดิบ หรือคลิกเลือกจากระบบ..."
+                                className={`w-full pl-8 pr-14 py-2 text-xs rounded-xl border font-bold text-slate-800 bg-white focus:outline-none focus:ring-2 ${
+                                  isDuplicateOfEarlier
+                                    ? 'border-amber-400 bg-amber-50/30 focus:ring-amber-500/30'
+                                    : 'border-slate-300 focus:ring-emerald-500/20 focus:border-emerald-600'
+                                }`}
+                              />
 
-                              {/* Quantity */}
-                              <td className="py-2.5 px-3 w-28 align-middle">
-                                <input
-                                  type="number"
-                                  step="0.001"
-                                  min="0.001"
-                                  required
-                                  placeholder="0"
-                                  value={item.quantity}
-                                  onChange={(e) => updateRecipeRow(idx, 'quantity', e.target.value)}
-                                  className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                                />
-                              </td>
-
-                              {/* Unit: Read-only, NO box! (หน่วยนับ แก้ไม่ได้ ไม่ต้องทำกล่อง) */}
-                              <td className="py-2.5 px-3 w-24 text-center align-middle">
-                                <span className="font-semibold text-slate-700 text-xs">
-                                  {item.unit || selectedIng?.unit || '-'}
-                                </span>
-                              </td>
-
-                              {/* Cost */}
-                              <td className="py-2.5 px-3 w-24 text-right align-middle">
-                                <span className="font-mono text-xs font-bold text-emerald-700">
-                                  ฿{itemCost.toFixed(2)}
-                                </span>
-                              </td>
-
-                              {/* Delete button */}
-                              <td className="py-2.5 px-3 w-12 text-center align-middle">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                {item.customName && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRecipeItems((prev) => {
+                                        const copy = [...prev];
+                                        copy[idx] = { ...copy[idx], ingredientId: '', customName: '', unit: '', quantity: '' };
+                                        return copy;
+                                      });
+                                    }}
+                                    className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                    title="ล้างข้อมูล"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => removeRecipeRow(idx)}
-                                  disabled={recipeItems.length <= 1}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-20 transition-colors cursor-pointer"
-                                  title="ลบรายการนี้"
+                                  onClick={() => setActiveRecipeSearchIdx(activeRecipeSearchIdx === idx ? null : idx)}
+                                  className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                  title="แสดงรายการวัตถุดิบในระบบ"
                                 >
-                                  <X className="w-4 h-4" />
+                                  <ChevronDown className="w-3.5 h-3.5" />
                                 </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                              </div>
+                            </div>
+
+                            {/* Status Indicator: Shows ingredient name if matched in system, or new ingredient tag */}
+                            {selectedIng ? (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  <span>ในระบบ: {selectedIng.name}</span>
+                                </span>
+                              </div>
+                            ) : item.customName && item.customName.trim() ? (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                                  <Sparkles className="w-3 h-3 text-blue-600" />
+                                  <span>วัตถุดิบใหม่: &ldquo;{item.customName.trim()}&rdquo;</span>
+                                </span>
+                                <select
+                                  value={item.unit || 'กรัม'}
+                                  onChange={(e) => updateRecipeRow(idx, 'unit', e.target.value)}
+                                  className="text-[10px] font-bold bg-white border border-slate-300 rounded px-1.5 py-0.5 text-slate-700 focus:outline-none"
+                                >
+                                  {PRESET_UNITS.map((u) => (
+                                    <option key={u} value={u}>หน่วย: {u}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            ) : null}
+
+                            {/* Dropdown Suggestions Popover */}
+                            {activeRecipeSearchIdx === idx && (() => {
+                              const q = (item.customName || '').trim().toLowerCase();
+                              const filtered = allIngredients.filter(
+                                (ing: any) =>
+                                  !q ||
+                                  ing.name.toLowerCase().includes(q) ||
+                                  ing.code.toLowerCase().includes(q) ||
+                                  (ing.category && ing.category.toLowerCase().includes(q))
+                              );
+                              const isExactExisting = allIngredients.some(
+                                (ing: any) => ing.name.trim().toLowerCase() === q
+                              );
+
+                              return (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99] max-h-60 overflow-y-auto divide-y divide-slate-100">
+                                  {/* Option to use custom name */}
+                                  {q && !isExactExisting && (
+                                    <div
+                                      onClick={() => {
+                                        setRecipeItems((prev) => {
+                                          const copy = [...prev];
+                                          copy[idx] = {
+                                            ...copy[idx],
+                                            ingredientId: '',
+                                            customName: item.customName!.trim(),
+                                            unit: copy[idx].unit || 'กรัม',
+                                          };
+                                          return copy;
+                                        });
+                                        setActiveRecipeSearchIdx(null);
+                                      }}
+                                      className="p-2.5 bg-emerald-50/90 hover:bg-emerald-100 transition-colors flex items-center justify-between gap-2 cursor-pointer border-b border-emerald-200"
+                                    >
+                                      <div>
+                                        <div className="font-bold text-xs text-emerald-900 flex items-center gap-1">
+                                          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                                          <span>ใช้ชื่อนี้:</span>
+                                          <span className="underline decoration-emerald-500 font-black">"{item.customName}"</span>
+                                        </div>
+                                        <div className="text-[10px] text-emerald-700 mt-0.5">
+                                          จะบันทึกเป็นวัตถุดิบใหม่เข้าระบบอัตโนมัติเมื่อกดบันทึกสูตร
+                                        </div>
+                                      </div>
+                                      <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg shrink-0">
+                                        + ใช้ชื่อนี้
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Header */}
+                                  <div className="px-3 py-1.5 bg-slate-50 text-[10px] font-bold text-slate-500 flex items-center justify-between">
+                                    <span>วัตถุดิบในระบบ ({filtered.length})</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveRecipeSearchIdx(null)}
+                                      className="text-slate-400 hover:text-slate-600 font-bold"
+                                    >
+                                      ปิด ✕
+                                    </button>
+                                  </div>
+
+                                  {/* List */}
+                                  {filtered.length === 0 ? (
+                                    <div className="p-3 text-center text-xs text-slate-400">
+                                      ไม่พบวัตถุดิบในระบบที่ตรงกับ &ldquo;{item.customName}&rdquo;
+                                      <div className="text-[11px] text-emerald-700 font-bold mt-1">
+                                        คลิก "+ ใช้ชื่อนี้" ด้านบนเพื่อเพิ่มวัตถุดิบใหม่เข้าระบบ
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    filtered.map((ing: any) => {
+                                      const stock = getRecipeIngredientStock(ing);
+                                      const isSelected = item.ingredientId === ing.id.toString();
+                                      const existingInOtherRow = recipeItems.find(
+                                        (r, rIdx) => rIdx !== idx && r.ingredientId === ing.id.toString()
+                                      );
+
+                                      return (
+                                        <div
+                                          key={ing.id}
+                                          onClick={() => {
+                                            updateRecipeRow(idx, 'ingredientId', ing.id.toString());
+                                            setActiveRecipeSearchIdx(null);
+                                          }}
+                                          className={`p-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                                            isSelected ? 'bg-emerald-50/70' : ''
+                                          }`}
+                                        >
+                                          <div className="min-w-0">
+                                            <div className="font-bold text-xs text-slate-800 flex items-center gap-1.5 truncate">
+                                              <span className="truncate">{ing.name}</span>
+                                              <span className="font-mono text-[10px] text-slate-400 shrink-0">({ing.code})</span>
+                                              {isSelected && <span className="text-[10px] text-emerald-600 font-bold">✓ เลือกอยู่</span>}
+                                              {existingInOtherRow && (
+                                                <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded font-bold shrink-0">
+                                                  มีในสูตรแล้ว
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                              หมวด: {ing.category || 'ทั่วไป'} • ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}
+                                            </div>
+                                          </div>
+                                          <div className="text-right shrink-0">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                              ในร้าน: {stock.toLocaleString()} {ing.unit}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+
+                          {/* Quantity with Unit */}
+                          <div className="col-span-3">
+                            <label className="block sm:hidden text-[10px] font-bold text-slate-500 mb-1">
+                              ปริมาณที่ใช้ (ต่อ 1 {editRecipeProduct.unit || 'แก้ว'})
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0.001"
+                                required
+                                placeholder="0"
+                                value={item.quantity}
+                                onChange={(e) => updateRecipeRow(idx, 'quantity', e.target.value)}
+                                className={`w-full px-3 py-2 pr-14 text-xs text-right font-mono font-bold rounded-xl border bg-white focus:outline-none focus:ring-2 text-slate-800 ${
+                                  isDuplicateOfEarlier
+                                    ? 'border-amber-400 bg-amber-50/30 focus:ring-amber-500/30'
+                                    : 'border-slate-300 focus:ring-emerald-500/20 focus:border-emerald-600'
+                                }`}
+                              />
+                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none truncate max-w-[45px]">
+                                {item.unit || selectedIng?.unit || '-'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Line Cost */}
+                          <div className="col-span-2 text-right">
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center">
+                              <span className="sm:hidden text-[10px] text-slate-400">ต้นทุน:</span>
+                              <div className="font-mono text-xs font-bold text-emerald-700">
+                                ฿{itemCost.toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="hidden sm:block text-[10px] text-slate-400">
+                              ต่อ 1 {editRecipeProduct.unit || 'แก้ว'}
+                            </div>
+                          </div>
+
+                          {/* Remove button */}
+                          <div className="col-span-1 text-center flex sm:justify-center justify-end">
+                            <button
+                              type="button"
+                              onClick={() => removeRecipeRow(idx)}
+                              disabled={recipeItems.length <= 1}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-20 transition-colors cursor-pointer"
+                              title="ลบรายการนี้"
+                            >
+                              <Trash2 className="w-4 h-4 mx-auto" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Card Bottom Strip: Stock info & Duplicate helper strip */}
+                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-3 -mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
+                          {selectedIng ? (
+                            <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
+                              <span className="font-bold text-slate-700">{selectedIng.name}</span>
+                              <span>•</span>
+                              <span>หมวด: <span className="font-semibold text-slate-600">{selectedIng.category || 'ทั่วไป'}</span></span>
+                              <span>•</span>
+                              <span>คงเหลือในสต็อก:</span>
+                              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                {inStoreStock.toLocaleString()} {selectedIng.unit}
+                              </span>
+                              <span>•</span>
+                              <span className="text-slate-400 font-mono text-[10px]">
+                                ต้นทุนเฉลี่ย: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
+                              </span>
+                            </div>
+                          ) : item.customName && item.customName.trim() ? (
+                            <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
+                              <span className="font-bold text-blue-700">วัตถุดิบ: {item.customName.trim()}</span>
+                              <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                                (กำหนดใหม่ - บันทึกเป็นวัตถุดิบใหม่อัตโนมัติเมื่อกดบันทึก)
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="text-slate-400 italic">
+                              กรุณาเลือกหรือพิมพ์ชื่อวัตถุดิบและระบุปริมาณที่ใช้
+                            </div>
+                          )}
+
+                          {isDuplicateOfEarlier && (
+                            <div className="w-full mt-1.5 p-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                              <div className="flex items-start sm:items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
+                                <div>
+                                  <span className="font-semibold text-amber-800">
+                                    ซ้ำกับรายการ #{earlierIdx + 1} (ของเก่ามี {earlierQty} {item.unit || selectedIng?.unit})
+                                  </span>
+                                  {currentQty > 0 ? (
+                                    <span className="block sm:inline sm:ml-1 text-emerald-800 font-bold">
+                                      → ยอดรวมจะเป็น {combinedQty.toLocaleString()} {item.unit || selectedIng?.unit} (ของเก่า {earlierQty} + เพิ่มใหม่ {currentQty})
+                                    </span>
+                                  ) : (
+                                    <span className="block sm:inline sm:ml-1 text-slate-500">
+                                      (กรอกจำนวนที่เพิ่มใหม่ ระบบจะรวมยอดให้)
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {currentQty > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => mergeRowWithEarlier(idx, earlierIdx)}
+                                  className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold text-[10px] shrink-0 transition-all cursor-pointer shadow-xs"
+                                  title="รวมยอดเข้ากับรายการเดิมทันที"
+                                >
+                                  รวมยอดทันที
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Total BOM Calculation Summary inside Card */}
