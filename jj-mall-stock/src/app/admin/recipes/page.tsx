@@ -196,9 +196,11 @@ function RecipesContent() {
     const target = el || (typeof document !== 'undefined' ? document.getElementById('recipe-ing-input-' + idx) : null);
     if (target) {
       const rect = target.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      // If space below is less than 300px and space above is greater, open upwards (Drop-up)
-      if (spaceBelow < 300 && rect.top > spaceBelow) {
+      const modalEl = document.getElementById('recipe-modal-dialog');
+      const modalBottom = modalEl ? modalEl.getBoundingClientRect().bottom : window.innerHeight;
+      const spaceBelowInModal = modalBottom - rect.bottom;
+      // If space below inside modal dialog is less than 320px, flip upwards (Drop-up) so it's never cut off
+      if (spaceBelowInModal < 320 && rect.top > 220) {
         setDropdownDirection('up');
       } else {
         setDropdownDirection('down');
@@ -773,7 +775,7 @@ function RecipesContent() {
       {/* Add / Edit Recipe Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
+          <div id="recipe-modal-dialog" className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -1057,7 +1059,7 @@ function RecipesContent() {
                                           (dropdownDirection === 'up'
                                             ? 'bottom-full mb-1.5 origin-bottom'
                                             : 'top-full mt-1.5 origin-top') +
-                                          ' left-0 w-full min-w-[340px] sm:min-w-[480px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5'}
+                                          ' left-0 w-[540px] sm:w-[620px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5'}
                                       >
                                         {/* Header */}
                                         <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-600 flex items-center justify-between shrink-0">
@@ -1082,7 +1084,7 @@ function RecipesContent() {
                                         </div>
 
                                         {/* Scrollable list of ingredients (Comfortable compact height) */}
-                                        <div className="max-h-48 sm:max-h-52 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-50 [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                        <div className="max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-slate-50 [&::-webkit-scrollbar-thumb]:bg-slate-300 hover:[&::-webkit-scrollbar-thumb]:bg-slate-400 [&::-webkit-scrollbar-thumb]:rounded-full">
                                           {filtered.length === 0 ? (
                                             <div className="p-6 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
                                               <div className="w-10 h-10 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 shadow-2xs">
