@@ -1692,9 +1692,9 @@ export default function IngredientsPage() {
               {/* Table Column Headers (Desktop) */}
               <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0 mb-1.5">
                 <div className="col-span-1 text-center">#</div>
-                <div className="col-span-5">วัตถุดิบ (เลือกจากระบบ หรือพิมพ์เองได้)</div>
+                <div className="col-span-6">วัตถุดิบ (เลือกจากระบบ หรือพิมพ์เองได้)</div>
                 <div className="col-span-2 text-right">จำนวนที่เพิ่ม (ซื้อเข้า)</div>
-                <div className="col-span-2 text-right">ต้นทุน/หน่วย (฿)</div>
+                <div className="col-span-1 text-right">ต้นทุน/หน่วย (฿)</div>
                 <div className="col-span-1 text-right">รวม (฿)</div>
                 <div className="col-span-1 text-center">ลบ</div>
               </div>
@@ -1731,11 +1731,12 @@ export default function IngredientsPage() {
                         </div>
 
                         {/* Searchable / Writeable Ingredient Combobox */}
-                        <div className="col-span-5 relative" data-stock-in-combobox={idx}>
+                        <div className="col-span-6 relative" data-stock-in-combobox={idx}>
                           <div className="relative flex items-center">
                             <input
                               type="text"
                               value={displayName}
+                              title={displayName}
                               onChange={(e) => {
                                 const val = e.target.value;
                                 const exactMatch = ingredients.find(
@@ -1803,15 +1804,8 @@ export default function IngredientsPage() {
                             </div>
                           </div>
 
-                          {/* Status Indicator: Shows ingredient name if matched in system, or new ingredient tag */}
-                          {selectedIng ? (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span>ในระบบ: {selectedIng.name}</span>
-                              </span>
-                            </div>
-                          ) : item.customName && item.customName.trim() ? (
+                          {/* Status Indicator: Only show tag when creating new custom ingredient */}
+                          {!selectedIng && item.customName && item.customName.trim() ? (
                             <div className="flex items-center gap-1.5 mt-1">
                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                                 <Sparkles className="w-3 h-3 text-blue-600" />
@@ -1831,22 +1825,23 @@ export default function IngredientsPage() {
 
                           {/* Dropdown Suggestions Popover */}
                           {activeStockInSearchIdx === idx && (() => {
-                            const q = (item.customName || '').trim().toLowerCase();
+                            const hasExactIdMatch = Boolean(item.ingredientId && selectedIng && item.customName === selectedIng.name);
+                            const searchKeyword = hasExactIdMatch ? '' : (item.customName || '').trim().toLowerCase();
                             const filtered = ingredients.filter(
                               (ing) =>
-                                !q ||
-                                ing.name.toLowerCase().includes(q) ||
-                                ing.code.toLowerCase().includes(q) ||
-                                (ing.category && ing.category.toLowerCase().includes(q))
+                                !searchKeyword ||
+                                ing.name.toLowerCase().includes(searchKeyword) ||
+                                ing.code.toLowerCase().includes(searchKeyword) ||
+                                (ing.category && ing.category.toLowerCase().includes(searchKeyword))
                             );
                             const isExactExisting = ingredients.some(
-                              (ing) => ing.name.trim().toLowerCase() === q
+                              (ing) => ing.name.trim().toLowerCase() === searchKeyword
                             );
 
                             return (
                               <div className="absolute top-full left-0 w-[420px] sm:w-[500px] max-w-[90vw] mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[99] max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 ring-4 ring-black/5">
                                 {/* Option to use typed text as new ingredient */}
-                                {q && !isExactExisting && (
+                                {searchKeyword && !isExactExisting && (
                                   <div
                                     onClick={() => {
                                       setStockInItems((prev) => {
@@ -1971,7 +1966,7 @@ export default function IngredientsPage() {
                         </div>
 
                         {/* Cost per unit */}
-                        <div className="col-span-2">
+                        <div className="col-span-1">
                           <div className="relative">
                             <input
                               type="text"
