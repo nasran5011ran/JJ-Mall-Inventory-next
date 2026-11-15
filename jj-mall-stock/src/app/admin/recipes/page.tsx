@@ -148,6 +148,7 @@ function RecipesContent() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [modalStoreFilter, setModalStoreFilter] = useState<string>('ALL');
 
   // Form State
   const [selectedProductId, setSelectedProductId] = useState<string>('');
@@ -171,6 +172,24 @@ function RecipesContent() {
     if (foundInRecipes) return foundInRecipes.product;
     return null;
   }, [editingRecipe, selectedProductId, productsWithoutRecipe, allProductsList, recipes]);
+
+  const modalFilteredProducts = useMemo(() => {
+    return productsWithoutRecipe.filter((p) => {
+      if (!modalStoreFilter || modalStoreFilter === 'ALL') return true;
+      if (modalStoreFilter === 'CENTRAL') return !p.storeId;
+      return String(p.storeId) === String(modalStoreFilter);
+    });
+  }, [productsWithoutRecipe, modalStoreFilter]);
+
+  const modalAvailableIngredients = useMemo(() => {
+    const prodStoreId = currentSelectedProduct?.storeId ?? null;
+    return allIngredients.filter((ing: any) => {
+      if (prodStoreId) {
+        return !ing.storeId || Number(ing.storeId) === Number(prodStoreId);
+      }
+      return !ing.storeId;
+    });
+  }, [allIngredients, currentSelectedProduct]);
 
   const currentActiveStoreId = useMemo(() => {
     if (selectedStoreId && selectedStoreId !== 'ALL' && selectedStoreId !== 'CENTRAL') {
@@ -304,6 +323,7 @@ function RecipesContent() {
   const openAddModal = (defaultProdId?: number) => {
     setEditingRecipe(null);
     setSelectedProductId(defaultProdId ? defaultProdId.toString() : '');
+    setModalStoreFilter(selectedStoreId && selectedStoreId !== 'ALL' ? selectedStoreId : 'ALL');
     setDescription('');
     setUpdateProductCost(true);
     setRecipeFormItems([
@@ -893,36 +913,75 @@ function RecipesContent() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              {/* Product Selection */}
+              {/* Product Selection with Store Filter */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  เลือกสินค้าที่ต้องการผูกสูตร <span className="text-red-500">*</span>
-                </label>
-                {paramProductId && currentSelectedProduct ? (
-                  <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
-                        <Coffee className="w-4 h-4" />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-700">
+                    เลือกสินค้าที่ต้องการผูกสูตร <span className="text-red-500">*</span>
+                  </label>
+                  {!editingRecipe && !paramProductId && (
+                    <span className="text-[11px] text-slate-400">
+                      มีสินค้าที่ยังไม่มีสูตร {modalFilteredProducts.length} รายการ
+                    </span>
+                  )}
+                </div>
+
+                {/* Filter Products by Store (Tabs inside Modal) */}
+                {!editingRecipe && !paramProductId && (
+                  <div className="mb-2.5">
+                    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200 w-fit max-w-full overflow-x-auto">
+                      <div className="px-2.5 py-1 text-xs font-bold text-slate-500 shrink-0">
+                        เลือกร้านค้า:
                       </div>
-                      <div>
-                        <div className="font-bold text-slate-900 text-sm">
-                          {currentSelectedProduct.name}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          รหัส: {currentSelectedProduct.code} {currentSelectedProduct.category ? `• หมวดหมู่: ${currentSelectedProduct.category}` : ''}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] text-slate-400">ราคาขาย</div>
-                      <div className="font-bold text-emerald-700 font-mono text-sm">
-                        ฿{Number(currentSelectedProduct.price || 0).toFixed(2)}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setModalStoreFilter('ALL')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                          modalStoreFilter === 'ALL'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
+                      >
+                        สินค้าทั้งหมด ({productsWithoutRecipe.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalStoreFilter('CENTRAL')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                          modalStoreFilter === 'CENTRAL'
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                        }`}
+                      >
+                        <Warehouse className="w-3 h-3" />
+                        <span>เมนูส่วนกลาง ({productsWithoutRecipe.filter((p) => !p.storeId).length})</span>
+                      </button>
+                      {staffStores.map((st) => {
+                        const count = productsWithoutRecipe.filter((p) => p.storeId === st.id).length;
+                        const isSelected = modalStoreFilter === String(st.id);
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            onClick={() => setModalStoreFilter(String(st.id))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                            }`}
+                          >
+                            <Store className="w-3 h-3" />
+                            <span>{st.name} ({count})</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                ) : editingRecipe ? (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+                )}
+
+                {editingRecipe ? (
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-800 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span>{editingRecipe.product.name} ({editingRecipe.product.code})</span>
                       {editingRecipe.product.store ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
@@ -945,18 +1004,54 @@ function RecipesContent() {
                     onChange={(e) => setSelectedProductId(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium"
                   >
-                    <option value="">-- กรุณาเลือกสินค้า --</option>
-                    {productsWithoutRecipe.map((p) => (
+                    <option value="">-- กรุณาเลือกสินค้า ({modalFilteredProducts.length} รายการที่ยังไม่มีสูตร) --</option>
+                    {modalFilteredProducts.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({p.code}) - ฿{Number(p.price).toFixed(2)} {p.store ? `[เฉพาะร้าน: ${p.store.name}]` : '[เมนูส่วนกลาง]'}
+                        {p.name} ({p.code}) - ฿{Number(p.price).toFixed(2)} {p.store ? `[เฉพาะร้าน: ${p.store.name}]` : '[🏢 เมนูส่วนกลาง]'}
                       </option>
                     ))}
-                    {selectedProductId && !productsWithoutRecipe.some((p) => p.id?.toString() === selectedProductId) && (
+                    {selectedProductId && !modalFilteredProducts.some((p) => p.id?.toString() === selectedProductId) && (
                       <option value={selectedProductId}>
                         สินค้าที่เลือก (#{selectedProductId})
                       </option>
                     )}
                   </select>
+                )}
+
+                {/* Selected Product Card Banner */}
+                {currentSelectedProduct && (
+                  <div className="mt-2.5 p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs flex items-center justify-between animate-in fade-in">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold shadow-xs">
+                        <Coffee className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-900 text-sm flex items-center gap-2 flex-wrap">
+                          <span>{currentSelectedProduct.name}</span>
+                          {currentSelectedProduct.store ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                              <Store className="w-3 h-3 text-amber-700" />
+                              <span>เฉพาะร้าน: {currentSelectedProduct.store.name}</span>
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
+                              <Warehouse className="w-3 h-3 text-blue-700" />
+                              <span>เมนูส่วนกลาง (ทุกร้าน)</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                          รหัส: {currentSelectedProduct.code} {currentSelectedProduct.category ? `• หมวดหมู่: ${currentSelectedProduct.category}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-slate-400">ราคาขาย</div>
+                      <div className="font-bold text-emerald-700 font-mono text-sm">
+                        ฿{Number(currentSelectedProduct.price || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -1137,14 +1232,15 @@ function RecipesContent() {
                                     const hasExactIdMatch = Boolean(item.ingredientId && selectedIng && item.customName === selectedIng.name);
                                     const searchKeyword = hasExactIdMatch ? '' : (item.customName || '').trim().toLowerCase();
 
-                                    const filtered = allIngredients.filter(
+                                    const ingredientSource = modalAvailableIngredients.length > 0 ? modalAvailableIngredients : allIngredients;
+                                    const filtered = ingredientSource.filter(
                                       (ing: any) =>
                                         !searchKeyword ||
                                         ing.name.toLowerCase().includes(searchKeyword) ||
                                         ing.code.toLowerCase().includes(searchKeyword) ||
                                         (ing.category && ing.category.toLowerCase().includes(searchKeyword))
                                     );
-                                    const isExactExisting = allIngredients.some(
+                                    const isExactExisting = ingredientSource.some(
                                       (ing: any) => ing.name.trim().toLowerCase() === searchKeyword
                                     );
 
@@ -1226,11 +1322,22 @@ function RecipesContent() {
                                                       )}
                                                     </div>
 
-                                                    {/* Code, Category & Cost Badges */}
+                                                    {/* Code, Category, Store & Cost Badges */}
                                                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
                                                       <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px]">
                                                         {ing.code}
                                                       </span>
+                                                      {ing.store ? (
+                                                        <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 font-medium border border-amber-200 text-[10px] flex items-center gap-0.5">
+                                                          <Store className="w-2.5 h-2.5 text-amber-600" />
+                                                          <span>ร้าน: {ing.store.name}</span>
+                                                        </span>
+                                                      ) : (
+                                                        <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 font-medium border border-blue-200 text-[10px] flex items-center gap-0.5">
+                                                          <Warehouse className="w-2.5 h-2.5 text-blue-600" />
+                                                          <span>ส่วนกลาง</span>
+                                                        </span>
+                                                      )}
                                                       {ing.category && (
                                                         <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200/60 text-[10px]">
                                                           {ing.category}

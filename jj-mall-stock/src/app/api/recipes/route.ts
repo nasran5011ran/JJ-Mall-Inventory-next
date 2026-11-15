@@ -145,6 +145,10 @@ export async function GET(req: NextRequest) {
         currentStock: true,
         costPerUnit: true,
         category: true,
+        storeId: true,
+        store: {
+          select: { id: true, name: true, username: true },
+        },
       },
     });
 
