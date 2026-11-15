@@ -54,6 +54,7 @@ model User {
   requestedRequisitions StockRequisition[] @relation("RequestedRequisitions")
   approvedRequisitions  StockRequisition[] @relation("ApprovedRequisitions")
   products            Product[]         @relation("StoreProducts")
+  ingredients         Ingredient[]      @relation("StoreIngredients")
 
   @@map("users")
 }
@@ -91,6 +92,8 @@ model Ingredient {
   minStock             Decimal               @default(10) @db.Decimal(12, 3)
   costPerUnit          Decimal               @default(0) @db.Decimal(10, 2)
   status               String                @default("ACTIVE")
+  storeId              Int?
+  store                User?                 @relation("StoreIngredients", fields: [storeId], references: [id], onDelete: SetNull)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 

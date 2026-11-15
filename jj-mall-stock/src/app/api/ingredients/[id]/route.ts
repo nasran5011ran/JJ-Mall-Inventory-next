@@ -26,6 +26,13 @@ export async function GET(
     const ingredient = await prisma.ingredient.findUnique({
       where: { id: ingredientId },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         recipeItems: {
           include: {
             recipe: {
@@ -76,7 +83,7 @@ export async function PUT(
     const { id } = await params;
     const ingredientId = parseInt(id, 10);
     const body = await req.json();
-    const { code, name, category, unit, currentStock, minStock, costPerUnit, status } = body;
+    const { code, name, category, unit, currentStock, minStock, costPerUnit, status, storeId } = body;
 
     // Check code collision
     if (code) {
@@ -123,8 +130,16 @@ export async function PUT(
         ...(minStock !== undefined && minStock !== '' && { minStock: Number(minStock) }),
         ...(costPerUnit !== undefined && costPerUnit !== '' && { costPerUnit: Number(costPerUnit) }),
         ...(status && { status }),
+        ...(storeId !== undefined && { storeId: storeId && storeId !== '' && storeId !== 'CENTRAL' ? Number(storeId) : null }),
       },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         _count: {
           select: {
             recipeItems: true,

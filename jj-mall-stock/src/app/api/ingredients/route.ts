@@ -40,6 +40,13 @@ export async function GET(req: NextRequest) {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         _count: {
           select: {
             recipeItems: true,
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { code, name, category, unit, currentStock, minStock, costPerUnit, status } = body;
+    const { code, name, category, unit, currentStock, minStock, costPerUnit, status, storeId } = body;
 
     if (!code || !name || !unit) {
       return NextResponse.json(
@@ -138,6 +145,8 @@ export async function POST(req: NextRequest) {
     const safetyStock = minStock !== undefined && minStock !== '' ? Number(minStock) : 0;
     const unitCost = costPerUnit !== undefined && costPerUnit !== '' ? Number(costPerUnit) : 0;
 
+    const targetStoreId = storeId && storeId !== '' && storeId !== 'CENTRAL' ? Number(storeId) : null;
+
     const ingredient = await prisma.ingredient.create({
       data: {
         code: code.trim().toUpperCase(),
@@ -148,8 +157,16 @@ export async function POST(req: NextRequest) {
         minStock: safetyStock,
         costPerUnit: unitCost,
         status: status || 'ACTIVE',
+        storeId: targetStoreId,
       },
       include: {
+        store: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
+          },
+        },
         _count: {
           select: {
             recipeItems: true,

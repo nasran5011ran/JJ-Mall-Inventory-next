@@ -37,9 +37,15 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
 
   const sinceDate = lastCount ? lastCount.createdAt : new Date(0);
 
-  // Active ingredients
+  // Active ingredients for this store or central (ส่วนกลาง)
   const ingredients = await prisma.ingredient.findMany({
-    where: { status: 'ACTIVE' },
+    where: {
+      status: 'ACTIVE',
+      OR: [
+        { storeId: targetStore.id },
+        { storeId: null },
+      ],
+    },
     select: {
       id: true,
       code: true,
@@ -48,6 +54,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
       unit: true,
       costPerUnit: true,
       currentStock: true,
+      storeId: true,
     },
     orderBy: [{ category: 'asc' }, { name: 'asc' }],
   });
