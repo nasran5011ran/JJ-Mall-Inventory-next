@@ -340,19 +340,23 @@ function RecipesContent() {
     ]);
     setHighlightRowIdx(newIdx);
 
-    // เลื่อนหน้าจอลงมาแสดงแถววัตถุดิบล่าสุดทันที
+    // เลื่อนหน้าจอลงมาแสดงแถววัตถุดิบล่าสุดทันที และโฟกัสที่ช่องพิมพ์
     setTimeout(() => {
-      if (tableContainerRef.current) {
-        tableContainerRef.current.scrollTo({
-          top: tableContainerRef.current.scrollHeight,
-          behavior: 'smooth',
-        });
+      const rowEl = document.getElementById('recipe-row-tr-' + newIdx);
+      const inputEl = document.getElementById('recipe-ing-input-' + newIdx);
+      if (rowEl) {
+        rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else if (inputEl) {
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }, 100);
+      if (inputEl) {
+        inputEl.focus();
+      }
+    }, 150);
 
     setTimeout(() => {
       setHighlightRowIdx(null);
-    }, 2000);
+    }, 2500);
   };
 
   const removeIngredientRow = (index: number) => {
@@ -920,7 +924,7 @@ function RecipesContent() {
                       <thead className="bg-slate-100/95 text-slate-700 font-bold text-[11px] border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs">
                         <tr>
                           <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
-                          <th className="py-2.5 px-3">เลือกวัตถุดิบ (คงเหลือ)</th>
+                          <th className="py-2.5 px-3 min-w-[280px] sm:min-w-[340px]">เลือกวัตถุดิบ (คงเหลือ)</th>
                           <th className="py-2.5 px-3 w-28 text-center">ปริมาณที่ใช้</th>
                           <th className="py-2.5 px-3 w-28 text-center">หน่วยนับ</th>
                           <th className="py-2.5 px-3 w-24 text-right">ต้นทุน</th>
@@ -942,11 +946,12 @@ function RecipesContent() {
                           return (
                             <tr
                               key={idx}
-                              className={`transition-all duration-200 ${
+                              id={'recipe-row-tr-' + idx}
+                              className={`transition-all duration-300 ${
                                 activeRecipeSearchIdx === idx ? 'relative z-40 bg-emerald-50/40' : 'relative z-0'
                               } ${
                                 highlightRowIdx === idx
-                                  ? 'bg-emerald-50 ring-2 ring-emerald-500/30 font-bold'
+                                  ? 'bg-emerald-100/70 ring-2 ring-emerald-500 font-bold scale-[1.002]'
                                   : 'hover:bg-slate-50/70'
                               }`}
                             >
@@ -956,7 +961,7 @@ function RecipesContent() {
                               </td>
 
                               {/* Searchable & Writeable Combobox */}
-                              <td className="py-2.5 px-3 align-top relative min-w-[280px]">
+                              <td className="py-2.5 px-3 align-middle relative min-w-[280px] sm:min-w-[340px]">
                                 <div className="relative flex items-center">
                                   <input
                                     id={'recipe-ing-input-' + idx}
@@ -1057,7 +1062,7 @@ function RecipesContent() {
                                           (dropdownDirection === 'up'
                                             ? 'bottom-full mb-1.5 origin-bottom'
                                             : 'top-full mt-1.5 origin-top') +
-                                          ' left-0 w-[460px] sm:w-[540px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5'}
+                                          ' left-0 w-full min-w-[340px] sm:min-w-[480px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100 ring-4 ring-black/5'}
                                       >
                                         {/* Header */}
                                         <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-600 flex items-center justify-between shrink-0">
