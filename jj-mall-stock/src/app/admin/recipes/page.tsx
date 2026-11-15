@@ -1101,6 +1101,9 @@ function RecipesContent() {
                                             filtered.map((ing: any) => {
                                               const inStoreStock = getEffectiveStock(ing);
                                               const isSelected = item.ingredientId === ing.id.toString();
+                                              const existingInOtherRow = recipeFormItems.some(
+                                                (other, otherIdx) => otherIdx !== idx && other.ingredientId === ing.id.toString()
+                                              );
                                               return (
                                                 <div
                                                   key={ing.id}
@@ -1116,6 +1119,16 @@ function RecipesContent() {
                                                     {/* Full Name */}
                                                     <div className="font-bold text-xs sm:text-sm text-slate-900 break-words whitespace-normal leading-snug">
                                                       {ing.name}
+                                                      {isSelected && (
+                                                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-2">
+                                                          ✓ เลือกอยู่
+                                                        </span>
+                                                      )}
+                                                      {existingInOtherRow && (
+                                                        <span className="text-[10px] text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded font-bold shrink-0 ml-1.5">
+                                                          มีในสูตรแล้ว
+                                                        </span>
+                                                      )}
                                                     </div>
 
                                                     {/* Code, Category & Cost Badges */}
@@ -1164,6 +1177,24 @@ function RecipesContent() {
                                     </span>
                                   </div>
                                 ) : null}
+
+                                {/* Duplicate warning if already in another row of recipe */}
+                                {(() => {
+                                  const earlierIdx = recipeFormItems.findIndex(
+                                    (other, oIdx) => oIdx < idx && other.ingredientId && other.ingredientId === item.ingredientId
+                                  );
+                                  if (earlierIdx !== -1 && item.ingredientId) {
+                                    return (
+                                      <div className="flex items-center gap-1.5 mt-1.5">
+                                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-300 shadow-2xs">
+                                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                                          <span>มีวัตถุดิบนี้ในสูตรแล้ว (รายการ #{earlierIdx + 1})</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
                               </td>
 
                               {/* Quantity */}

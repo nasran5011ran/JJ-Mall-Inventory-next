@@ -1120,6 +1120,9 @@ export default function StaffStockInPage() {
                                 ) : (
                                   filtered.map((ing) => {
                                     const isSelected = ing.id === item.ingredientId;
+                                    const existingInOtherRow = formItems.some(
+                                      (other, otherIdx) => otherIdx !== idx && other.ingredientId === ing.id
+                                    );
                                     return (
                                       <div
                                         key={ing.id}
@@ -1137,6 +1140,11 @@ export default function StaffStockInPage() {
                                             {isSelected && (
                                               <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-2">
                                                 ✓ เลือกอยู่
+                                              </span>
+                                            )}
+                                            {existingInOtherRow && (
+                                              <span className="text-[10px] text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded font-bold shrink-0 ml-1.5">
+                                                มีในรายการแล้ว
                                               </span>
                                             )}
                                           </div>

@@ -1823,6 +1823,25 @@ export default function IngredientsPage() {
                             </div>
                           ) : null}
 
+                          {/* Duplicate notice if this ingredient is selected in an earlier row */}
+                          {(() => {
+                            const earlierIdx = stockInItems.findIndex(
+                              (other, oIdx) =>
+                                oIdx < idx &&
+                                ((other.ingredientId && item.ingredientId && other.ingredientId === item.ingredientId) ||
+                                 (other.customName && item.customName && other.customName.trim().toLowerCase() === item.customName.trim().toLowerCase()))
+                            );
+                            if (earlierIdx !== -1 && (item.ingredientId || item.customName?.trim())) {
+                              return (
+                                <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-300">
+                                  <AlertCircle className="w-3 h-3 text-amber-600 shrink-0" />
+                                  <span>มีในรายการแล้ว (แถวที่ {earlierIdx + 1})</span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
                           {/* Dropdown Suggestions Popover */}
                           {activeStockInSearchIdx === idx && (() => {
                             const hasExactIdMatch = Boolean(item.ingredientId && selectedIng && item.customName === selectedIng.name);
@@ -1898,6 +1917,12 @@ export default function IngredientsPage() {
                                   filtered.map((ing) => {
                                     const storeStock = getStoreBalanceForItem(ing.id, stockInStoreId);
                                     const isSelected = String(ing.id) === item.ingredientId;
+                                    const existingInOtherRow = stockInItems.some(
+                                      (other, otherIdx) =>
+                                        otherIdx !== idx &&
+                                        ((other.ingredientId && other.ingredientId === String(ing.id)) ||
+                                         (other.customName && other.customName.trim().toLowerCase() === ing.name.trim().toLowerCase()))
+                                    );
                                     return (
                                       <div
                                         key={ing.id}
@@ -1915,6 +1940,11 @@ export default function IngredientsPage() {
                                             {isSelected && (
                                               <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full ml-2">
                                                 ✓ เลือกอยู่
+                                              </span>
+                                            )}
+                                            {existingInOtherRow && (
+                                              <span className="text-[10px] text-amber-700 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded font-bold shrink-0 ml-1.5">
+                                                มีในรายการแล้ว
                                               </span>
                                             )}
                                           </div>
@@ -1943,9 +1973,9 @@ export default function IngredientsPage() {
                           })()}
                         </div>
 
-                        {/* Quantity */}
+                        {/* Quantity with clean suffix box so unit never touches 0 */}
                         <div className="col-span-2">
-                          <div className="relative">
+                          <div className="flex items-center rounded-xl border-2 border-emerald-300 bg-white overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-600">
                             <input
                               type="text"
                               inputMode="decimal"
@@ -1957,10 +1987,10 @@ export default function IngredientsPage() {
                                 }
                               }}
                               placeholder="0"
-                              className="w-full px-2.5 py-1.5 pr-10 text-xs text-right font-mono font-bold rounded-xl border-2 border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 bg-white"
+                              className="w-full pl-2.5 pr-1.5 py-1.5 text-xs text-right font-mono font-bold text-slate-800 bg-transparent focus:outline-none"
                             />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">
-                              {item.unit || selectedIng?.unit || ''}
+                            <span className="px-2 text-[10px] font-bold text-slate-500 shrink-0 bg-slate-50 border-l border-slate-200 py-1.5 min-w-[34px] text-center select-none">
+                              {item.unit || selectedIng?.unit || 'หน่วย'}
                             </span>
                           </div>
                         </div>
