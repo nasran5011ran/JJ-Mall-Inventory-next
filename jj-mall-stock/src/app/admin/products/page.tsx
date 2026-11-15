@@ -530,7 +530,8 @@ export default function ProductsPage() {
       const matchStore =
         selectedStore === 'ALL' ||
         (selectedStore === 'CENTRAL' && !p.storeId) ||
-        String(p.storeId) === String(selectedStore);
+        String(p.storeId) === String(selectedStore) ||
+        !p.storeId; // เมนูส่วนกลาง ให้แสดงในทุกร้านค้าด้วย
 
       return matchSearch && matchCategory && matchStatus && matchStore;
     });
@@ -803,7 +804,7 @@ export default function ProductsPage() {
             </button>
 
             {staffStores.map((st) => {
-              const count = products.filter((p) => p.storeId === st.id).length;
+              const count = products.filter((p) => p.storeId === st.id || !p.storeId).length;
               const isSelected = selectedStore === String(st.id);
               return (
                 <button

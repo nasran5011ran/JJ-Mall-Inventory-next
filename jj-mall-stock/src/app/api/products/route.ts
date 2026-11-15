@@ -33,7 +33,13 @@ export async function GET(req: NextRequest) {
       if (storeIdParam === 'CENTRAL') {
         andConditions.push({ storeId: null });
       } else if (storeIdParam && storeIdParam !== 'ALL') {
-        andConditions.push({ storeId: Number(storeIdParam) });
+        // เมื่อกรองตามร้านค้า เมนูส่วนกลาง (storeId: null) จะแสดงในร้านค้าด้วย
+        andConditions.push({
+          OR: [
+            { storeId: Number(storeIdParam) },
+            { storeId: null },
+          ],
+        });
       }
     }
 
