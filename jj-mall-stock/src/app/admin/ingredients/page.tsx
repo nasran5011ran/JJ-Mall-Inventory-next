@@ -410,8 +410,8 @@ export default function IngredientsPage() {
   const [formData, setFormData] = useState({
     code: '',
     name: '',
-    category: 'ผงเครื่องดื่ม',
-    unit: 'กรัม',
+    category: '',
+    unit: '',
     currentStock: '',
     minStock: '',
     costPerUnit: '',
