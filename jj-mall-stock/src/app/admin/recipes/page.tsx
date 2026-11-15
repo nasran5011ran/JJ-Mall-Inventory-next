@@ -919,9 +919,9 @@ function RecipesContent() {
                       onClick={() => setActiveRecipeSearchIdx(null)}
                     />
                   )}
-                  <div className="overflow-visible min-h-[160px]">
+                  <div className="overflow-visible">
                     <table className="w-full text-xs text-left border-collapse">
-                      <thead className="bg-slate-100/95 text-slate-700 font-bold text-[11px] border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs">
+                      <thead className="bg-slate-100/95 text-slate-700 font-bold text-[11px] border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs [&>tr>th:first-child]:rounded-tl-2xl [&>tr>th:last-child]:rounded-tr-2xl">
                         <tr>
                           <th className="py-2.5 px-3 w-10 text-center text-slate-400">#</th>
                           <th className="py-2.5 px-3 min-w-[280px] sm:min-w-[340px]">เลือกวัตถุดิบ (คงเหลือ)</th>
@@ -931,7 +931,7 @@ function RecipesContent() {
                           <th className="py-2.5 px-3 w-12 text-center">ลบ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-slate-100 [&>tr:last-child>td:first-child]:rounded-bl-2xl [&>tr:last-child>td:last-child]:rounded-br-2xl">
                         {recipeFormItems.map((item, idx) => {
                           const selectedIng = allIngredients.find(
                             (i: any) =>
@@ -956,7 +956,7 @@ function RecipesContent() {
                               }`}
                             >
                               {/* Row Number */}
-                              <td className="py-3 px-3 text-center font-bold text-slate-400 align-top pt-3.5">
+                              <td className="py-2.5 px-3 text-center font-bold text-slate-400 align-middle">
                                 {idx + 1}
                               </td>
 
