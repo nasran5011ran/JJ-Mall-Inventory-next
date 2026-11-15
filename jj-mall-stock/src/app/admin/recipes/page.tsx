@@ -334,23 +334,18 @@ function RecipesContent() {
   // Dynamic Item row controls
   const addIngredientRow = () => {
     const newIdx = recipeFormItems.length;
+    setActiveRecipeSearchIdx(null); // ปิดกล่องค้นหา ไม่ให้เปิดค้างหรือเปิดอัตโนมัติ
     setRecipeFormItems((prev) => [
       ...prev,
       { ingredientId: '', customName: '', quantity: '', unit: '' },
     ]);
     setHighlightRowIdx(newIdx);
 
-    // เลื่อนหน้าจอลงมาแสดงแถววัตถุดิบล่าสุดทันที และโฟกัสที่ช่องพิมพ์
+    // เลื่อนหน้าจอลงมาแสดงแถววัตถุดิบล่าสุดทันที (ไม่เปิดกล่องค้นหา ให้ผู้ใช้กดเอง)
     setTimeout(() => {
       const rowEl = document.getElementById('recipe-row-tr-' + newIdx);
-      const inputEl = document.getElementById('recipe-ing-input-' + newIdx);
       if (rowEl) {
         rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else if (inputEl) {
-        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      if (inputEl) {
-        inputEl.focus();
       }
     }, 150);
 
@@ -1000,7 +995,7 @@ function RecipesContent() {
                                       }
                                       openSearchForIdx(idx, e.currentTarget);
                                     }}
-                                    onFocus={(e) => openSearchForIdx(idx, e.currentTarget)}
+                                    onClick={(e) => openSearchForIdx(idx, e.currentTarget)}
                                     placeholder="พิมพ์ชื่อวัตถุดิบเพื่อค้นหาในระบบ..."
                                     className="w-full pl-8 pr-14 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                                   />
