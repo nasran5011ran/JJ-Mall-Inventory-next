@@ -287,30 +287,20 @@ export default function AdminStockRequestsPage() {
     <div className="space-y-6">
 
 
-      {/* Header Banner */}
-      <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700 shadow-xs">
-              <ShoppingCart className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-slate-900">อนุมัติการซื้อวัตถุดิบหน้าร้าน</h1>
-              <p className="text-xs text-slate-500">
-                ตรวจสอบและอนุมัติรายการที่หน้าร้านสาขาซื้อมา เพื่อบันทึกรับเข้าสต็อกของแต่ละสาขา
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5">
+      {/* Action Header */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500 hidden sm:block">
+          ตรวจสอบและอนุมัติรายการที่หน้าร้านสาขาซื้อมา เพื่อบันทึกรับเข้าสต็อกของแต่ละสาขา
+        </p>
+        <div className="flex items-center gap-2.5 ml-auto">
           <button
             onClick={() => mutate()}
             disabled={isValidating}
-            className="p-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
+            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
             title="รีเฟรชข้อมูล"
           >
             <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">รีเฟรช</span>
           </button>
         </div>
       </div>

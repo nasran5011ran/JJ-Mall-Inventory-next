@@ -240,7 +240,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
     }
     if (path.startsWith('/admin/stock-requests')) {
       return {
-        title: 'อนุมัติการซื้อวัตถุดิบหน้าร้าน (Approve Store Purchase)',
+        title: 'อนุมัติการซื้อวัตถุดิบหน้าร้าน',
         icon: ShoppingCart,
       };
     }
@@ -315,7 +315,7 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
 
           {/* Dynamic Page Title: Changes based on the active page */}
           <h1 className="text-sm sm:text-base lg:text-lg font-black text-slate-800 tracking-tight mt-0.5 truncate flex items-center gap-2">
-            <PageIcon className="w-5 h-5 text-emerald-600 shrink-0 hidden sm:block" />
+            {PageIcon && <PageIcon className="w-5 h-5 text-emerald-600 shrink-0 hidden sm:block" />}
             <span className="truncate">{pageInfo.title}</span>
           </h1>
         </div>
@@ -323,25 +323,6 @@ export default function AdminNavbar({ onOpenSidebar, notificationCount = 0 }: Ad
 
       {/* Right Controls */}
       <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
-        {/* Quick Link Button: อนุมัติการซื้อวัตถุดิบหน้าร้าน */}
-        <Link
-          href="/admin/stock-requests"
-          className={`hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-2xs ${
-            pathname?.startsWith('/admin/stock-requests')
-              ? 'bg-emerald-700 text-white border-emerald-700 shadow-emerald-700/20'
-              : 'bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border-slate-200 hover:border-emerald-300'
-          }`}
-          title="อนุมัติการซื้อวัตถุดิบหน้าร้าน"
-        >
-          <ShoppingCart className={`w-4 h-4 ${pathname?.startsWith('/admin/stock-requests') ? 'text-white' : 'text-emerald-600'}`} />
-          <span>อนุมัติการซื้อวัตถุดิบหน้าร้าน</span>
-          {Number(kpis?.pendingRequisitionsCount || 0) > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
-              {kpis.pendingRequisitionsCount}
-            </span>
-          )}
-        </Link>
-
         {/* Real-time Clock */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600">
           <Clock className="w-4 h-4 text-emerald-600" />
