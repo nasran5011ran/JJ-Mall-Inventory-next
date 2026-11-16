@@ -1099,18 +1099,18 @@ export default function AdminStockAdjustmentsPage() {
                 <span className="text-slate-400">สถานะคำขอ:</span>
                 <div>
                   {selectedAdjustment.status === 'PENDING' && (
-                    <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                      ⏳ รอการอนุมัติ (Pending)
+                    <span className="font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 text-xs">
+                      รอการอนุมัติ (Pending)
                     </span>
                   )}
                   {selectedAdjustment.status === 'APPROVED' && (
-                    <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                      ✅ อนุมัติแล้ว (Approved)
+                    <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 text-xs">
+                      อนุมัติแล้ว (Approved)
                     </span>
                   )}
                   {selectedAdjustment.status === 'REJECTED' && (
-                    <span className="font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
-                      ❌ ไม่อนุมัติ (Rejected)
+                    <span className="font-bold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 text-xs">
+                      ไม่อนุมัติ (Rejected)
                     </span>
                   )}
                 </div>
@@ -1210,16 +1210,18 @@ export default function AdminStockAdjustmentsPage() {
                     <button
                       type="button"
                       onClick={() => handleApprove(selectedAdjustment)}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-2xs"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-2xs flex items-center gap-1.5"
                     >
-                      ✅ อนุมัติคำขอนี้
+                      <Check className="w-3.5 h-3.5" />
+                      <span>อนุมัติคำขอนี้</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleReject(selectedAdjustment)}
-                      className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs cursor-pointer flex items-center gap-1.5"
                     >
-                      ❌ ปฏิเสธคำขอ
+                      <X className="w-3.5 h-3.5" />
+                      <span>ปฏิเสธคำขอ</span>
                     </button>
                   </>
                 )}
