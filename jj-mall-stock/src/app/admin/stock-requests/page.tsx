@@ -541,22 +541,36 @@ export default function AdminStockRequestsPage() {
                         </div>
                       </td>
 
-                      {/* Purchased Items Preview */}
+                      {/* Purchased Items Preview (Option 2: Compact Pills with max 2 items + Clickable count) */}
                       <td className="py-3.5 px-3.5">
-                        <div className="space-y-1">
-                          {req.items.slice(0, 3).map((it) => (
-                            <div key={it.id} className="flex items-center gap-1.5 text-xs text-slate-800">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                              <span className="font-medium">{it.ingredient.name}</span>
-                              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[11px]">
-                                {Number(req.status === 'APPROVED' && it.approvedQty !== null ? it.approvedQty : it.requestedQty).toLocaleString()} {it.ingredient.unit}
+                        <div className="flex flex-wrap items-center gap-1.5 max-w-sm">
+                          {req.items.slice(0, 2).map((it) => {
+                            const qty = Number(req.status === 'APPROVED' && it.approvedQty !== null ? it.approvedQty : it.requestedQty);
+                            return (
+                              <span
+                                key={it.id}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200/90 text-slate-800 text-[11px] font-medium shadow-2xs hover:bg-emerald-50/60 hover:border-emerald-200 transition-colors"
+                                title={`${it.ingredient.name} (${qty.toLocaleString()} ${it.ingredient.unit})`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                <span className="max-w-[130px] truncate">{it.ingredient.name}</span>
+                                <span className="font-mono font-bold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.2 rounded text-[10px] shrink-0">
+                                  {qty.toLocaleString()} {it.ingredient.unit}
+                                </span>
                               </span>
-                            </div>
-                          ))}
-                          {req.items.length > 3 && (
-                            <div className="text-[10px] text-slate-400 font-medium pl-3">
-                              + และอีก {req.items.length - 3} รายการ...
-                            </div>
+                            );
+                          })}
+
+                          {req.items.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetailModal(req)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 text-emerald-800 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+                              title="คลิกเพื่อดูรายการวัตถุดิบทั้งหมด"
+                            >
+                              <span>+{req.items.length - 2} รายการ</span>
+                              <Eye className="w-3 h-3 text-emerald-600" />
+                            </button>
                           )}
                         </div>
                       </td>
