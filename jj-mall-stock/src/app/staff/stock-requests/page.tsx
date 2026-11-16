@@ -1227,14 +1227,18 @@ export default function StaffStockRequestsPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
                     <tr>
+                      <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
                       <th className="py-2.5 px-3">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่ขอ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่อนุมัติ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item) => (
+                    {selectedRequisition.items.map((item, idx) => (
                       <tr key={item.id}>
+                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          {idx + 1}
+                        </td>
                         <td className="py-2.5 px-3">
                           <span className="font-bold text-slate-800">{item.ingredient.name}</span>
                           <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>

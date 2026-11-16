@@ -726,6 +726,7 @@ export default function AdminStockRequestsPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100/90 text-slate-700 font-bold uppercase text-[10px]">
                     <tr>
+                      <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
                       <th className="py-2.5 px-3">วัตถุดิบ</th>
                       <th className="py-2.5 px-3 text-right">สต็อกเดิมที่ร้านมี</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่ซื้อเข้า</th>
@@ -735,7 +736,7 @@ export default function AdminStockRequestsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item) => {
+                    {selectedRequisition.items.map((item, idx) => {
                       const costPerUnit = Number(item.ingredient.costPerUnit || 0);
                       const purchasedQty = Number(item.requestedQty || 0);
                       const storeStockBefore = getStoreStock(selectedRequisition.store.id, item.ingredientId);
@@ -744,6 +745,11 @@ export default function AdminStockRequestsPage() {
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/60">
+                          {/* Row Number */}
+                          <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                            {idx + 1}
+                          </td>
+
                           {/* Ingredient Name & Code */}
                           <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.ingredient.name}</div>
@@ -795,7 +801,7 @@ export default function AdminStockRequestsPage() {
                   {/* Table Footer with Total ฿ */}
                   <tfoot className="bg-slate-50/90 border-t-2 border-slate-200">
                     <tr>
-                      <td colSpan={5} className="py-3 px-3 text-right font-bold text-slate-700">
+                      <td colSpan={6} className="py-3 px-3 text-right font-bold text-slate-700">
                         รวมยอดเงินขอเบิกซื้อทั้งสิ้น:
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-black text-emerald-800 text-sm">
@@ -939,6 +945,7 @@ export default function AdminStockRequestsPage() {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100/90 text-slate-700 font-bold uppercase text-[10px]">
                     <tr>
+                      <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
                       <th className="py-2.5 px-3">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่ขอซื้อ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่อนุมัติ</th>
@@ -947,13 +954,16 @@ export default function AdminStockRequestsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item) => {
+                    {selectedRequisition.items.map((item, idx) => {
                       const cost = Number(item.ingredient.costPerUnit || 0);
                       const finalQty = Number(selectedRequisition.status === 'APPROVED' && item.approvedQty !== null ? item.approvedQty : item.requestedQty);
                       const lineTotal = finalQty * cost;
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                            {idx + 1}
+                          </td>
                           <td className="py-2.5 px-3">
                             <span className="font-bold text-slate-800">{item.ingredient.name}</span>
                             <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>
@@ -982,7 +992,7 @@ export default function AdminStockRequestsPage() {
                   </tbody>
                   <tfoot className="bg-slate-50/90 border-t border-slate-200">
                     <tr>
-                      <td colSpan={4} className="py-2.5 px-3 text-right font-bold text-slate-700">
+                      <td colSpan={5} className="py-2.5 px-3 text-right font-bold text-slate-700">
                         ยอดเงินรวมทั้งสิ้น:
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-800 text-xs">
