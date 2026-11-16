@@ -366,6 +366,21 @@ body {
     background: #ffffff !important;
   }
 
+  /* Ensure uniform deep black font weight on stock-adjustment printouts */
+  #official-stock-adjustment-voucher *,
+  #official-stock-adjustments-report * {
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #official-stock-adjustment-voucher th,
+  #official-stock-adjustment-voucher td,
+  #official-stock-adjustments-report th,
+  #official-stock-adjustments-report td {
+    font-weight: 600 !important;
+  }
+
   /* Normal weight and comfortable row height for clean non-heavy black text */
   #official-stock-inventory-report td,
   #official-sales-print-report td,

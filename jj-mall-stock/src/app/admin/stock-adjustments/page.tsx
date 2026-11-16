@@ -699,8 +699,8 @@ export default function AdminStockAdjustmentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-full">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider whitespace-nowrap">
-                  <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider whitespace-nowrap">
+                  <th className="py-2.5 px-3 text-center w-10 text-slate-500">#</th>
                   <th className="py-2.5 px-3">ใบปรับปรุงสต็อก</th>
                   <th className="py-2.5 px-3">วันที่ทำรายการ</th>
                   <th className="py-2.5 px-3">ร้านค้า / สาขา</th>
@@ -726,21 +726,21 @@ export default function AdminStockAdjustmentsPage() {
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
                       {/* Sequence Row Number */}
-                      <td className="py-3 px-3 text-center text-slate-400 font-mono text-xs font-semibold">
+                      <td className="py-3 px-3 text-center text-slate-600 font-mono text-xs font-bold">
                         {rowNumber}
                       </td>
 
                       {/* Adjustment Number */}
-                      <td className="py-3 px-4 font-mono font-semibold text-xs text-slate-700 whitespace-nowrap">
+                      <td className="py-3 px-4 font-mono font-bold text-xs text-slate-900 whitespace-nowrap">
                         <span className="hover:text-emerald-700 hover:underline">{adj.adjustmentNumber}</span>
                       </td>
 
                       {/* Date & Time (Single Line) */}
-                      <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                        <span className="font-semibold text-slate-800 text-xs">
+                      <td className="py-3 px-4 text-slate-900 whitespace-nowrap">
+                        <span className="font-bold text-slate-900 text-xs">
                           {new Date(adj.createdAt).toLocaleDateString('th-TH')}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono ml-1.5">
+                        <span className="text-[11px] text-slate-600 font-mono font-semibold ml-1.5">
                           {new Date(adj.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                         </span>
                       </td>
@@ -748,11 +748,11 @@ export default function AdminStockAdjustmentsPage() {
                       {/* Store / Branch Badge (Single Line, Smaller Font) */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {isStore ? (
-                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-900 border border-amber-200 whitespace-nowrap">
+                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 whitespace-nowrap">
                             {adj.requestedBy?.name}
                           </span>
                         ) : (
-                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
+                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 whitespace-nowrap">
                             คลังส่วนกลาง
                           </span>
                         )}
@@ -767,7 +767,7 @@ export default function AdminStockAdjustmentsPage() {
                               <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold border ${badge.color} shrink-0`}>
                                 {badge.label}
                               </span>
-                              <span className="text-xs text-slate-600 truncate max-w-[200px]" title={adj.reason}>
+                              <span className="text-xs text-slate-900 font-semibold truncate max-w-[200px]" title={adj.reason}>
                                 {adj.reason}
                               </span>
                             </div>
@@ -783,7 +783,7 @@ export default function AdminStockAdjustmentsPage() {
                             const unit = item.ingredient?.unit || '';
                             return (
                               <div key={item.id || itemIdx} className="inline-flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-slate-800 truncate max-w-[150px]" title={item.ingredient?.name}>
+                                <span className="text-xs font-bold text-slate-900 truncate max-w-[150px]" title={item.ingredient?.name}>
                                   {item.ingredient?.name}
                                 </span>
                                 <span
@@ -801,7 +801,7 @@ export default function AdminStockAdjustmentsPage() {
                             );
                           })}
                           {adj.items.length > 2 && (
-                            <span className="text-[11px] text-slate-400 font-medium">
+                            <span className="text-[11px] text-slate-600 font-bold">
                               +{adj.items.length - 2} รายการ
                             </span>
                           )}
@@ -810,11 +810,11 @@ export default function AdminStockAdjustmentsPage() {
 
                       {/* Requested By (Single Line, Smaller Font) */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className="font-semibold text-xs text-slate-800">
+                        <span className="font-bold text-xs text-slate-900">
                           {adj.requestedBy?.name || 'User'}
                         </span>
                         {adj.requestedBy?.username && (
-                          <span className="text-[11px] text-slate-400 font-mono ml-1">
+                          <span className="text-[11px] text-slate-600 font-mono font-semibold ml-1">
                             (@{adj.requestedBy?.username})
                           </span>
                         )}
@@ -1400,20 +1400,20 @@ export default function AdminStockAdjustmentsPage() {
               </div>
 
               {/* Sub-Header 2: Staff, Approver, Reason */}
-              <div className="mt-1.5 flex items-center justify-between text-[10px] text-black">
+              <div className="mt-1.5 flex items-center justify-between text-[10px] text-black font-bold">
                 <div>
                   <span className="font-bold">ผู้ยื่นคำขอ: </span>
-                  <span>{selectedAdjustment.requestedBy?.name} (@{selectedAdjustment.requestedBy?.username})</span>
+                  <span className="font-bold">{selectedAdjustment.requestedBy?.name} (@{selectedAdjustment.requestedBy?.username})</span>
                   {selectedAdjustment.approvedBy && (
                     <span className="ml-4">
                       <span className="font-bold">ผู้อนุมัติ/จัดการ: </span>
-                      <span>{selectedAdjustment.approvedBy.name}</span>
+                      <span className="font-bold">{selectedAdjustment.approvedBy.name}</span>
                     </span>
                   )}
                 </div>
                 <div>
                   <span className="font-bold">เหตุผล: </span>
-                  <span>{selectedAdjustment.reason}</span>
+                  <span className="font-bold">{selectedAdjustment.reason}</span>
                   {selectedAdjustment.rejectReason && (
                     <span className="ml-2 font-bold">(เหตุผลปฏิเสธ: {selectedAdjustment.rejectReason})</span>
                   )}
@@ -1444,16 +1444,16 @@ export default function AdminStockAdjustmentsPage() {
                     const diffVal = diff * cost;
                     return (
                       <tr key={item.id} className="border-b border-black">
-                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans font-bold text-black">
                           {idx + 1}
                         </td>
                         <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
                           {item.ingredient?.code}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black truncate max-w-[200px]">
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-bold text-black truncate max-w-[200px]">
                           {item.ingredient?.name}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black text-right text-black font-mono">
+                        <td className="py-0.5 px-1.5 border-r border-black text-right text-black font-mono font-bold">
                           {Number(item.systemQuantity).toLocaleString()}
                         </td>
                         <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">
@@ -1462,10 +1462,10 @@ export default function AdminStockAdjustmentsPage() {
                         <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">
                           {diff === 0 ? '0' : diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()}
                         </td>
-                        <td className="py-0.5 px-1 text-center font-sans text-black border-r border-black">
+                        <td className="py-0.5 px-1 text-center font-sans font-bold text-black border-r border-black">
                           {item.ingredient?.unit}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black text-right font-mono text-black">
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-mono font-bold text-black">
                           ฿{cost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="py-0.5 px-1.5 text-right font-bold font-mono text-black">
@@ -1699,29 +1699,29 @@ export default function AdminStockAdjustmentsPage() {
                     );
                     return (
                       <tr key={adj.id} className="border-b border-black">
-                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-mono font-bold text-black">
                           {idx + 1}
                         </td>
                         <td className="py-0.5 px-1.5 border-r border-black font-bold text-black font-mono">
                           {adj.adjustmentNumber}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black font-sans text-black text-center">
+                        <td className="py-0.5 px-1.5 border-r border-black font-mono font-bold text-black text-center">
                           {new Date(adj.createdAt).toLocaleDateString('th-TH')}
                         </td>
                         <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left font-bold">
                           {adj.requestedBy?.name}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left">
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left font-bold">
                           <div>{adj.reason}</div>
                           {adj.rejectReason && (
                             <div className="text-[8.5px] text-black font-bold">(เหตุผล: {adj.rejectReason})</div>
                           )}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans text-left text-black">
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-left text-black font-bold">
                           {adj.items.map((i) => {
                             const diff = Number(i.diffQuantity);
                             return (
-                              <div key={i.id} className="text-[9px] leading-tight text-black">
+                              <div key={i.id} className="text-[9px] leading-tight text-black font-bold">
                                 • {i.ingredient?.name}:{' '}
                                 <span className="text-black font-bold font-mono">
                                   {diff > 0 ? `+${diff}` : diff} {i.ingredient?.unit}
@@ -1744,7 +1744,7 @@ export default function AdminStockAdjustmentsPage() {
                           {adj.status === 'APPROVED' && <span>อนุมัติแล้ว</span>}
                           {adj.status === 'REJECTED' && <span>ไม่อนุมัติ</span>}
                         </td>
-                        <td className="py-0.5 px-2 font-sans text-black text-left text-[9px]">
+                        <td className="py-0.5 px-2 font-sans text-black text-left text-[9px] font-bold">
                           {adj.approvedBy?.name || '-'}
                         </td>
                       </tr>
