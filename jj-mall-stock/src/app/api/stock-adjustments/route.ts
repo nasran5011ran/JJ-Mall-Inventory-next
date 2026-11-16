@@ -19,6 +19,51 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || 'ALL';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
+    // Lightweight mode (Admin): return current system stock for a chosen location
+    // stockFor=WAREHOUSE -> central warehouse stock, stockFor=<storeUserId> -> that store's stock
+    const stockFor = searchParams.get('stockFor');
+    if (stockFor && session.role === 'ADMIN') {
+      if (stockFor === 'WAREHOUSE') {
+        const whIngredients = await prisma.ingredient.findMany({
+          where: { status: 'ACTIVE' },
+          select: { id: true, code: true, name: true, category: true, unit: true, currentStock: true, costPerUnit: true },
+          orderBy: { name: 'asc' },
+        });
+        return NextResponse.json({
+          success: true,
+          ingredients: whIngredients.map((ing) => ({
+            ...ing,
+            currentStock: Number(ing.currentStock),
+            costPerUnit: Number(ing.costPerUnit || 0),
+          })),
+        });
+      }
+
+      const storeUserId = Number(stockFor);
+      const storeUser = await prisma.user.findFirst({
+        where: { id: storeUserId, role: 'STAFF' },
+        select: { id: true },
+      });
+      if (!storeUser) {
+        return NextResponse.json({ success: false, message: 'ไม่พบร้านค้าที่เลือก' }, { status: 404 });
+      }
+      const balances = await calculateStoreReconciliation(storeUserId);
+      return NextResponse.json({
+        success: true,
+        ingredients: balances
+          .map((b) => ({
+            id: b.ingredientId,
+            code: b.code,
+            name: b.name,
+            category: b.category,
+            unit: b.unit,
+            currentStock: b.expectedStock,
+            costPerUnit: b.costPerUnit,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'th')),
+      });
+    }
+
     const whereClause: any = {};
     if (session.role === 'STAFF') {
       whereClause.requestedById = session.id;
@@ -135,7 +180,8 @@ export async function POST(req: NextRequest) {
     const {
       reason,
       autoApprove = false,
-      items, // Array of { ingredientId: number, actualQuantity: number }
+      storeId, // Admin only: target store user id (omit / 'WAREHOUSE' = central warehouse)
+      items, // Array of { ingredientId: number, actualQuantity?: number, wasteQuantity?: number }
     } = body;
 
     if (!reason || !reason.trim()) {
@@ -159,6 +205,27 @@ export async function POST(req: NextRequest) {
     const isAdmin = session.role === 'ADMIN';
     const willApproveImmediately = autoApprove && isAdmin;
 
+    // Resolve the target store (null = central warehouse)
+    let targetStoreId: number | null = null;
+    let targetStoreName = '';
+    if (session.role === 'STAFF') {
+      targetStoreId = session.id;
+      targetStoreName = session.name;
+    } else if (isAdmin && storeId && storeId !== 'WAREHOUSE') {
+      const storeUser = await prisma.user.findFirst({
+        where: { id: Number(storeId), role: 'STAFF' },
+        select: { id: true, name: true },
+      });
+      if (!storeUser) {
+        return NextResponse.json(
+          { success: false, message: 'ไม่พบร้านค้าที่เลือก' },
+          { status: 400 }
+        );
+      }
+      targetStoreId = storeUser.id;
+      targetStoreName = storeUser.name;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // 1. Fetch current ingredients
       const ingIds = items.map((i: any) => Number(i.ingredientId));
@@ -169,8 +236,8 @@ export async function POST(req: NextRequest) {
       dbIngredients.forEach((ing) => ingMap.set(ing.id, ing));
 
       let storeBalMap = new Map<number, number>();
-      if (session.role === 'STAFF') {
-        const storeBalances = await calculateStoreReconciliation(session.id);
+      if (targetStoreId) {
+        const storeBalances = await calculateStoreReconciliation(targetStoreId);
         storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
       }
 
@@ -180,15 +247,24 @@ export async function POST(req: NextRequest) {
 
       for (const item of items) {
         const ingId = Number(item.ingredientId);
-        const actualQty = parseFloat(item.actualQuantity);
-        if (isNaN(actualQty) || actualQty < 0) continue;
-
         const dbIng = ingMap.get(ingId);
         if (!dbIng) continue;
 
-        const systemQty = session.role === 'STAFF'
+        // System quantity is always computed server-side from the CURRENT stock
+        const systemQty = targetStoreId
           ? (storeBalMap.has(ingId) ? storeBalMap.get(ingId)! : 0)
           : parseFloat(String(dbIng.currentStock));
+
+        // Waste mode: new stock = current system stock - waste
+        let actualQty: number;
+        if (item.wasteQuantity !== undefined && item.wasteQuantity !== null && item.wasteQuantity !== '') {
+          const waste = parseFloat(item.wasteQuantity);
+          if (isNaN(waste) || waste <= 0) continue;
+          actualQty = Math.max(0, systemQty - waste);
+        } else {
+          actualQty = parseFloat(item.actualQuantity);
+          if (isNaN(actualQty) || actualQty < 0) continue;
+        }
         const diffQty = actualQty - systemQty;
 
         adjustmentItemsData.push({
@@ -218,7 +294,7 @@ export async function POST(req: NextRequest) {
           adjustmentNumber,
           reason: reason.trim(),
           status: willApproveImmediately ? AdjustmentStatus.APPROVED : AdjustmentStatus.PENDING,
-          requestedById: session.id,
+          requestedById: targetStoreId || session.id,
           approvedById: willApproveImmediately ? session.id : null,
           approvedAt: willApproveImmediately ? new Date() : null,
           items: {
@@ -240,13 +316,18 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 4. If auto-approved, update Ingredient.currentStock and record StockTransaction
+      // 4. If auto-approved, update Ingredient.currentStock (for Central Warehouse) and record StockTransaction
       if (willApproveImmediately && stockUpdates.length > 0) {
+        const isStoreAdj = Boolean(targetStoreId);
+        const storeTag = isStoreAdj ? ` [STORE_ID:${targetStoreId}]` : '';
+
         for (const update of stockUpdates) {
-          await tx.ingredient.update({
-            where: { id: update.id },
-            data: { currentStock: update.newStock },
-          });
+          if (!isStoreAdj) {
+            await tx.ingredient.update({
+              where: { id: update.id },
+              data: { currentStock: update.newStock },
+            });
+          }
 
           const isAdd = update.diff > 0;
           const qtyIn = isAdd ? Math.abs(update.diff) : 0;
@@ -263,7 +344,7 @@ export async function POST(req: NextRequest) {
               balanceAfter: update.newStock,
               refType: 'STOCK_ADJUSTMENT',
               refId: adjustmentNumber,
-              note: `ปรับปรุงสต็อก #${adjustmentNumber} (${update.diff > 0 ? '+' : ''}${update.diff} ${update.ing.unit}): ${reason.trim()}`,
+              note: `ปรับปรุงสต็อก${isStoreAdj ? `หน้าร้าน (${targetStoreName})` : 'คลังกลาง'} #${adjustmentNumber} (${update.diff > 0 ? '+' : ''}${update.diff} ${update.ing.unit}): ${reason.trim()}${storeTag}`,
               createdById: session.id,
             },
           });

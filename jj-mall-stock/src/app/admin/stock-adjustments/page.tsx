@@ -131,6 +131,9 @@ export default function AdminStockAdjustmentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const [formStoreId, setFormStoreId] = useState<string>('WAREHOUSE');
+  const [formIngredients, setFormIngredients] = useState<Ingredient[]>([]);
+  const [loadingStoreStock, setLoadingStoreStock] = useState(false);
   const [formReason, setFormReason] = useState('');
   const [autoApprove, setAutoApprove] = useState(true);
   const [formItems, setFormItems] = useState<NewItemForm[]>([
@@ -170,23 +173,52 @@ export default function AdminStockAdjustmentsPage() {
     return { label: '✏️ ปรับปรุงสต็อก', color: 'bg-slate-100 text-slate-700 border-slate-200' };
   };
 
+  // Fetch live stock for selected warehouse or store
+  const fetchLocationStock = async (targetStoreId: string) => {
+    setLoadingStoreStock(true);
+    try {
+      const res = await fetch(`/api/stock-adjustments?stockFor=${encodeURIComponent(targetStoreId)}`);
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.ingredients)) {
+        setFormIngredients(data.ingredients);
+        return data.ingredients as Ingredient[];
+      }
+    } catch (err) {
+      console.error('Failed to load location stock:', err);
+    } finally {
+      setLoadingStoreStock(false);
+    }
+    return ingredients;
+  };
+
   // Open Create Modal
-  const openCreateModal = () => {
-    const firstIng = ingredients[0];
+  const openCreateModal = async () => {
+    const initialStore = storeFilter !== 'ALL' ? storeFilter : 'WAREHOUSE';
+    setFormStoreId(initialStore);
     setFormReason('');
     setAutoApprove(true);
+    setFormError(null);
+    setCreateModalOpen(true);
+
+    const locIngs = await fetchLocationStock(initialStore);
+    const firstIng = locIngs[0] || ingredients[0];
     setFormItems([
       {
         ingredientId: firstIng ? String(firstIng.id) : '',
         actualQuantity: '',
       },
     ]);
+  };
+
+  const handleFormStoreChange = async (newStoreId: string) => {
+    setFormStoreId(newStoreId);
     setFormError(null);
-    setCreateModalOpen(true);
+    await fetchLocationStock(newStoreId);
   };
 
   const handleAddItemRow = () => {
-    const firstIng = ingredients[0];
+    const activeList = formIngredients.length > 0 ? formIngredients : ingredients;
+    const firstIng = activeList[0];
     setFormItems((prev) => [
       ...prev,
       {
@@ -214,12 +246,31 @@ export default function AdminStockAdjustmentsPage() {
     e.preventDefault();
     setFormError(null);
 
+    // NOTE: item.actualQuantity holds the WASTE amount typed by the user (e.g. 20 g).
+    // The new stock level sent to the API = current system stock - waste.
     const validItems = formItems.filter(
-      (item) => item.ingredientId && item.actualQuantity !== '' && !isNaN(parseFloat(item.actualQuantity))
+      (item) =>
+        item.ingredientId &&
+        item.actualQuantity !== '' &&
+        !isNaN(parseFloat(item.actualQuantity)) &&
+        parseFloat(item.actualQuantity) > 0
     );
 
     if (validItems.length === 0) {
-      setFormError('กรุณาระบุวัตถุดิบและจำนวนที่ต้องการปรับปรุงอย่างน้อย 1 รายการ');
+      setFormError('กรุณาระบุวัตถุดิบและจำนวนเสีย (มากกว่า 0) อย่างน้อย 1 รายการ');
+      return;
+    }
+
+    const activeIngList = formIngredients.length > 0 ? formIngredients : ingredients;
+    const overItem = validItems.find((item) => {
+      const ing = activeIngList.find((i) => i.id === Number(item.ingredientId));
+      return ing && parseFloat(item.actualQuantity) > Number(ing.currentStock);
+    });
+    if (overItem) {
+      const ing = activeIngList.find((i) => i.id === Number(overItem.ingredientId));
+      setFormError(
+        `จำนวนเสียของ "${ing?.name}" มากกว่าสต็อกในระบบ (${Number(ing?.currentStock)} ${ing?.unit})`
+      );
       return;
     }
 
@@ -237,9 +288,10 @@ export default function AdminStockAdjustmentsPage() {
         body: JSON.stringify({
           reason: finalReason,
           autoApprove,
+          storeId: formStoreId,
           items: validItems.map((item) => ({
             ingredientId: Number(item.ingredientId),
-            actualQuantity: parseFloat(item.actualQuantity),
+            wasteQuantity: parseFloat(item.actualQuantity),
           })),
         }),
       });
@@ -898,7 +950,7 @@ export default function AdminStockAdjustmentsPage() {
                     สร้างใบขอปรับปรุงสต็อก (New Stock Adjustment)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    ระบุวัตถุดิบและยอดที่ต้องการปรับปรุง พร้อมเหตุผลประกอบ
+                    ระบุวัตถุดิบและจำนวนที่เสีย ระบบจะหักออกจากสต็อกให้อัตโนมัติ
                   </p>
                 </div>
               </div>
@@ -918,6 +970,32 @@ export default function AdminStockAdjustmentsPage() {
             )}
 
             <form onSubmit={handleSubmitCreate} className="mt-5 space-y-4">
+              {/* Store / Location Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    ร้านค้า / คลังที่ต้องการปรับสต็อก <span className="text-red-500">*</span>
+                  </label>
+                  {loadingStoreStock && (
+                    <span className="text-[11px] font-bold text-emerald-700 animate-pulse">
+                      กำลังดึงยอดสต็อกปัจจุบัน...
+                    </span>
+                  )}
+                </div>
+                <select
+                  value={formStoreId}
+                  onChange={(e) => handleFormStoreChange(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="WAREHOUSE">🏭 คลังสินค้าส่วนกลาง (Central Warehouse)</option>
+                  {staffStores.map((s: any) => (
+                    <option key={s.id} value={String(s.id)}>
+                      🏪 {s.name} (@{s.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Reason Selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -976,10 +1054,12 @@ export default function AdminStockAdjustmentsPage() {
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {formItems.map((item, idx) => {
-                    const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
+                    const activeIngredients = formIngredients.length > 0 ? formIngredients : ingredients;
+                    const selectedIng = activeIngredients.find((i) => i.id === Number(item.ingredientId));
                     const systemQty = selectedIng ? Number(selectedIng.currentStock) : 0;
-                    const actualQty = parseFloat(item.actualQuantity);
-                    const diff = item.actualQuantity !== '' && !isNaN(actualQty) ? actualQty - systemQty : 0;
+                    const wasteQty = parseFloat(item.actualQuantity);
+                    const diff = item.actualQuantity !== '' && !isNaN(wasteQty) ? -Math.abs(wasteQty) : 0;
+                    const remainQty = Math.max(0, systemQty + diff);
 
                     return (
                       <div
@@ -995,7 +1075,7 @@ export default function AdminStockAdjustmentsPage() {
                             className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none"
                           >
                             <option value="">-- เลือกวัตถุดิบ --</option>
-                            {ingredients.map((ing) => (
+                            {activeIngredients.map((ing) => (
                               <option key={ing.id} value={ing.id}>
                                 {ing.name} (ในระบบ: {Number(ing.currentStock)} {ing.unit})
                               </option>
@@ -1008,9 +1088,9 @@ export default function AdminStockAdjustmentsPage() {
                           ระบบ: {systemQty.toLocaleString()}
                         </div>
 
-                        {/* Actual Input */}
-                        <div className="w-full sm:w-36 flex items-center gap-1">
-                          <span className="text-slate-400 text-[10px]">ปรับเป็น:</span>
+                        {/* Waste Input */}
+                        <div className="w-full sm:w-40 flex items-center gap-1">
+                          <span className="text-slate-600 text-[10px] font-bold whitespace-nowrap">จำนวนเสีย:</span>
                           <input
                             type="number"
                             min="0"
@@ -1018,22 +1098,25 @@ export default function AdminStockAdjustmentsPage() {
                             required
                             value={item.actualQuantity}
                             onChange={(e) => handleItemChange(idx, 'actualQuantity', e.target.value)}
-                            placeholder="ยอดใหม่"
+                            placeholder="เช่น 20"
                             className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono font-bold text-right focus:outline-none"
                           />
-                          <span className="text-[10px] text-slate-400 w-8 truncate">
+                          <span className="text-[10px] text-slate-500 w-8 truncate">
                             {selectedIng?.unit || 'หน่วย'}
                           </span>
                         </div>
 
-                        {/* Diff Preview */}
-                        <div className="w-24 text-right font-mono font-bold">
+                        {/* Diff Preview + remaining */}
+                        <div className="w-28 text-right font-mono font-bold leading-tight">
                           {diff === 0 ? (
                             <span className="text-slate-400">0</span>
-                          ) : diff > 0 ? (
-                            <span className="text-blue-600">+{diff}</span>
                           ) : (
-                            <span className="text-red-600">{diff}</span>
+                            <span className="text-red-600">{diff.toLocaleString()}</span>
+                          )}
+                          {diff !== 0 && (
+                            <div className="text-[10px] font-semibold text-slate-500">
+                              คงเหลือ {remainQty.toLocaleString()}
+                            </div>
                           )}
                         </div>
 
