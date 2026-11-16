@@ -139,6 +139,7 @@ export default function AdminStockAdjustmentsPage() {
 
   // Print Modals
   const [printListModalOpen, setPrintListModalOpen] = useState(false);
+  const [printListStatus, setPrintListStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [printVoucherOpen, setPrintVoucherOpen] = useState(false);
 
   const showToast = (msg: string) => {
@@ -370,6 +371,33 @@ export default function AdminStockAdjustmentsPage() {
     });
   }, [adjustments, activeTab, storeFilter, search]);
 
+  // Filtered List for Printing Summary Report
+  const printAdjustments = useMemo(() => {
+    return adjustments.filter((adj) => {
+      // Print status filter
+      if (printListStatus !== 'ALL' && adj.status !== printListStatus) return false;
+
+      // Store filter
+      if (storeFilter !== 'ALL') {
+        const staffId = Number(storeFilter);
+        if (adj.requestedBy?.id !== staffId) return false;
+      }
+
+      // Search keyword
+      const q = search.toLowerCase().trim();
+      if (q) {
+        const matchNum = adj.adjustmentNumber.toLowerCase().includes(q);
+        const matchReason = adj.reason.toLowerCase().includes(q);
+        const matchReq = adj.requestedBy?.name.toLowerCase().includes(q);
+        const matchIng = adj.items.some((i) =>
+          i.ingredient?.name.toLowerCase().includes(q) || i.ingredient?.code.toLowerCase().includes(q)
+        );
+        if (!matchNum && !matchReason && !matchReq && !matchIng) return false;
+      }
+      return true;
+    });
+  }, [adjustments, printListStatus, storeFilter, search]);
+
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -417,7 +445,10 @@ export default function AdminStockAdjustmentsPage() {
 
           <button
             type="button"
-            onClick={() => setPrintListModalOpen(true)}
+            onClick={() => {
+              setPrintListStatus(activeTab);
+              setPrintListModalOpen(true);
+            }}
             className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
           >
             <Printer className="w-4 h-4 text-emerald-600" />
@@ -1420,20 +1451,68 @@ export default function AdminStockAdjustmentsPage() {
       {printListModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs overflow-y-auto flex flex-col items-center justify-start p-2 sm:p-6 print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
           {/* Top Control Bar (Hidden on print) */}
-          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20">
+          <div className="no-print w-full max-w-5xl bg-white rounded-2xl p-3.5 shadow-xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-3 mb-4 sticky top-2 z-20">
             <div className="flex items-center gap-2">
-              <Printer className="w-5 h-5 text-emerald-700" />
+              <Printer className="w-5 h-5 text-emerald-700 shrink-0" />
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-slate-800">
                   ตัวอย่างพิมพ์รายงานสรุปรายการขอปรับปรุงสต็อก (A4 แนวนอน)
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  ตรวจสอบความถูกต้องก่อนสั่งพิมพ์ หรือบันทึกเป็น PDF
+                  เลือกสถานะที่ต้องการพิมพ์ หรือสลับพิมพ์เฉพาะที่อนุมัติแล้ว / ไม่อนุมัติ ได้ทันที
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Status Switcher in Print Preview */}
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setPrintListStatus('APPROVED')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  printListStatus === 'APPROVED'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                เฉพาะที่อนุมัติแล้ว ({metrics.approvedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintListStatus('REJECTED')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  printListStatus === 'REJECTED'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                เฉพาะที่ไม่อนุมัติ ({metrics.rejectedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintListStatus('PENDING')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  printListStatus === 'PENDING'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                เฉพาะรออนุมัติ ({metrics.pendingCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintListStatus('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  printListStatus === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+              >
+                ทุกสถานะรวมกัน ({metrics.totalCount})
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -1465,7 +1544,10 @@ export default function AdminStockAdjustmentsPage() {
                     บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
                   </h1>
                   <h2 className="text-sm font-bold text-black mt-0.5">
-                    รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (Stock Adjustments Summary Report)
+                    {printListStatus === 'APPROVED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่อนุมัติแล้ว - อัปเดตสต็อกจริง)'}
+                    {printListStatus === 'REJECTED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่ไม่อนุมัติ / ปฏิเสธคำขอ)'}
+                    {printListStatus === 'PENDING' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการรอการอนุมัติ)'}
+                    {printListStatus === 'ALL' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (ทุกสถานะคำขอ)'}
                   </h2>
                 </div>
                 <div className="text-right text-[10px] text-black font-mono leading-tight">
@@ -1478,48 +1560,54 @@ export default function AdminStockAdjustmentsPage() {
               {/* Sub-Header: Filter Info */}
               <div className="mt-2 flex items-center justify-between text-[10px] text-black font-medium">
                 <div>
-                  <span className="font-bold text-black">สถานะที่เลือก: </span>
-                  <span>
-                    {activeTab === 'ALL'
+                  <span className="font-bold text-black">สถานะที่เลือกพิมพ์: </span>
+                  <span className="font-bold">
+                    {printListStatus === 'ALL'
                       ? 'คำขอทั้งหมด'
-                      : activeTab === 'PENDING'
+                      : printListStatus === 'PENDING'
                       ? 'รอการอนุมัติ (Pending)'
-                      : activeTab === 'APPROVED'
+                      : printListStatus === 'APPROVED'
                       ? 'อนุมัติแล้ว (Approved)'
                       : 'ไม่อนุมัติ (Rejected)'}
                   </span>
+                  {storeFilter !== 'ALL' && (
+                    <span className="ml-3">
+                      • <span className="font-bold text-black">สาขา: </span>
+                      {staffStores.find((s: any) => String(s.id) === storeFilter)?.name || 'เฉพาะสาขาที่เลือก'}
+                    </span>
+                  )}
                 </div>
                 <div>
                   <span className="font-bold text-black">จำนวนคำขอที่แสดง: </span>
-                  <span className="font-bold font-mono">{filteredAdjustments.length}</span> ฉบับ
+                  <span className="font-bold font-mono">{printAdjustments.length}</span> ฉบับ
                 </div>
               </div>
             </div>
 
             {/* 4 Primary KPI Summary Cards Strip */}
             <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2.5">
-              <div className="p-2 rounded border border-black bg-white">
+              <div className={`p-2 rounded border border-black ${printListStatus === 'PENDING' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
                 <div className="text-[9.5px] font-bold text-black">รอการอนุมัติ (Pending)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.pendingCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className="p-2 rounded border border-black bg-white">
+              <div className={`p-2 rounded border border-black ${printListStatus === 'APPROVED' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
                 <div className="text-[9.5px] font-bold text-black">อนุมัติแล้ว (Approved)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.approvedCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className="p-2 rounded border border-black bg-white">
+              <div className={`p-2 rounded border border-black ${printListStatus === 'REJECTED' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
                 <div className="text-[9.5px] font-bold text-black">ไม่อนุมัติ (Rejected)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.rejectedCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className="p-2 rounded border border-black bg-white">
+              <div className={`p-2 rounded border border-black ${printListStatus === 'ALL' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
                 <div className="text-[9.5px] font-bold text-black">รวมคำขอทั้งหมด</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.totalCount} <span className="text-[9.5px] font-normal">ใบ</span>
@@ -1537,13 +1625,13 @@ export default function AdminStockAdjustmentsPage() {
                     <th className="py-1 px-2 border-r border-black w-24">วันที่ยื่น</th>
                     <th className="py-1 px-2 border-r border-black w-24 text-left">ผู้ขอปรับปรุง</th>
                     <th className="py-1 px-2 border-r border-black text-left">เหตุผล</th>
-                    <th className="py-1 px-2 border-r border-black text-left w-44">รายการวัตถุดิบ & ผลต่าง</th>
+                    <th className="py-1 px-2 border-r border-black text-left w-48">รายการวัตถุดิบ & ผลต่าง</th>
                     <th className="py-1 px-2 border-r border-black text-center w-20">สถานะ</th>
                     <th className="py-1 px-2 text-left w-24">ผู้อนุมัติ/จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
-                  {filteredAdjustments.map((adj, idx) => (
+                  {printAdjustments.map((adj, idx) => (
                     <tr key={adj.id} className="border-b border-black">
                       <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
                         {idx + 1}
@@ -1558,7 +1646,10 @@ export default function AdminStockAdjustmentsPage() {
                         {adj.requestedBy?.name}
                       </td>
                       <td className="py-1 px-2 border-r border-black font-sans text-black text-left">
-                        {adj.reason}
+                        <div>{adj.reason}</div>
+                        {adj.rejectReason && (
+                          <div className="text-[8.5px] text-black italic">(เหตุผล: {adj.rejectReason})</div>
+                        )}
                       </td>
                       <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
                         {adj.items.map((i) => {
@@ -1583,6 +1674,13 @@ export default function AdminStockAdjustmentsPage() {
                       </td>
                     </tr>
                   ))}
+                  {printAdjustments.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-6 text-center text-black font-sans">
+                        ไม่พบข้อมูลคำขอปรับปรุงสต็อกตามสถานะที่เลือก
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
@@ -1590,7 +1688,7 @@ export default function AdminStockAdjustmentsPage() {
                       รวมคำขอทั้งหมดในรายงานนี้:
                     </td>
                     <td colSpan={3} className="py-1.5 px-3 text-left font-sans text-black">
-                      <span className="font-mono font-bold">{filteredAdjustments.length}</span> ใบคำขอ
+                      <span className="font-mono font-bold">{printAdjustments.length}</span> ใบคำขอ
                     </td>
                   </tr>
                 </tfoot>
