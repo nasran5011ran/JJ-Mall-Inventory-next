@@ -143,4 +143,48 @@ export const confirmActionAlert = async (options?: {
   return result.isConfirmed;
 };
 
+/**
+ * SweetAlert2 Reject Requisition Alert (with reason input textarea & warning UI)
+ */
+export const confirmRejectAlert = async (options?: {
+  requisitionNumber?: string;
+  storeName?: string;
+}): Promise<{ isConfirmed: boolean; reason?: string }> => {
+  const { requisitionNumber = '', storeName = '' } = options || {};
+
+  const result = await Swal.fire({
+    title: 'ปฏิเสธใบขอซื้อวัตถุดิบ?',
+    text: `ต้องการปฏิเสธใบขอซื้อ "${requisitionNumber}"${storeName ? ` ของร้าน ${storeName}` : ''} ใช่หรือไม่? เมื่อปฏิเสธแล้ว คุณไม่สามารถกู้คืนได้!!`,
+    icon: 'warning',
+    input: 'textarea',
+    inputPlaceholder: 'พิมพ์ระบุเหตุผลที่ไม่อนุมัติ (เช่น ใบเสร็จไม่ชัดเจน, ซื้อเกินงบ, ข้อมูลซ้ำซ้อน)...',
+    inputAttributes: {
+      'aria-label': 'ระบุเหตุผลการปฏิเสธ',
+      rows: '3',
+    },
+    width: 440,
+    showCancelButton: true,
+    confirmButtonColor: '#f27474',
+    cancelButtonColor: '#7a7a7a',
+    confirmButtonText: 'ตกลง',
+    cancelButtonText: 'ยกเลิก',
+    reverseButtons: true, // "ยกเลิก" on left, "ตกลง" on right
+    focusCancel: true,
+    customClass: {
+      popup: 'swal2-thai-popup',
+      title: 'swal2-thai-title',
+      htmlContainer: 'swal2-thai-text',
+      confirmButton: 'swal2-thai-confirm',
+      cancelButton: 'swal2-thai-cancel',
+      actions: 'swal2-thai-actions',
+      input: 'swal2-thai-textarea',
+    },
+  });
+
+  return {
+    isConfirmed: result.isConfirmed,
+    reason: (result.value as string)?.trim() || 'ไม่อนุมัติ',
+  };
+};
+
 export default Swal;

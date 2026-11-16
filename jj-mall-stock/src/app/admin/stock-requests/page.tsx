@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import Pagination from '@/components/Pagination';
-import { showSuccessAlert, showErrorAlert, confirmActionAlert } from '@/lib/sweetalert';
+import { showSuccessAlert, showErrorAlert, confirmActionAlert, confirmRejectAlert } from '@/lib/sweetalert';
 
 interface RequisitionItem {
   id: number;
@@ -124,9 +124,7 @@ export default function AdminStockRequestsPage() {
   // Action Modals State
   const [selectedRequisition, setSelectedRequisition] = useState<RequisitionRecord | null>(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [rejectReasonInput, setRejectReasonInput] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -162,12 +160,41 @@ export default function AdminStockRequestsPage() {
     setIsApproveModalOpen(true);
   };
 
-  // Open Reject Modal
-  const handleOpenRejectModal = (req: RequisitionRecord) => {
-    setSelectedRequisition(req);
-    setRejectReasonInput('');
-    setActionError(null);
-    setIsRejectModalOpen(true);
+  // Reject Requisition with SweetAlert2 (Matches admin/users delete confirmation + allows reason input)
+  const handleRejectRequisition = async (req: RequisitionRecord) => {
+    const { isConfirmed, reason } = await confirmRejectAlert({
+      requisitionNumber: req.requisitionNumber,
+      storeName: req.store.name,
+    });
+    if (!isConfirmed) return;
+
+    try {
+      setIsProcessing(true);
+      const res = await fetch('/api/stock-requests', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requisitionId: req.id,
+          action: 'REJECT',
+          rejectReason: reason || 'ไม่อนุมัติ',
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'ปฏิเสธไม่สำเร็จ');
+      }
+
+      mutate();
+      await showSuccessAlert(
+        'ปฏิเสธข้อมูลสำเร็จ',
+        `ปฏิเสธใบขอซื้อ "${req.requisitionNumber}" เรียบร้อยแล้ว`
+      );
+    } catch (err: any) {
+      await showErrorAlert('เกิดข้อผิดพลาดในการปฏิเสธ', err.message || 'เกิดข้อผิดพลาด');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Open Detail Modal
@@ -176,20 +203,9 @@ export default function AdminStockRequestsPage() {
     setIsDetailModalOpen(true);
   };
 
-  // Confirm Approval (Approve store purchase & add stock)
+  // Confirm Approval (Approve store purchase & add stock immediately without redundant confirmation)
   const handleConfirmApproval = async () => {
     if (!selectedRequisition) return;
-
-    const isConfirmed = await confirmActionAlert({
-      title: 'ยืนยันอนุมัติการซื้อวัตถุดิบ?',
-      text: `ต้องการอนุมัติใบขอซื้อเลขที่ ${selectedRequisition.requisitionNumber} และบันทึกรับเข้าสต็อกสาขาใช่หรือไม่?`,
-      icon: 'question',
-      confirmButtonText: 'ตกลง',
-      cancelButtonText: 'ยกเลิก',
-      confirmButtonColor: '#10b981',
-    });
-    if (!isConfirmed) return;
-
     setActionError(null);
 
     try {
@@ -226,52 +242,7 @@ export default function AdminStockRequestsPage() {
     }
   };
 
-  // Confirm Rejection
-  const handleConfirmRejection = async () => {
-    if (!selectedRequisition) return;
 
-    const isConfirmed = await confirmActionAlert({
-      title: 'ยืนยันปฏิเสธคำขอซื้อ?',
-      text: `ต้องการปฏิเสธใบขอซื้อเลขที่ ${selectedRequisition.requisitionNumber} ใช่หรือไม่?`,
-      icon: 'warning',
-      confirmButtonText: 'ตกลง',
-      cancelButtonText: 'ยกเลิก',
-      confirmButtonColor: '#ef4444',
-    });
-    if (!isConfirmed) return;
-
-    setActionError(null);
-
-    try {
-      setIsProcessing(true);
-      const res = await fetch('/api/stock-requests', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requisitionId: selectedRequisition.id,
-          action: 'REJECT',
-          rejectReason: rejectReasonInput,
-        }),
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'ปฏิเสธไม่สำเร็จ');
-      }
-
-      setIsRejectModalOpen(false);
-      mutate();
-      await showSuccessAlert(
-        'ปฏิเสธใบขอซื้อเรียบร้อย',
-        `ใบขอซื้อ ${selectedRequisition.requisitionNumber} ได้รับการบันทึกสถานะไม่อนุมัติแล้ว`
-      );
-    } catch (e: any) {
-      setActionError(e.message || 'เกิดข้อผิดพลาด');
-      await showErrorAlert('ปฏิเสธไม่สำเร็จ', e.message || 'เกิดข้อผิดพลาดในการปฏิเสธ');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // Calculation for approve modal total amount
   const approveModalTotal = useMemo(() => {
@@ -646,7 +617,7 @@ export default function AdminStockRequestsPage() {
 
                               <button
                                 type="button"
-                                onClick={() => handleOpenRejectModal(req)}
+                                onClick={() => handleRejectRequisition(req)}
                                 className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer flex items-center gap-1"
                                 title="ปฏิเสธคำขอซื้อ"
                               >
@@ -868,76 +839,6 @@ export default function AdminStockRequestsPage() {
         </div>
       )}
 
-      {/* REJECT MODAL */}
-      {isRejectModalOpen && selectedRequisition && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-rose-600" />
-                <h3 className="text-base font-black text-slate-900">ปฏิเสธใบขอซื้อวัตถุดิบ</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRejectModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {actionError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold">
-                {actionError}
-              </div>
-            )}
-
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
-              <div>
-                <span className="text-slate-400">เลขที่ใบขอซื้อ:</span>{' '}
-                <strong className="text-slate-800 font-mono">{selectedRequisition.requisitionNumber}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400">ร้านค้า:</span>{' '}
-                <strong className="text-slate-800">{selectedRequisition.store.name}</strong>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                เหตุผลที่ไม่อนุมัติการซื้อ <span className="text-rose-500">*</span>
-              </label>
-              <textarea
-                rows={3}
-                required
-                placeholder="ระบุเหตุผล เช่น ใบเสร็จไม่ชัดเจน, ซื้อซ้ำซ้อน, เกินงบที่กำหนด"
-                value={rejectReasonInput}
-                onChange={(e) => setRejectReasonInput(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-              />
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsRejectModalOpen(false)}
-                className="px-4 py-2 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmRejection}
-                disabled={isProcessing || !rejectReasonInput.trim()}
-                className="px-5 py-2 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isProcessing ? 'กำลังบันทึก...' : 'ยืนยันปฏิเสธ'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* DETAIL MODAL (Available for all statuses) */}
       {isDetailModalOpen && selectedRequisition && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -1112,7 +1013,7 @@ export default function AdminStockRequestsPage() {
                     type="button"
                     onClick={() => {
                       setIsDetailModalOpen(false);
-                      handleOpenRejectModal(selectedRequisition);
+                      handleRejectRequisition(selectedRequisition);
                     }}
                     className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 cursor-pointer"
                   >
