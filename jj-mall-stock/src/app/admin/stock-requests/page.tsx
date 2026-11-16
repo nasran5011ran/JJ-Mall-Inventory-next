@@ -3,7 +3,6 @@
 import React, { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import {
-  ArrowDownToLine,
   ArrowUpFromLine,
   Search,
   RefreshCw,
@@ -13,13 +12,14 @@ import {
   Layers,
   X,
   FileText,
-  Printer,
   Store,
   Warehouse,
   AlertCircle,
   Check,
-  ChevronRight,
-  Filter,
+  Eye,
+  DollarSign,
+  ShoppingCart,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import Pagination from '@/components/Pagination';
@@ -37,6 +37,7 @@ interface RequisitionItem {
     category?: string | null;
     currentStock: number;
     costPerUnit?: number;
+    storeId?: number | null;
   };
 }
 
@@ -85,6 +86,26 @@ export default function AdminStockRequestsPage() {
     return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
   }, [swrData]);
 
+  const storeBalancesByStore: Record<number, any[]> = useMemo(() => {
+    return swrData?.success && swrData.storeBalancesByStore ? swrData.storeBalancesByStore : {};
+  }, [swrData]);
+
+  // Helper to look up in-store stock before purchase
+  const getStoreStock = (storeId: number, ingredientId: number): number => {
+    const list = storeBalancesByStore[storeId] || [];
+    const item = list.find((b: any) => b.ingredientId === ingredientId);
+    return item ? Number(item.expectedStock || 0) : 0;
+  };
+
+  // Helper to compute total requisition cost (฿)
+  const computeRequisitionTotal = (req: RequisitionRecord): number => {
+    return req.items.reduce((sum, it) => {
+      const qty = Number(it.approvedQty !== null && req.status === 'APPROVED' ? it.approvedQty : it.requestedQty || 0);
+      const cost = Number(it.ingredient.costPerUnit || 0);
+      return sum + qty * cost;
+    }, 0);
+  };
+
   const metrics = swrData?.metrics || {
     pendingCount: 0,
     approvedCount: 0,
@@ -132,7 +153,7 @@ export default function AdminStockRequestsPage() {
     });
   }, [requisitions, statusFilter, storeFilter, searchTerm]);
 
-  // Pagination
+  // Paginated list
   const totalPages = Math.ceil(filteredRequisitions.length / pageSize) || 1;
   const paginatedList = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -160,7 +181,13 @@ export default function AdminStockRequestsPage() {
     setIsRejectModalOpen(true);
   };
 
-  // Confirm Approval (Fulfill & Transfer)
+  // Open Detail Modal
+  const handleOpenDetailModal = (req: RequisitionRecord) => {
+    setSelectedRequisition(req);
+    setIsDetailModalOpen(true);
+  };
+
+  // Confirm Approval (Approve store purchase & add stock)
   const handleConfirmApproval = async () => {
     if (!selectedRequisition) return;
     setActionError(null);
@@ -179,10 +206,10 @@ export default function AdminStockRequestsPage() {
 
       const json = await res.json();
       if (!res.ok || !json.success) {
-        throw new Error(json.message || 'อนุมัติไม่สำเร็จ');
+        throw new Error(json.message || 'อนุมัติการซื้อไม่สำเร็จ');
       }
 
-      showToast(json.message || 'อนุมัติและโอนวัตถุดิบเข้าหน้าร้านเรียบร้อยแล้ว');
+      showToast(json.message || 'อนุมัติการซื้อและเพิ่มสต็อกเข้าหน้าร้านเรียบร้อยแล้ว');
       setIsApproveModalOpen(false);
       mutate();
     } catch (e: any) {
@@ -214,7 +241,7 @@ export default function AdminStockRequestsPage() {
         throw new Error(json.message || 'ปฏิเสธไม่สำเร็จ');
       }
 
-      showToast(json.message || 'ปฏิเสธใบขอเบิกสต็อกเรียบร้อยแล้ว');
+      showToast(json.message || 'ปฏิเสธใบขอซื้อเรียบร้อยแล้ว');
       setIsRejectModalOpen(false);
       mutate();
     } catch (e: any) {
@@ -223,6 +250,17 @@ export default function AdminStockRequestsPage() {
       setIsProcessing(false);
     }
   };
+
+  // Calculation for approve modal total amount
+  const approveModalTotal = useMemo(() => {
+    if (!selectedRequisition) return 0;
+    return selectedRequisition.items.reduce((sum, item) => {
+      const it = approvalItems.find((a) => a.id === item.id);
+      const qty = parseFloat(it?.approvedQty || '0');
+      const cost = Number(item.ingredient.costPerUnit || 0);
+      return sum + (isNaN(qty) ? 0 : qty * cost);
+    }, 0);
+  }, [selectedRequisition, approvalItems]);
 
   return (
     <div className="space-y-6">
@@ -238,13 +276,13 @@ export default function AdminStockRequestsPage() {
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700">
-              <ArrowUpFromLine className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700 shadow-xs">
+              <ShoppingCart className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">อนุมัติเบิกซื้อวัตถุดิบ</h1>
+              <h1 className="text-xl font-black text-slate-900">อนุมัติการซื้อวัตถุดิบหน้าร้าน</h1>
               <p className="text-xs text-slate-500">
-                ตรวจสอบคำขอเบิกเงินซื้อวัตถุดิบของร้านค้าสาขา (อนุมัติแล้วยอดสต็อกจะเพิ่มเข้าร้านค้าทันที)
+                ตรวจสอบและอนุมัติรายการที่หน้าร้านสาขาซื้อมา เพื่อบันทึกรับเข้าสต็อกของแต่ละสาขา
               </p>
             </div>
           </div>
@@ -254,7 +292,7 @@ export default function AdminStockRequestsPage() {
           <button
             onClick={() => mutate()}
             disabled={isValidating}
-            className="p-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+            className="p-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
             title="รีเฟรชข้อมูล"
           >
             <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
@@ -271,7 +309,7 @@ export default function AdminStockRequestsPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">คำขอทั้งหมด</span>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">คำขอซื้อทั้งหมด</span>
             <FileText className="w-4 h-4 text-slate-400" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
@@ -286,7 +324,7 @@ export default function AdminStockRequestsPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">รออนุมัติ (ต้องดำเนินการ)</span>
+            <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">รออนุมัติการซื้อ (ต้องดำเนินการ)</span>
             <Clock className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-amber-600 mt-1">
@@ -301,7 +339,7 @@ export default function AdminStockRequestsPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">อนุมัติและโอนแล้ว</span>
+            <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">อนุมัติการซื้อแล้ว</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-emerald-700 mt-1">
@@ -325,14 +363,65 @@ export default function AdminStockRequestsPage() {
         </div>
       </div>
 
+      {/* Store Selection Tabs */}
+      <div className="flex">
+        <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+          <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+            <span>เลือกร้านค้า:</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStoreFilter('ALL');
+              setCurrentPage(1);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              storeFilter === 'ALL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            ทุกร้านค้า ({requisitions.length})
+          </button>
+
+          {staffStores.map((st) => {
+            const count = requisitions.filter((r) => r.store.id === st.id).length;
+            const pendingCountForStore = requisitions.filter((r) => r.store.id === st.id && r.status === 'PENDING').length;
+            const isSelected = storeFilter === String(st.id);
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  setStoreFilter(String(st.id));
+                  setCurrentPage(1);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                <span>{st.name} ({count})</span>
+                {pendingCountForStore > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse ml-0.5" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 w-full md:w-auto flex-1">
-          <div className="relative flex-1 md:max-w-xs">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <div className="relative flex-1 md:max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="ค้นหาเลขที่, ชื่อร้าน, วัตถุดิบ..."
+              placeholder="ค้นหาเลขที่บิล, ชื่อร้าน, ชื่อวัตถุดิบ..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -342,16 +431,16 @@ export default function AdminStockRequestsPage() {
             />
           </div>
 
-          {/* Store Filter */}
+          {/* Store Filter Dropdown */}
           <select
             value={storeFilter}
             onChange={(e) => {
               setStoreFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
           >
-            <option value="ALL">🏪 ทุกร้านค้า / จุดขาย</option>
+            <option value="ALL">🏪 ทุกร้านค้า ({requisitions.length})</option>
             {staffStores.map((st) => (
               <option key={st.id} value={String(st.id)}>
                 🏪 {st.name} (@{st.username})
@@ -360,11 +449,12 @@ export default function AdminStockRequestsPage() {
           </select>
         </div>
 
+        {/* Status Filter Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
           {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((st) => {
             const labels = {
               ALL: 'ทั้งหมด',
-              PENDING: 'รออนุมัติ',
+              PENDING: 'รออนุมัติการซื้อ',
               APPROVED: 'อนุมัติแล้ว',
               REJECTED: 'ไม่อนุมัติ',
             };
@@ -375,9 +465,9 @@ export default function AdminStockRequestsPage() {
                   setStatusFilter(st);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   statusFilter === st
-                    ? 'bg-slate-900 text-white'
+                    ? 'bg-slate-900 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
@@ -388,157 +478,230 @@ export default function AdminStockRequestsPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Main Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
         {isLoading && requisitions.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-xs">กำลังโหลดข้อมูล...</div>
+          <div className="p-16 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+            <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+            <span>กำลังโหลดรายการขอซื้อวัตถุดิบ...</span>
+          </div>
         ) : paginatedList.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-            <p className="text-xs font-bold text-slate-600">ไม่พบใบขอเบิกสต็อก</p>
-            <p className="text-[11px] text-slate-400">ยังไม่มีคำขอเบิกสต็อกที่ตรงกับเงื่อนไขการค้นหา</p>
+          <div className="p-16 text-center space-y-2">
+            <FileText className="w-10 h-10 text-slate-300 mx-auto" />
+            <p className="text-xs font-bold text-slate-600">ไม่พบใบขอซื้อวัตถุดิบ</p>
+            <p className="text-[11px] text-slate-400">ยังไม่มีรายการขอซื้อที่ตรงกับเงื่อนไขการค้นหา</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-900 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
-                  <th className="py-3 px-4">เลขที่ใบขอเบิก</th>
-                  <th className="py-3 px-3">ร้านค้าที่ขอเบิก</th>
-                  <th className="py-3 px-3">วันที่ส่งคำขอ</th>
-                  <th className="py-3 px-3">วัตถุประสงค์</th>
-                  <th className="py-3 px-3 text-center">รายการ</th>
-                  <th className="py-3 px-3 text-center">สถานะ</th>
+                  <th className="py-3 px-3.5">เลขที่ใบขอซื้อ</th>
+                  <th className="py-3 px-3.5">ร้านค้าที่ซื้อ</th>
+                  <th className="py-3 px-3.5 min-w-[260px]">รายการวัตถุดิบที่ซื้อ (พรีวิว)</th>
+                  <th className="py-3 px-3.5 text-right">ยอดเงินรวม (฿)</th>
+                  <th className="py-3 px-3.5">วันที่ส่งคำขอ</th>
+                  <th className="py-3 px-3.5 text-center">สถานะ</th>
                   <th className="py-3 px-4 text-center">การดำเนินการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {paginatedList.map((req, idx) => {
                   const rowNumber = (currentPage - 1) * pageSize + idx + 1;
+                  const totalCost = computeRequisitionTotal(req);
+
                   return (
-                    <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
                       {/* Sequence Row Number */}
-                      <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
                         {rowNumber}
                       </td>
-                      <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                        {req.requisitionNumber}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="font-bold text-slate-900">{req.store.name}</div>
-                      <div className="text-[10px] text-slate-400">@{req.store.username}</div>
-                    </td>
-                    <td className="py-3 px-3 text-slate-600">
-                      {new Date(req.createdAt).toLocaleString('th-TH', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })} น.
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="font-bold text-slate-800">{req.reason || '-'}</div>
-                      {req.note && <div className="text-[10px] text-slate-400 truncate max-w-xs">{req.note}</div>}
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className="font-bold text-slate-800">{req.items.length}</span>{' '}
-                      <span className="text-[11px] text-slate-400">รายการ</span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      {req.status === 'PENDING' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                          <Clock className="w-3 h-3 text-amber-600" />
-                          รออนุมัติ
+
+                      {/* Requisition Number & Note */}
+                      <td className="py-3.5 px-3.5">
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 text-[11px]">
+                          {req.requisitionNumber}
                         </span>
-                      )}
-                      {req.status === 'APPROVED' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          อนุมัติแล้ว
-                        </span>
-                      )}
-                      {req.status === 'REJECTED' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                          <XCircle className="w-3 h-3 text-rose-600" />
-                          ไม่อนุมัติ
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {req.status === 'PENDING' ? (
-                          <>
-                            <button
-                              onClick={() => handleOpenApproveModal(req)}
-                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>อนุมัติ & โอนของ</span>
-                            </button>
-                            <button
-                              onClick={() => handleOpenRejectModal(req)}
-                              className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
-                            >
-                              ปฏิเสธ
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              setSelectedRequisition(req);
-                              setIsDetailModalOpen(true);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
-                          >
-                            ดูรายละเอียด
-                          </button>
+                        {req.reason && (
+                          <div className="text-[11px] text-slate-500 mt-1 font-normal line-clamp-1">
+                            {req.reason}
+                          </div>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+
+                      {/* Store */}
+                      <td className="py-3.5 px-3.5">
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <Store className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{req.store.name}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          @{req.store.username}
+                        </div>
+                      </td>
+
+                      {/* Purchased Items Preview */}
+                      <td className="py-3.5 px-3.5">
+                        <div className="space-y-1">
+                          {req.items.slice(0, 3).map((it) => (
+                            <div key={it.id} className="flex items-center gap-1.5 text-xs text-slate-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="font-medium">{it.ingredient.name}</span>
+                              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[11px]">
+                                {Number(req.status === 'APPROVED' && it.approvedQty !== null ? it.approvedQty : it.requestedQty).toLocaleString()} {it.ingredient.unit}
+                              </span>
+                            </div>
+                          ))}
+                          {req.items.length > 3 && (
+                            <div className="text-[10px] text-slate-400 font-medium pl-3">
+                              + และอีก {req.items.length - 3} รายการ...
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Total Cost */}
+                      <td className="py-3.5 px-3.5 text-right font-mono font-black text-slate-900 text-xs">
+                        ฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+
+                      {/* Date */}
+                      <td className="py-3.5 px-3.5 text-slate-600 text-[11px] whitespace-nowrap">
+                        {new Date(req.createdAt).toLocaleString('th-TH', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })} น.
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
+                        {req.status === 'PENDING' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            รออนุมัติการซื้อ
+                          </span>
+                        )}
+                        {req.status === 'APPROVED' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            อนุมัติแล้ว
+                          </span>
+                        )}
+                        {req.status === 'REJECTED' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            <XCircle className="w-3 h-3 text-rose-600" />
+                            ไม่อนุมัติ
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                          {req.status === 'PENDING' ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenApproveModal(req)}
+                                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm shadow-emerald-700/20 cursor-pointer transition-all"
+                                title="ตรวจสอบและอนุมัติการซื้อ"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>อนุมัติการซื้อ</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRejectModal(req)}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+                                title="ปฏิเสธคำขอซื้อ"
+                              >
+                                ปฏิเสธ
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailModal(req)}
+                                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                                title="ตรวจสอบรายละเอียดก่อนอนุมัติ"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetailModal(req)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              <span>ดูรายละเอียด</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500">
-              แสดงหน้า {currentPage} จาก {totalPages}
+              แสดงหน้า {currentPage} จาก {totalPages} (ทั้งหมด {filteredRequisitions.length} รายการ)
             </span>
-            <Pagination currentPage={currentPage} totalItems={filteredRequisitions.length} pageSize={pageSize} onPageChange={setCurrentPage} />
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredRequisitions.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>
 
-      {/* APPROVE & FULFILL MODAL */}
+      {/* APPROVE PURCHASE MODAL */}
       {isApproveModalOpen && selectedRequisition && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <span className="font-mono font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-0.5 rounded-md">
-                  {selectedRequisition.requisitionNumber}
-                </span>
-                <h3 className="text-base font-black text-slate-900 mt-1">อนุมัติเบิกซื้อวัตถุดิบ</h3>
-                <p className="text-[11px] text-slate-500">
-                  อนุมัติซื้อให้ร้าน: <strong>{selectedRequisition.store.name}</strong> (@{selectedRequisition.store.username})
-                </p>
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-800 shadow-xs">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900">
+                      ตรวจสอบและอนุมัติการซื้อวัตถุดิบ
+                    </h3>
+                    <span className="font-mono font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                      {selectedRequisition.requisitionNumber}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    ร้านค้าผู้ซื้อ: <strong className="text-slate-800">{selectedRequisition.store.name}</strong> (@{selectedRequisition.store.username})
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsApproveModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
+            {/* Error Message */}
             {actionError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -546,76 +709,132 @@ export default function AdminStockRequestsPage() {
               </div>
             )}
 
-            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-center gap-2">
+            {/* Info Notice */}
+            <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl text-xs text-emerald-950 flex items-center gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                เมื่อกดยืนยัน ระบบจะอนุมัติงบเบิกซื้อและเพิ่มยอดสต็อกวัตถุดิบให้กับหน้าร้านนี้ทันที พร้อมขายผ่าน POS
+                เมื่อกดยืนยันอนุมัติ ระบบจะบันทึกยอดวัตถุดิบรับเข้าสต็อกของร้าน <strong>{selectedRequisition.store.name}</strong> ทันที เพื่อนำไปใช้ตัดขายผ่านระบบ POS
               </span>
             </div>
 
             {/* Items Table */}
             <div>
-              <h4 className="text-xs font-bold text-slate-700 mb-2">ตรวจสอบรายการและจำนวนที่อนุมัติซื้อ</h4>
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-emerald-600" />
+                  <span>รายการวัตถุดิบที่ร้านซื้อมา ({selectedRequisition.items.length} รายการ)</span>
+                </h4>
+                <span className="text-[11px] text-slate-400">
+                  ตรวจสอบจำนวนที่ซื้อเข้าและยอดสต็อกหลังอนุมัติ
+                </span>
+              </div>
+
+              <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
+                  <thead className="bg-slate-100/90 text-slate-700 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-3">วัตถุดิบ</th>
-                      <th className="py-2.5 px-3 text-right">ต้นทุน/หน่วย</th>
-                      <th className="py-2.5 px-3 text-right">ร้านขอซื้อ</th>
-                      <th className="py-2.5 px-3 text-right w-36">จำนวนที่อนุมัติซื้อ</th>
+                      <th className="py-2.5 px-3 text-right">สต็อกเดิมที่ร้านมี</th>
+                      <th className="py-2.5 px-3 text-right">จำนวนที่ซื้อเข้า</th>
+                      <th className="py-2.5 px-3 text-right">สต็อกหลังอนุมัติ</th>
+                      <th className="py-2.5 px-3 text-right">ราคา/หน่วย</th>
+                      <th className="py-2.5 px-3 text-right">รวมเงิน (฿)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item, idx) => {
+                    {selectedRequisition.items.map((item) => {
                       const costPerUnit = Number(item.ingredient.costPerUnit || 0);
-                      const currentApproved = approvalItems.find((it) => it.id === item.id)?.approvedQty || '0';
+                      const currentApprovedStr = approvalItems.find((it) => it.id === item.id)?.approvedQty || '0';
+                      const currentApprovedNum = parseFloat(currentApprovedStr) || 0;
+                      const storeStockBefore = getStoreStock(selectedRequisition.store.id, item.ingredientId);
+                      const storeStockAfter = storeStockBefore + currentApprovedNum;
+                      const lineTotal = currentApprovedNum * costPerUnit;
 
                       return (
-                        <tr key={item.id}>
-                          <td className="py-2.5 px-3">
+                        <tr key={item.id} className="hover:bg-slate-50/60">
+                          {/* Ingredient Name & Code */}
+                          <td className="py-3 px-3">
                             <div className="font-bold text-slate-900">{item.ingredient.name}</div>
-                            <div className="text-[10px] font-mono text-slate-400">{item.ingredient.code}</div>
+                            <div className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 mt-0.5">
+                              <span>{item.ingredient.code}</span>
+                              {item.ingredient.category && (
+                                <span className="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded text-[9px]">
+                                  {item.ingredient.category}
+                                </span>
+                              )}
+                            </div>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-600">
-                            ฿{costPerUnit.toFixed(2)}/{item.ingredient.unit}
+
+                          {/* In-Store Stock Before Purchase */}
+                          <td className="py-3 px-3 text-right font-mono text-slate-600">
+                            <span className="font-bold">{storeStockBefore.toLocaleString()}</span>{' '}
+                            <span className="text-[10px] text-slate-400">{item.ingredient.unit}</span>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
-                            {Number(item.requestedQty).toLocaleString()} {item.ingredient.unit}
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
+
+                          {/* Purchased Quantity (Editable Input) */}
+                          <td className="py-3 px-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <input
                                 type="number"
                                 step="any"
                                 min="0"
-                                value={currentApproved}
+                                value={currentApprovedStr}
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   setApprovalItems((prev) =>
                                     prev.map((it) => (it.id === item.id ? { ...it, approvedQty: val } : it))
                                   );
                                 }}
-                                className="w-24 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 focus:bg-white text-right text-xs font-bold"
+                                className="w-24 px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50/50 text-emerald-950 focus:bg-white text-right text-xs font-black focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
                               />
-                              <span className="text-[11px] font-semibold text-slate-500 w-8 text-left">
+                              <span className="text-[11px] font-semibold text-slate-500 w-10 text-left">
                                 {item.ingredient.unit}
                               </span>
                             </div>
+                          </td>
+
+                          {/* Stock After Approval */}
+                          <td className="py-3 px-3 text-right font-mono text-emerald-700 bg-emerald-50/30">
+                            <span className="font-black text-xs">
+                              {storeStockAfter.toLocaleString()}
+                            </span>{' '}
+                            <span className="text-[10px] text-slate-400">{item.ingredient.unit}</span>
+                          </td>
+
+                          {/* Cost Per Unit */}
+                          <td className="py-3 px-3 text-right font-mono text-slate-600">
+                            ฿{costPerUnit.toFixed(2)}
+                          </td>
+
+                          {/* Line Total */}
+                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                            ฿{lineTotal.toFixed(2)}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+                  {/* Table Footer with Total ฿ */}
+                  <tfoot className="bg-slate-50/90 border-t-2 border-slate-200">
+                    <tr>
+                      <td colSpan={5} className="py-3 px-3 text-right font-bold text-slate-700">
+                        รวมยอดเงินขอเบิกซื้อทั้งสิ้น:
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-black text-emerald-800 text-sm">
+                        ฿{approveModalTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
 
+            {/* Modal Actions */}
             <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setIsApproveModalOpen(false)}
-                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
               >
                 ยกเลิก
               </button>
@@ -623,7 +842,7 @@ export default function AdminStockRequestsPage() {
                 type="button"
                 onClick={handleConfirmApproval}
                 disabled={isProcessing}
-                className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-md shadow-emerald-700/20 flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing ? (
                   <>
@@ -633,7 +852,7 @@ export default function AdminStockRequestsPage() {
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>ยืนยันอนุมัติเบิกซื้อ & เพิ่มสต็อก</span>
+                    <span>ยืนยันอนุมัติการซื้อ (เพิ่มเข้าสต็อกร้าน)</span>
                   </>
                 )}
               </button>
@@ -647,10 +866,14 @@ export default function AdminStockRequestsPage() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-base font-black text-slate-900">ปฏิเสธใบขอเบิกสต็อก</h3>
+              <div className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-rose-600" />
+                <h3 className="text-base font-black text-slate-900">ปฏิเสธใบขอซื้อวัตถุดิบ</h3>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsRejectModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -662,12 +885,25 @@ export default function AdminStockRequestsPage() {
               </div>
             )}
 
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+              <div>
+                <span className="text-slate-400">เลขที่ใบขอซื้อ:</span>{' '}
+                <strong className="text-slate-800 font-mono">{selectedRequisition.requisitionNumber}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400">ร้านค้า:</span>{' '}
+                <strong className="text-slate-800">{selectedRequisition.store.name}</strong>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">เหตุผลที่ไม่อนุมัติ</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                เหตุผลที่ไม่อนุมัติการซื้อ <span className="text-rose-500">*</span>
+              </label>
               <textarea
                 rows={3}
                 required
-                placeholder="ระบุเหตุผล เช่น ของในคลังกลางขาดแคลน, ขอให้สั่งซื้อใหม่"
+                placeholder="ระบุเหตุผล เช่น ใบเสร็จไม่ชัดเจน, ซื้อซ้ำซ้อน, เกินงบที่กำหนด"
                 value={rejectReasonInput}
                 onChange={(e) => setRejectReasonInput(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
@@ -678,15 +914,15 @@ export default function AdminStockRequestsPage() {
               <button
                 type="button"
                 onClick={() => setIsRejectModalOpen(false)}
-                className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                className="px-4 py-2 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
               >
                 ยกเลิก
               </button>
               <button
                 type="button"
                 onClick={handleConfirmRejection}
-                disabled={isProcessing}
-                className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                disabled={isProcessing || !rejectReasonInput.trim()}
+                className="px-5 py-2 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/30 flex items-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isProcessing ? 'กำลังบันทึก...' : 'ยืนยันปฏิเสธ'}
               </button>
@@ -695,55 +931,69 @@ export default function AdminStockRequestsPage() {
         </div>
       )}
 
-      {/* DETAIL MODAL */}
+      {/* DETAIL MODAL (Available for all statuses) */}
       {isDetailModalOpen && selectedRequisition && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <span className="font-mono font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-0.5 rounded-md">
-                  {selectedRequisition.requisitionNumber}
-                </span>
-                <h3 className="text-base font-black text-slate-900 mt-1">รายละเอียดใบขอเบิกสต็อก</h3>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-emerald-800 text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                    {selectedRequisition.requisitionNumber}
+                  </span>
+                  <h3 className="text-base font-black text-slate-900">รายละเอียดใบขอซื้อวัตถุดิบ</h3>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  ร้านค้า: {selectedRequisition.store.name} (@{selectedRequisition.store.username})
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            {/* Info Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <div>
-                <span className="text-slate-400 font-semibold">ร้านค้าที่ขอเบิก:</span>
+                <span className="text-slate-400 font-semibold text-[11px]">ร้านค้า:</span>
                 <p className="font-bold text-slate-800">{selectedRequisition.store.name}</p>
               </div>
               <div>
-                <span className="text-slate-400 font-semibold">วันที่ส่งคำขอ:</span>
+                <span className="text-slate-400 font-semibold text-[11px]">วันที่ส่งคำขอ:</span>
                 <p className="font-bold text-slate-800">
-                  {new Date(selectedRequisition.createdAt).toLocaleString('th-TH')}
+                  {new Date(selectedRequisition.createdAt).toLocaleString('th-TH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })} น.
                 </p>
               </div>
               <div>
-                <span className="text-slate-400 font-semibold">ผู้อนุมัติ:</span>
+                <span className="text-slate-400 font-semibold text-[11px]">ผู้อนุมัติ:</span>
                 <p className="font-bold text-slate-800">{selectedRequisition.approvedBy?.name || '-'}</p>
               </div>
               <div>
-                <span className="text-slate-400 font-semibold">สถานะ:</span>
+                <span className="text-slate-400 font-semibold text-[11px]">สถานะ:</span>
                 <div className="mt-0.5">
                   {selectedRequisition.status === 'PENDING' && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                      รออนุมัติ
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                      รออนุมัติการซื้อ
                     </span>
                   )}
                   {selectedRequisition.status === 'APPROVED' && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      อนุมัติและโอนของแล้ว
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      อนุมัติแล้ว
                     </span>
                   )}
                   {selectedRequisition.status === 'REJECTED' && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
                       ไม่อนุมัติ
                     </span>
                   )}
@@ -751,54 +1001,125 @@ export default function AdminStockRequestsPage() {
               </div>
             </div>
 
-            {selectedRequisition.rejectReason && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700">
-                <span className="font-bold">เหตุผลที่ไม่อนุมัติ:</span> {selectedRequisition.rejectReason}
+            {/* Reason / Note */}
+            {selectedRequisition.reason && (
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs">
+                <span className="font-bold text-slate-700">วัตถุประสงค์:</span>{' '}
+                <span className="text-slate-800">{selectedRequisition.reason}</span>
+                {selectedRequisition.note && (
+                  <div className="mt-1 text-slate-500 text-[11px]">
+                    <span className="font-semibold">หมายเหตุ:</span> {selectedRequisition.note}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Reject Reason (if any) */}
+            {selectedRequisition.rejectReason && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+                <div>
+                  <span className="font-bold">เหตุผลที่ไม่อนุมัติ:</span> {selectedRequisition.rejectReason}
+                </div>
+              </div>
+            )}
+
+            {/* Items Table */}
             <div>
-              <h4 className="text-xs font-bold text-slate-700 mb-2">รายการวัตถุดิบ</h4>
-              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+              <h4 className="text-xs font-bold text-slate-800 mb-2">รายการวัตถุดิบ ({selectedRequisition.items.length} รายการ)</h4>
+              <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px]">
+                  <thead className="bg-slate-100/90 text-slate-700 font-bold uppercase text-[10px]">
                     <tr>
                       <th className="py-2.5 px-3">รหัส/ชื่อวัตถุดิบ</th>
-                      <th className="py-2.5 px-3 text-right">จำนวนที่ขอ</th>
+                      <th className="py-2.5 px-3 text-right">จำนวนที่ขอซื้อ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่อนุมัติ</th>
+                      <th className="py-2.5 px-3 text-right">ราคา/หน่วย</th>
+                      <th className="py-2.5 px-3 text-right">รวมเงิน (฿)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item) => (
-                      <tr key={item.id}>
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold text-slate-800">{item.ingredient.name}</span>
-                          <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
-                          {Number(item.requestedQty).toLocaleString()} {item.ingredient.unit}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
-                          {item.approvedQty !== null ? (
-                            <span className="text-emerald-700">
-                              {Number(item.approvedQty).toLocaleString()} {item.ingredient.unit}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {selectedRequisition.items.map((item) => {
+                      const cost = Number(item.ingredient.costPerUnit || 0);
+                      const finalQty = Number(selectedRequisition.status === 'APPROVED' && item.approvedQty !== null ? item.approvedQty : item.requestedQty);
+                      const lineTotal = finalQty * cost;
+
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3">
+                            <span className="font-bold text-slate-800">{item.ingredient.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
+                            {Number(item.requestedQty).toLocaleString()} {item.ingredient.unit}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold">
+                            {item.approvedQty !== null ? (
+                              <span className="text-emerald-700">
+                                {Number(item.approvedQty).toLocaleString()} {item.ingredient.unit}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-600">
+                            ฿{cost.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                            ฿{lineTotal.toFixed(2)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
+                  <tfoot className="bg-slate-50/90 border-t border-slate-200">
+                    <tr>
+                      <td colSpan={4} className="py-2.5 px-3 text-right font-bold text-slate-700">
+                        ยอดเงินรวมทั้งสิ้น:
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-emerald-800 text-xs">
+                        ฿{computeRequisitionTotal(selectedRequisition).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {selectedRequisition.status === 'PENDING' ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDetailModalOpen(false);
+                      handleOpenApproveModal(selectedRequisition);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>ไปที่หน้าอนุมัติการซื้อ</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDetailModalOpen(false);
+                      handleOpenRejectModal(selectedRequisition);
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 cursor-pointer"
+                  >
+                    ปฏิเสธ
+                  </button>
+                </div>
+              ) : (
+                <div />
+              )}
+
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 cursor-pointer"
               >
                 ปิด
               </button>

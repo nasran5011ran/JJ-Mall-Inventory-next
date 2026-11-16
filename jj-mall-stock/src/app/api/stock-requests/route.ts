@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
                 category: true,
                 costPerUnit: true,
                 currentStock: true,
+                storeId: true,
               },
             },
           },
@@ -121,11 +122,20 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    // 5. For Admin: Compute store balances for each store to display in-store stock before purchase
+    const storeBalancesByStore: Record<number, any[]> = {};
+    if (session.role === 'ADMIN') {
+      for (const st of staffStores) {
+        storeBalancesByStore[st.id] = await calculateStoreReconciliation(st.id);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       requisitions,
       ingredients,
       storeBalances: storeBalancesList,
+      storeBalancesByStore,
       staffStores,
       metrics: {
         pendingCount,
