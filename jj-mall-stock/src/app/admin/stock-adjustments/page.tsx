@@ -1675,37 +1675,6 @@ export default function AdminStockAdjustmentsPage() {
               </div>
             </div>
 
-            {/* 4 Primary KPI Summary Cards Strip */}
-            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2">
-              <div className="p-1.5 border border-black bg-white">
-                <div className="text-[9.5px] font-bold text-black">รอการอนุมัติ (Pending)</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
-                  {metrics.pendingCount} <span className="text-[9.5px] font-normal">ใบ</span>
-                </div>
-              </div>
-
-              <div className="p-1.5 border border-black bg-white">
-                <div className="text-[9.5px] font-bold text-black">อนุมัติแล้ว (Approved)</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
-                  {metrics.approvedCount} <span className="text-[9.5px] font-normal">ใบ</span>
-                </div>
-              </div>
-
-              <div className="p-1.5 border border-black bg-white">
-                <div className="text-[9.5px] font-bold text-black">ไม่อนุมัติ (Rejected)</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
-                  {metrics.rejectedCount} <span className="text-[9.5px] font-normal">ใบ</span>
-                </div>
-              </div>
-
-              <div className="p-1.5 border border-black bg-white">
-                <div className="text-[9.5px] font-bold text-black">รวมคำขอทั้งหมด</div>
-                <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
-                  {metrics.totalCount} <span className="text-[9.5px] font-normal">ใบ</span>
-                </div>
-              </div>
-            </div>
-
             {/* Adjustments Table */}
             <div className="overflow-x-auto print:overflow-visible">
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
