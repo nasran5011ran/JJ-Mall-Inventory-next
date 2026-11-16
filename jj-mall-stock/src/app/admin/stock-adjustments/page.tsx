@@ -24,8 +24,13 @@ import {
   Trash2,
   Printer,
   Sparkles,
+  Store,
+  Warehouse,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { showSuccessAlert, showErrorAlert, confirmActionAlert, confirmRejectAlert } from '@/lib/sweetalert';
 import Pagination from '@/components/Pagination';
 
 interface Ingredient {
@@ -88,6 +93,7 @@ export default function AdminStockAdjustmentsPage() {
   const { user } = useAuth();
   const { mutate: globalMutate } = useSWRConfig();
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [storeFilter, setStoreFilter] = useState('ALL');
   const [search, setSearch] = useState('');
 
   // Instant SWR Cache
@@ -99,6 +105,10 @@ export default function AdminStockAdjustmentsPage() {
 
   const ingredients: Ingredient[] = useMemo(() => {
     return swrData?.success && Array.isArray(swrData.ingredients) ? swrData.ingredients : [];
+  }, [swrData]);
+
+  const staffStores = useMemo(() => {
+    return swrData?.success && Array.isArray(swrData.staffStores) ? swrData.staffStores : [];
   }, [swrData]);
 
   const metrics = swrData?.metrics || {
@@ -123,11 +133,6 @@ export default function AdminStockAdjustmentsPage() {
     { ingredientId: '', actualQuantity: '' },
   ]);
 
-  // Reject Modal
-  const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [selectedAdjForReject, setSelectedAdjForReject] = useState<AdjustmentRecord | null>(null);
-  const [rejectReasonInput, setRejectReasonInput] = useState('');
-  const [rejecting, setRejecting] = useState(false);
 
   // Detail Modal
   const [selectedAdjustment, setSelectedAdjustment] = useState<AdjustmentRecord | null>(null);
@@ -239,11 +244,17 @@ export default function AdminStockAdjustmentsPage() {
     }
   };
 
-  // Approve Action
+  // Approve Action with SweetAlert2
   const handleApprove = async (adj: AdjustmentRecord) => {
-    if (!confirm(`ยืนยันการอนุมัติใบปรับปรุงสต็อก #${adj.adjustmentNumber} ใช่หรือไม่?\nระบบจะทำการอัปเดตยอดคงเหลือจริงในคลังทันที`)) {
-      return;
-    }
+    const isConfirmed = await confirmActionAlert({
+      title: 'ยืนยันอนุมัติใบปรับปรุงสต็อก?',
+      text: `ต้องการอนุมัติใบปรับปรุงสต็อก #${adj.adjustmentNumber} ใช่หรือไม่?\nระบบจะทำการอัปเดตยอดคงเหลือจริงในคลังทันที`,
+      confirmButtonText: 'ยืนยันอนุมัติ',
+      confirmButtonColor: '#10b981',
+      icon: 'question',
+    });
+
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch('/api/stock-adjustments', {
@@ -260,36 +271,37 @@ export default function AdminStockAdjustmentsPage() {
         throw new Error(data.message || 'อนุมัติไม่สำเร็จ');
       }
 
-      showToast(data.message);
       await mutate();
       globalMutate('/api/notifications');
       if (selectedAdjustment?.id === adj.id) {
         setSelectedAdjustment(data.adjustment);
       }
+      await showSuccessAlert(
+        'อนุมัติสำเร็จ',
+        `อนุมัติใบปรับปรุง #${adj.adjustmentNumber} และอัปเดตยอดสต็อกจริงเรียบร้อยแล้ว`
+      );
     } catch (err: any) {
-      alert(err.message || 'เกิดข้อผิดพลาด');
+      await showErrorAlert('อนุมัติไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการอนุมัติ');
     }
   };
 
-  // Reject Action
-  const handleOpenRejectModal = (adj: AdjustmentRecord) => {
-    setSelectedAdjForReject(adj);
-    setRejectReasonInput('');
-    setRejectModalOpen(true);
-  };
+  // Reject Action with SweetAlert2
+  const handleReject = async (adj: AdjustmentRecord) => {
+    const { isConfirmed, reason } = await confirmRejectAlert({
+      requisitionNumber: adj.adjustmentNumber,
+      storeName: adj.requestedBy?.name,
+    });
 
-  const handleConfirmReject = async () => {
-    if (!selectedAdjForReject) return;
-    setRejecting(true);
+    if (!isConfirmed) return;
 
     try {
       const res = await fetch('/api/stock-adjustments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: selectedAdjForReject.id,
+          id: adj.id,
           action: 'REJECT',
-          rejectReason: rejectReasonInput.trim() || 'ไม่อนุมัติโดยผู้ดูแลระบบ',
+          rejectReason: reason,
         }),
       });
 
@@ -298,18 +310,17 @@ export default function AdminStockAdjustmentsPage() {
         throw new Error(data.message || 'ดำเนินการไม่สำเร็จ');
       }
 
-      showToast(data.message);
       await mutate();
       globalMutate('/api/notifications');
-      setRejectModalOpen(false);
-      setSelectedAdjForReject(null);
-      if (selectedAdjustment?.id === selectedAdjForReject.id) {
+      if (selectedAdjustment?.id === adj.id) {
         setSelectedAdjustment(data.adjustment);
       }
+      await showSuccessAlert(
+        'ปฏิเสธคำขอสำเร็จ',
+        `ปฏิเสธใบปรับปรุง #${adj.adjustmentNumber} เรียบร้อยแล้ว`
+      );
     } catch (err: any) {
-      alert(err.message || 'เกิดข้อผิดพลาด');
-    } finally {
-      setRejecting(false);
+      await showErrorAlert('ดำเนินการไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาด');
     }
   };
 
@@ -318,6 +329,12 @@ export default function AdminStockAdjustmentsPage() {
     return adjustments.filter((adj) => {
       // Tab filter
       if (activeTab !== 'ALL' && adj.status !== activeTab) return false;
+
+      // Store filter
+      if (storeFilter !== 'ALL') {
+        const staffId = Number(storeFilter);
+        if (adj.requestedBy?.id !== staffId) return false;
+      }
 
       // Search keyword
       const q = search.toLowerCase().trim();
@@ -332,7 +349,7 @@ export default function AdminStockAdjustmentsPage() {
       }
       return true;
     });
-  }, [adjustments, activeTab, search]);
+  }, [adjustments, activeTab, storeFilter, search]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -340,7 +357,7 @@ export default function AdminStockAdjustmentsPage() {
   // Reset page when filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [search, activeTab]);
+  }, [search, activeTab, storeFilter]);
 
   // Paginated adjustments (10 items per page for screen view)
   const paginatedAdjustments = useMemo(() => {
@@ -493,6 +510,55 @@ export default function AdminStockAdjustmentsPage() {
         </div>
       </div>
 
+      
+      {/* Store Selection Tabs */}
+      <div className="flex">
+        <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+          <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+            <span>เลือกร้านค้า / สาขา:</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStoreFilter('ALL');
+              setCurrentPage(1);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              storeFilter === 'ALL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Warehouse className="w-3.5 h-3.5" />
+            <span>ทุกสาขา ({adjustments.length})</span>
+          </button>
+
+          {staffStores.map((st: any) => {
+            const count = adjustments.filter((adj) => adj.requestedBy?.id === st.id).length;
+            const isSelected = storeFilter === String(st.id);
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  setStoreFilter(String(st.id));
+                  setCurrentPage(1);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                <span>{st.name} ({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Tabs & Search Filter */}
       <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Tabs */}
@@ -582,17 +648,18 @@ export default function AdminStockAdjustmentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-sm min-w-[1100px]">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
-                  <th className="py-3.5 px-4">เลขที่คำขอ</th>
-                  <th className="py-3.5 px-4">วันที่ทำรายการ</th>
-                  <th className="py-3.5 px-4">ผู้ขอปรับปรุง</th>
-                  <th className="py-3.5 px-4">เหตุผลในการปรับปรุง</th>
-                  <th className="py-3.5 px-4">รายการวัตถุดิบ & ผลต่าง</th>
-                  <th className="py-3.5 px-4 text-center">สถานะ</th>
-                  <th className="py-3.5 px-4 text-right">การอนุมัติ / จัดการ</th>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-4 px-3 text-center w-12 text-slate-400">#</th>
+                  <th className="py-4 px-4 w-44">เลขที่คำขอ</th>
+                  <th className="py-4 px-4 w-36">วันที่ทำรายการ</th>
+                  <th className="py-4 px-4 w-36">ร้านค้า / สาขา</th>
+                  <th className="py-4 px-4 w-48">เหตุผลในการปรับปรุง</th>
+                  <th className="py-4 px-4 w-60">รายการวัตถุดิบ & ผลต่าง</th>
+                  <th className="py-4 px-4 w-36">ผู้ขอปรับปรุง</th>
+                  <th className="py-4 px-4 text-center w-32">สถานะ</th>
+                  <th className="py-4 px-4 text-right w-44">การดำเนินการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -601,6 +668,7 @@ export default function AdminStockAdjustmentsPage() {
                   const isPending = adj.status === 'PENDING';
                   const isApproved = adj.status === 'APPROVED';
                   const isRejected = adj.status === 'REJECTED';
+                  const isStore = adj.requestedBy?.role === 'STAFF';
 
                   return (
                     <tr
@@ -609,61 +677,65 @@ export default function AdminStockAdjustmentsPage() {
                       className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
                     >
                       {/* Sequence Row Number */}
-                      <td className="py-3.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                      <td className="py-4 px-3 text-center text-slate-400 font-mono text-xs font-bold">
                         {rowNumber}
                       </td>
 
                       {/* Adjustment Number */}
-                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-700">
-                        <div className="flex items-center gap-1.5 group-hover:underline">
-                          <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      <td className="py-4 px-4">
+                        <div className="font-mono font-bold text-sm text-emerald-700 flex items-center gap-1.5 group-hover:underline">
+                          <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>{adj.adjustmentNumber}</span>
                         </div>
                       </td>
 
                       {/* Date & Time */}
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <div className="font-bold text-slate-700">
+                      <td className="py-4 px-4 text-slate-600">
+                        <div className="font-bold text-slate-800 text-xs">
                           {new Date(adj.createdAt).toLocaleDateString('th-TH')}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+                        <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
                           <Clock className="w-3 h-3" />
                           {new Date(adj.createdAt).toLocaleTimeString('th-TH')} น.
                         </div>
                       </td>
 
-                      {/* Requested By */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{adj.requestedBy?.name || 'User'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
-                          @{adj.requestedBy?.username} ({adj.requestedBy?.role})
-                        </div>
+                      {/* Store / Branch Badge */}
+                      <td className="py-4 px-4">
+                        {isStore ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                            <Store className="w-3.5 h-3.5 text-amber-700" />
+                            <span>{adj.requestedBy?.name}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                            <Warehouse className="w-3.5 h-3.5 text-slate-500" />
+                            <span>คลังส่วนกลาง</span>
+                          </span>
+                        )}
                       </td>
 
                       {/* Reason */}
-                      <td className="py-3.5 px-4 max-w-xs">
-                        <div className="font-bold text-slate-800 truncate">{adj.reason}</div>
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-xs text-slate-800 line-clamp-1">{adj.reason}</div>
                         {isRejected && adj.rejectReason && (
-                          <div className="text-[10px] text-red-500 font-semibold truncate mt-0.5">
-                            เหตุผลปฏิเสธ: {adj.rejectReason}
+                          <div className="text-[11px] text-rose-500 font-semibold line-clamp-1 mt-0.5">
+                            เหตุผล: {adj.rejectReason}
                           </div>
                         )}
                       </td>
 
                       {/* Items Preview */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4">
                         <div className="space-y-1">
                           {adj.items.slice(0, 2).map((item) => {
                             const diff = Number(item.diffQuantity);
                             return (
-                              <div key={item.id} className="text-[11px] flex items-center gap-1.5">
-                                <span className="font-medium text-slate-700">{item.ingredient?.name}</span>
+                              <div key={item.id} className="text-xs flex items-center gap-1.5">
+                                <span className="font-medium text-slate-700 truncate max-w-[150px]">{item.ingredient?.name}</span>
                                 <span
                                   className={`font-mono font-bold ${
-                                    diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-red-600' : 'text-slate-400'
+                                    diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'
                                   }`}
                                 >
                                   {diff > 0 ? `+${diff}` : diff} {item.ingredient?.unit}
@@ -672,44 +744,64 @@ export default function AdminStockAdjustmentsPage() {
                             );
                           })}
                           {adj.items.length > 2 && (
-                            <div className="text-[10px] text-slate-400 font-semibold">
+                            <div className="text-[11px] text-slate-400 font-semibold">
                               + อีก {adj.items.length - 2} รายการ
                             </div>
                           )}
                         </div>
                       </td>
 
+                      {/* Requested By */}
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{adj.requestedBy?.name || 'User'}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          @{adj.requestedBy?.username}
+                        </div>
+                      </td>
+
                       {/* Status Badge */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-4 px-4 text-center">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
                             <Clock className="w-3.5 h-3.5 text-amber-600" />
                             <span>รออนุมัติ</span>
                           </span>
                         )}
                         {isApproved && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                             <span>อนุมัติแล้ว</span>
                           </span>
                         )}
                         {isRejected && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-50 text-red-800 border border-red-300">
-                            <XCircle className="w-3.5 h-3.5 text-red-600" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
+                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
                             <span>ไม่อนุมัติ</span>
                           </span>
                         )}
                       </td>
 
                       {/* Action Buttons */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="py-4 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAdjustment(adj)}
+                            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-100 shadow-2xs transition-all cursor-pointer"
+                            title="ดูรายละเอียด"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+
                           {isPending && (
                             <>
                               <button
                                 type="button"
                                 onClick={() => handleApprove(adj)}
-                                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
                                 title="อนุมัติและปรับปรุงยอดสต็อกจริง"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -717,8 +809,8 @@ export default function AdminStockAdjustmentsPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => handleOpenRejectModal(adj)}
-                                className="px-2.5 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                                onClick={() => handleReject(adj)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
                                 title="ปฏิเสธคำขอนี้"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -726,13 +818,6 @@ export default function AdminStockAdjustmentsPage() {
                               </button>
                             </>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => setSelectedAdjustment(adj)}
-                            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
-                          >
-                            ดูรายละเอียด
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -956,54 +1041,7 @@ export default function AdminStockAdjustmentsPage() {
         </div>
       )}
 
-      {/* Modal 2: Reject Reason Prompt */}
-      {rejectModalOpen && selectedAdjForReject && (
-        <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-2.5 text-red-600 pb-3 border-b border-slate-100">
-              <XCircle className="w-5 h-5" />
-              <h3 className="font-bold text-base text-slate-800">ปฏิเสธใบขอปรับปรุงสต็อก</h3>
-            </div>
 
-            <div className="mt-4 text-xs space-y-3">
-              <p className="text-slate-600">
-                คุณกำลังปฏิเสธคำขอเลขที่ <span className="font-mono font-bold text-slate-800">#{selectedAdjForReject.adjustmentNumber}</span>
-              </p>
-
-              <div>
-                <label className="block text-slate-700 font-bold mb-1">
-                  ระบุเหตุผลที่ไม่อนุมัติคำขอนี้
-                </label>
-                <textarea
-                  rows={3}
-                  value={rejectReasonInput}
-                  onChange={(e) => setRejectReasonInput(e.target.value)}
-                  placeholder="เช่น ตรวจสอบแล้วยอดจริงไม่ตรงกับที่ระบุ, ไม่ได้รับอนุญาต..."
-                  className="w-full p-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                />
-              </div>
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setRejectModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold cursor-pointer"
-              >
-                ยกเลิก
-              </button>
-              <button
-                type="button"
-                disabled={rejecting}
-                onClick={handleConfirmReject}
-                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-50"
-              >
-                {rejecting ? 'กำลังบันทึก...' : 'ยืนยันปฏิเสธคำขอ'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal 3: View Adjustment Detail */}
       {selectedAdjustment && !printVoucherOpen && (
@@ -1091,6 +1129,7 @@ export default function AdminStockAdjustmentsPage() {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
                   <tr>
+                    <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
                     <th className="py-2.5 px-3">รหัส / ชื่อวัตถุดิบ</th>
                     <th className="py-2.5 px-3 text-right">ยอดในระบบเดิม</th>
                     <th className="py-2.5 px-3 text-right">ยอดที่ปรับใหม่</th>
@@ -1098,10 +1137,13 @@ export default function AdminStockAdjustmentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {selectedAdjustment.items.map((item) => {
+                  {selectedAdjustment.items.map((item, idx) => {
                     const diff = Number(item.diffQuantity);
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/70">
+                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          {idx + 1}
+                        </td>
                         <td className="py-2.5 px-3">
                           <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{item.ingredient?.code}</div>
@@ -1151,7 +1193,7 @@ export default function AdminStockAdjustmentsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleOpenRejectModal(selectedAdjustment)}
+                      onClick={() => handleReject(selectedAdjustment)}
                       className="px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs cursor-pointer"
                     >
                       ❌ ปฏิเสธคำขอ

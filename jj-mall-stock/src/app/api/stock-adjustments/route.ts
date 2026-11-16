@@ -92,10 +92,18 @@ export async function GET(req: NextRequest) {
     const approvedCount = allAdjustments.filter((a) => a.status === 'APPROVED').length;
     const rejectedCount = allAdjustments.filter((a) => a.status === 'REJECTED').length;
 
+    // 4. Fetch Staff Stores
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, username: true, name: true },
+      orderBy: { id: 'asc' },
+    });
+
     return NextResponse.json({
       success: true,
       adjustments,
       ingredients,
+      staffStores,
       metrics: {
         pendingCount,
         approvedCount,
