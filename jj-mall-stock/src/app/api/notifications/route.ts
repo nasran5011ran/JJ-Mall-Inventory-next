@@ -316,14 +316,14 @@ export async function GET() {
     pendingRequisitions.forEach((reqItem) => {
       notifications.push({
         id: `REQ-${reqItem.id}`,
-        category: 'INVENTORY',
+        category: 'APPROVAL',
         type: 'PENDING_REQUISITION',
         severity: 'ACTION_REQUIRED',
-        title: `มีใบขอเบิกสต็อกรออนุมัติ: ${reqItem.requisitionNumber}`,
-        description: `ร้าน "${reqItem.store.name}" ขอเบิกวัตถุดิบ ${reqItem.items.length} รายการ`,
+        title: `มีใบขอซื้อวัตถุดิบรออนุมัติ: ${reqItem.requisitionNumber}`,
+        description: `ร้าน "${reqItem.store.name}" ขอซื้อวัตถุดิบ ${reqItem.items.length} รายการ`,
         timestamp: reqItem.createdAt,
         actionUrl: `/admin/stock-requests?highlight=${reqItem.id}`,
-        actionLabel: 'ตรวจและอนุมัติ',
+        actionLabel: 'อนุมัติการซื้อ',
         metadata: {
           requisitionId: reqItem.id,
           requisitionNumber: reqItem.requisitionNumber,

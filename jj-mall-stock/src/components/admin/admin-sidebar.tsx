@@ -69,7 +69,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     {
       title: 'งานสต็อก & การอนุมัติ',
       items: [
-        { href: '/admin/stock-requests', label: 'อนุมัติเบิกซื้อวัตถุดิบ', icon: ArrowUpFromLine },
+        { href: '/admin/stock-requests', label: 'อนุมัติการซื้อวัตถุดิบหน้าร้าน', icon: ShoppingCart },
         { href: '/admin/stock-in', label: 'รับสินค้าเข้าสต็อก (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-adjustments', label: 'อนุมัติใบปรับปรุงสต็อก', icon: FileEdit },
         { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
