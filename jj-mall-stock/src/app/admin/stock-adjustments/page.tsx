@@ -146,6 +146,25 @@ export default function AdminStockAdjustmentsPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const getReasonBadge = (reason: string) => {
+    if (reason.includes('เสียหาย') || reason.includes('ชำรุด') || reason.includes('แตก') || reason.includes('หก')) {
+      return { label: '📦 เสียหาย / ชำรุด', color: 'bg-rose-50 text-rose-700 border-rose-200' };
+    }
+    if (reason.includes('หมดอายุ') || reason.includes('เสื่อม')) {
+      return { label: '⚠️ หมดอายุ', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+    }
+    if (reason.includes('ตรวจนับ') || reason.includes('นับสต็อก')) {
+      return { label: '📋 ตรวจนับสต็อก', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (reason.includes('สูญหาย') || reason.includes('หาย')) {
+      return { label: '❓ สูญหาย', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+    if (reason.includes('ทดลอง') || reason.includes('ฝึกอบรม')) {
+      return { label: '🧪 ทดลองสูตร', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+    }
+    return { label: '✏️ ปรับปรุงสต็อก', color: 'bg-slate-100 text-slate-700 border-slate-200' };
+  };
+
   // Open Create Modal
   const openCreateModal = () => {
     const firstIng = ingredients[0];
@@ -648,15 +667,15 @@ export default function AdminStockAdjustmentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm min-w-[1100px]">
+            <table className="w-full text-left text-sm min-w-full">
               <thead>
                 <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-4 px-3 text-center w-12 text-slate-400">#</th>
                   <th className="py-4 px-4 w-44">ใบปรับปรุงสต็อก</th>
                   <th className="py-4 px-4 w-36">วันที่ทำรายการ</th>
                   <th className="py-4 px-4 w-36">ร้านค้า / สาขา</th>
-                  <th className="py-4 px-4 w-48">เหตุผลในการปรับปรุง</th>
-                  <th className="py-4 px-4 w-64">รายการวัตถุดิบ & ผลต่าง</th>
+                  <th className="py-4 px-4 w-1/4">เหตุผลในการปรับปรุง</th>
+                  <th className="py-4 px-4 w-2/5">รายการวัตถุดิบ & ผลต่าง</th>
                   <th className="py-4 px-4 w-36">ผู้ขอปรับปรุง</th>
                   <th className="py-4 px-4 text-center w-32">สถานะ</th>
                   <th className="py-4 px-4 text-right w-44">การดำเนินการ</th>
@@ -682,7 +701,7 @@ export default function AdminStockAdjustmentsPage() {
                       </td>
 
                       {/* Adjustment Number */}
-                      <td className="py-4 px-4 font-mono font-bold text-sm text-slate-800">
+                      <td className="py-4 px-4 font-mono font-bold text-base text-slate-900">
                         <span className="hover:underline">{adj.adjustmentNumber}</span>
                       </td>
 
@@ -700,12 +719,12 @@ export default function AdminStockAdjustmentsPage() {
                       {/* Store / Branch Badge */}
                       <td className="py-4 px-4">
                         {isStore ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
                             <Store className="w-3.5 h-3.5 text-amber-700" />
                             <span>{adj.requestedBy?.name}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                             <Warehouse className="w-3.5 h-3.5 text-slate-500" />
                             <span>คลังส่วนกลาง</span>
                           </span>
@@ -713,40 +732,55 @@ export default function AdminStockAdjustmentsPage() {
                       </td>
 
                       {/* Reason */}
-                      <td className="py-4 px-4 max-w-xs">
-                        <div className="text-xs font-semibold text-slate-800 leading-relaxed">{adj.reason}</div>
-                        {isRejected && adj.rejectReason && (
-                          <div className="text-[11px] text-rose-600 font-medium mt-1">
-                            เหตุผล: {adj.rejectReason}
-                          </div>
-                        )}
+                      <td className="py-4 px-4">
+                        {(() => {
+                          const badge = getReasonBadge(adj.reason);
+                          return (
+                            <div className="space-y-1">
+                              <span className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold border ${badge.color}`}>
+                                {badge.label}
+                              </span>
+                              <div className="text-xs text-slate-600 truncate max-w-[240px]" title={adj.reason}>
+                                {adj.reason}
+                              </div>
+                              {isRejected && adj.rejectReason && (
+                                <div className="text-[11px] text-rose-600 font-medium truncate max-w-[240px]" title={adj.rejectReason}>
+                                  เหตุผล: {adj.rejectReason}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
-                      {/* Items Preview */}
+                      {/* Items Summary (Approach 1: Clean One-Liner) */}
                       <td className="py-4 px-4">
-                        <div className="space-y-1.5">
-                          {adj.items.map((item) => {
-                            const diff = Number(item.diffQuantity);
-                            const sys = Number(item.systemQuantity);
-                            const act = Number(item.actualQuantity);
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-800 font-bold text-xs border border-slate-200 shrink-0">
+                            <Package className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{adj.items.length} รายการ</span>
+                          </span>
+                          <span className="text-xs font-semibold text-slate-700 truncate max-w-[220px]" title={adj.items.map((i) => i.ingredient?.name).join(', ')}>
+                            {adj.items[0]?.ingredient?.name}
+                            {adj.items.length > 1 ? ` และอีก ${adj.items.length - 1} รายการ` : ''}
+                          </span>
+                          {(() => {
+                            const netDiff = adj.items.reduce((sum, it) => sum + Number(it.diffQuantity || 0), 0);
+                            const unit = adj.items[0]?.ingredient?.unit || 'หน่วย';
                             return (
-                              <div key={item.id} className="text-xs">
-                                <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
-                                <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
-                                  <span>เดิม: {sys.toLocaleString()}</span>
-                                  <span>→</span>
-                                  <span className="font-bold text-slate-700">ปรับเป็น: {act.toLocaleString()}</span>
-                                  <span
-                                    className={`font-bold ml-1 ${
-                                      diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'
-                                    }`}
-                                  >
-                                    ({diff > 0 ? `+${diff}` : diff} {item.ingredient?.unit})
-                                  </span>
-                                </div>
-                              </div>
+                              <span
+                                className={`ml-auto font-mono font-bold text-xs px-2.5 py-1 rounded-xl shrink-0 ${
+                                  netDiff < 0
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : netDiff > 0
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                {netDiff > 0 ? `+${netDiff}` : netDiff} {adj.items.length === 1 ? unit : 'รวม'}
+                              </span>
                             );
-                          })}
+                          })()}
                         </div>
                       </td>
 
@@ -764,19 +798,19 @@ export default function AdminStockAdjustmentsPage() {
                       {/* Status Badge */}
                       <td className="py-4 px-4 text-center">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
                             <Clock className="w-3.5 h-3.5 text-amber-600" />
                             <span>รออนุมัติ</span>
                           </span>
                         )}
                         {isApproved && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                             <span>อนุมัติแล้ว</span>
                           </span>
                         )}
                         {isRejected && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
+                          <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-300">
                             <XCircle className="w-3.5 h-3.5 text-rose-600" />
                             <span>ไม่อนุมัติ</span>
                           </span>
@@ -840,7 +874,7 @@ export default function AdminStockAdjustmentsPage() {
       {/* Modal 1: Create New Stock Adjustment */}
       {createModalOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -1045,7 +1079,7 @@ export default function AdminStockAdjustmentsPage() {
       {/* Modal 3: View Adjustment Detail */}
       {selectedAdjustment && !printVoucherOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -1124,15 +1158,15 @@ export default function AdminStockAdjustmentsPage() {
             </div>
 
             {/* Items Table */}
-            <div className="mt-4 border border-slate-200 rounded-2xl overflow-hidden">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+            <div className="mt-4 border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-xs">
                   <tr>
-                    <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
-                    <th className="py-2.5 px-3">รหัส / ชื่อวัตถุดิบ</th>
-                    <th className="py-2.5 px-3 text-right">ยอดในระบบเดิม</th>
-                    <th className="py-2.5 px-3 text-right">ยอดที่ปรับใหม่</th>
-                    <th className="py-2.5 px-3 text-right">ผลต่าง (Diff)</th>
+                    <th className="py-3 px-3.5 text-center w-12 text-slate-400">#</th>
+                    <th className="py-3 px-4">รหัส / ชื่อวัตถุดิบ</th>
+                    <th className="py-3 px-4 text-right">ยอดในระบบเดิม</th>
+                    <th className="py-3 px-4 text-right">ยอดที่ปรับใหม่</th>
+                    <th className="py-3 px-4 text-right">ผลต่าง (Diff)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -1140,26 +1174,32 @@ export default function AdminStockAdjustmentsPage() {
                     const diff = Number(item.diffQuantity);
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/70">
-                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                        <td className="py-3 px-3.5 text-center text-slate-400 font-mono text-xs font-bold">
                           {idx + 1}
                         </td>
-                        <td className="py-2.5 px-3">
-                          <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{item.ingredient?.code}</div>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900 text-sm">{item.ingredient?.name}</div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">{item.ingredient?.code}</div>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-600">
+                        <td className="py-3 px-4 text-right font-mono text-slate-600">
                           {Number(item.systemQuantity).toLocaleString()} {item.ingredient?.unit}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
+                        <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
                           {Number(item.actualQuantity).toLocaleString()} {item.ingredient?.unit}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
+                        <td className="py-3 px-4 text-right font-mono">
                           {diff === 0 ? (
-                            <span className="text-slate-400">0</span>
-                          ) : diff > 0 ? (
-                            <span className="text-blue-600">+{diff.toLocaleString()} {item.ingredient?.unit}</span>
+                            <span className="text-slate-400 font-bold">0</span>
                           ) : (
-                            <span className="text-red-600">{diff.toLocaleString()} {item.ingredient?.unit}</span>
+                            <span
+                              className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-black ${
+                                diff > 0
+                                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+                              }`}
+                            >
+                              {diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()} {item.ingredient?.unit}
+                            </span>
                           )}
                         </td>
                       </tr>

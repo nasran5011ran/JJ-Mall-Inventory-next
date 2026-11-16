@@ -25,7 +25,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     pathname?.includes('/admin/products') ||
     pathname?.includes('/admin/stock-out') ||
     pathname?.includes('/admin/stock-in') ||
-    pathname?.includes('/admin/stock-requests');
+    pathname?.includes('/admin/stock-requests') ||
+    pathname?.includes('/admin/stock-adjustments');
 
   // Route Guard: Strictly kick non-admins out, redirect to login if unauthenticated
   useEffect(() => {
