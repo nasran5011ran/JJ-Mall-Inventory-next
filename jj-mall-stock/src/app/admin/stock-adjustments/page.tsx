@@ -69,6 +69,11 @@ interface AdjustmentRecord {
   rejectReason: string | null;
   createdAt: string;
   approvedAt: string | null;
+  storeId?: number | null;
+  store?: {
+    id: number;
+    name: string;
+  } | null;
   requestedBy: {
     id: number;
     name: string;
@@ -692,18 +697,18 @@ export default function AdminStockAdjustmentsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm min-w-full">
+            <table className="w-full text-left text-xs min-w-full">
               <thead>
-                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px] whitespace-nowrap">
-                  <th className="py-3 px-3 text-center w-10 text-slate-400">#</th>
-                  <th className="py-3 px-4">ใบปรับปรุงสต็อก</th>
-                  <th className="py-3 px-4">วันที่ทำรายการ</th>
-                  <th className="py-3 px-4">ร้านค้า / สาขา</th>
-                  <th className="py-3 px-4">เหตุผลในการปรับปรุง</th>
-                  <th className="py-3 px-4">รายการวัตถุดิบ & ผลต่าง</th>
-                  <th className="py-3 px-4">ผู้ขอปรับปรุง</th>
-                  <th className="py-3 px-4 text-center">สถานะ</th>
-                  <th className="py-3 px-4 text-right">การดำเนินการ</th>
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider whitespace-nowrap">
+                  <th className="py-2.5 px-3 text-center w-10 text-slate-400">#</th>
+                  <th className="py-2.5 px-3">ใบปรับปรุงสต็อก</th>
+                  <th className="py-2.5 px-3">วันที่ทำรายการ</th>
+                  <th className="py-2.5 px-3">ร้านค้า / สาขา</th>
+                  <th className="py-2.5 px-3">เหตุผลในการปรับปรุง</th>
+                  <th className="py-2.5 px-3">รายการวัตถุดิบ & ผลต่าง</th>
+                  <th className="py-2.5 px-3">ผู้ขอปรับปรุง</th>
+                  <th className="py-2.5 px-3 text-center">สถานะ</th>
+                  <th className="py-2.5 px-3 text-right">การดำเนินการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -1352,72 +1357,84 @@ export default function AdminStockAdjustmentsPage() {
           {/* Printable Voucher Sheet (A4 Landscape Style) */}
           <div
             id="official-stock-adjustment-voucher"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
           >
             {/* Document Header */}
-            <div className="relative pb-2 mb-2 border-b border-black">
-              <div className="flex items-start justify-between">
+            <div className="relative pb-1 mb-2">
+              {/* Top Right Reference Meta */}
+              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
+                <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+                <div>ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
+              </div>
+
+              {/* Company & Document Title */}
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-bold text-black tracking-tight">
+                  บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                </h2>
+                <h3 className="text-xs sm:text-sm font-bold text-black">
+                  ใบขออนุมัติปรับปรุงยอดสต็อกสินค้า (Stock Adjustment Request & Approval Voucher)
+                </h3>
+              </div>
+
+              {/* Sub-Header: Document Number, Date, Store */}
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-b border-black pb-1 text-black">
                 <div>
-                  <h1 className="text-base font-bold tracking-tight text-black uppercase">
-                    บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
-                  </h1>
-                  <h2 className="text-sm font-bold text-black mt-0.5">
-                    ใบขออนุมัติปรับปรุงยอดสต็อกสินค้า (Stock Adjustment Request & Approval Voucher)
-                  </h2>
+                  <span className="font-bold">เลขที่คำขอ </span>
+                  <span className="font-mono font-bold ml-1">{selectedAdjustment.adjustmentNumber}</span>
+                  {selectedAdjustment.store?.name && (
+                    <span className="ml-3">
+                      (<span className="font-bold">สาขา: </span>{selectedAdjustment.store.name})
+                    </span>
+                  )}
                 </div>
-                <div className="text-right text-[10px] text-black font-mono leading-tight">
-                  <div className="font-bold text-black">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
-                  <div>เลขที่คำขอ: {selectedAdjustment.adjustmentNumber}</div>
-                  <div>วันที่พิมพ์: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
+                <div>
+                  <span className="font-bold">วันที่ยื่นคำขอ </span>
+                  <span className="font-mono ml-1">
+                    {new Date(selectedAdjustment.createdAt).toLocaleDateString('th-TH')} {new Date(selectedAdjustment.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                  </span>
+                  <span className="font-bold ml-4">
+                    สถานะ: {selectedAdjustment.status === 'PENDING' ? 'รอการอนุมัติ' : selectedAdjustment.status === 'APPROVED' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ'}
+                  </span>
                 </div>
               </div>
 
-              {/* Sub-Header: Meta Grid */}
-              <div className="mt-3 p-2.5 rounded border border-black bg-white grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] text-black">
+              {/* Sub-Header 2: Staff, Approver, Reason */}
+              <div className="mt-1.5 flex items-center justify-between text-[10px] text-black">
                 <div>
-                  <span className="font-bold text-black">วันที่ยื่นคำขอ: </span>
-                  <span className="font-mono">{new Date(selectedAdjustment.createdAt).toLocaleDateString('th-TH')} {new Date(selectedAdjustment.createdAt).toLocaleTimeString('th-TH')} น.</span>
-                </div>
-                <div>
-                  <span className="font-bold text-black">ผู้ยื่นคำขอ: </span>
+                  <span className="font-bold">ผู้ยื่นคำขอ: </span>
                   <span>{selectedAdjustment.requestedBy?.name} (@{selectedAdjustment.requestedBy?.username})</span>
+                  {selectedAdjustment.approvedBy && (
+                    <span className="ml-4">
+                      <span className="font-bold">ผู้อนุมัติ/จัดการ: </span>
+                      <span>{selectedAdjustment.approvedBy.name}</span>
+                    </span>
+                  )}
                 </div>
                 <div>
-                  <span className="font-bold text-black">สถานะคำขอ: </span>
-                  <span className="font-bold">
-                    {selectedAdjustment.status === 'PENDING' && 'รอการอนุมัติ (Pending)'}
-                    {selectedAdjustment.status === 'APPROVED' && 'อนุมัติแล้ว (Approved)'}
-                    {selectedAdjustment.status === 'REJECTED' && 'ไม่อนุมัติ (Rejected)'}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-bold text-black">ผู้อนุมัติ/จัดการ: </span>
-                  <span>{selectedAdjustment.approvedBy ? `${selectedAdjustment.approvedBy.name}` : '-'}</span>
-                </div>
-                <div className="sm:col-span-4 border-t border-black pt-1.5 mt-0.5">
-                  <span className="font-bold text-black">เหตุผลในการปรับปรุง: </span>
+                  <span className="font-bold">เหตุผล: </span>
                   <span>{selectedAdjustment.reason}</span>
                   {selectedAdjustment.rejectReason && (
-                    <span className="ml-3 text-black font-bold">(เหตุผลปฏิเสธ: {selectedAdjustment.rejectReason})</span>
+                    <span className="ml-2 font-bold">(เหตุผลปฏิเสธ: {selectedAdjustment.rejectReason})</span>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Adjustment Items Table with Price / Value */}
-            <div className="overflow-x-auto my-2.5">
+            <div className="overflow-x-auto print:overflow-visible">
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
-                  <tr className="border-b border-black text-black font-bold bg-white text-center">
-                    <th className="py-1.5 px-2 border-r border-black w-8">ลำดับ</th>
-                    <th className="py-1.5 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
-                    <th className="py-1.5 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
-                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ยอดเดิม</th>
-                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ปรับใหม่</th>
-                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ผลต่าง</th>
-                    <th className="py-1.5 px-2 border-r border-black text-center w-14">หน่วย</th>
-                    <th className="py-1.5 px-2 border-r border-black text-right w-24">ต้นทุน/หน่วย (฿)</th>
-                    <th className="py-1.5 px-2 text-right w-28">มูลค่าผลต่าง (฿)</th>
+                  <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
+                    <th className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
+                    <th className="py-1 px-1.5 border-r border-black w-24 bg-white">รหัสวัตถุดิบ</th>
+                    <th className="py-1 px-2 border-r border-black text-left bg-white">ชื่อวัตถุดิบ</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">ยอดเดิม</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">ปรับใหม่</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">ผลต่าง</th>
+                    <th className="py-1 px-1 border-r border-black text-center w-12 bg-white">หน่วย</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-24 bg-white">ต้นทุน/หน่วย (฿)</th>
+                    <th className="py-1 px-1.5 text-right w-28 bg-white">มูลค่าผลต่าง (฿)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
@@ -1427,43 +1444,37 @@ export default function AdminStockAdjustmentsPage() {
                     const diffVal = diff * cost;
                     return (
                       <tr key={item.id} className="border-b border-black">
-                        <td className="py-1.5 px-2 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-1.5 px-2 border-r border-black font-bold text-black font-mono">
+                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
                           {item.ingredient?.code}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black font-sans font-bold text-black text-left">
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black truncate max-w-[200px]">
                           {item.ingredient?.name}
                         </td>
-                        <td className="py-1.5 px-2 border-r border-black text-right text-black font-mono">
+                        <td className="py-0.5 px-1.5 border-r border-black text-right text-black font-mono">
                           {Number(item.systemQuantity).toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-2 border-r border-black text-right font-bold text-black font-mono">
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">
                           {Number(item.actualQuantity).toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-2 border-r border-black text-right font-bold text-black font-mono">
-                          {diff === 0 ? (
-                            <span>0</span>
-                          ) : diff > 0 ? (
-                            <span>+{diff.toLocaleString()}</span>
-                          ) : (
-                            <span>{diff.toLocaleString()}</span>
-                          )}
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">
+                          {diff === 0 ? '0' : diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-2 text-center font-sans text-black border-r border-black">
+                        <td className="py-0.5 px-1 text-center font-sans text-black border-r border-black">
                           {item.ingredient?.unit}
                         </td>
-                        <td className="py-1.5 px-2 border-r border-black text-right font-mono text-black">
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-mono text-black">
                           ฿{cost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td className="py-1.5 px-2 text-right font-bold font-mono text-black">
+                        <td className="py-0.5 px-1.5 text-right font-bold font-mono text-black">
                           {diffVal === 0 ? (
-                            <span>฿0.00</span>
+                            '฿0.00'
                           ) : diffVal > 0 ? (
-                            <span>+฿{diffVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `+฿${diffVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           ) : (
-                            <span>-฿{Math.abs(diffVal).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `-฿${Math.abs(diffVal).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           )}
                         </td>
                       </tr>
@@ -1478,19 +1489,19 @@ export default function AdminStockAdjustmentsPage() {
                     );
                     return (
                       <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
-                        <td colSpan={3} className="py-2 px-3 text-left font-sans border-r border-black">
+                        <td colSpan={3} className="py-1 px-2 text-left font-sans border-r border-black">
                           รวมรายการที่ขอปรับปรุง: <span className="font-mono font-bold">{selectedAdjustment.items.length}</span> รายการ
                         </td>
-                        <td colSpan={4} className="py-2 px-3 text-right font-sans border-r border-black">
+                        <td colSpan={4} className="py-1 px-2 text-right font-sans border-r border-black">
                           มูลค่าผลต่างสุทธิรวม (Total Net Adjustment Value):
                         </td>
-                        <td colSpan={2} className="py-2 px-3 text-right font-mono font-black text-black">
+                        <td colSpan={2} className="py-1 px-1.5 text-right font-mono font-bold text-black">
                           {totalDiffCost === 0 ? (
-                            <span>฿0.00</span>
+                            '฿0.00'
                           ) : totalDiffCost > 0 ? (
-                            <span>+฿{totalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `+฿${totalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           ) : (
-                            <span>-฿{Math.abs(totalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `-฿${Math.abs(totalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           )}
                         </td>
                       </tr>
@@ -1500,8 +1511,8 @@ export default function AdminStockAdjustmentsPage() {
               </table>
             </div>
 
-            {/* Signature Section */}
-            <div className="print-signature-section pt-5 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
+            {/* Bottom 3 Signature Blocks (Matching User Form in Stock-Count) */}
+            <div className="print-signature-section mt-4 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
               <div className="space-y-1">
                 <div className="text-black font-mono text-[10px]">___________________________________</div>
                 <div className="font-bold text-black">ผู้ขอปรับปรุงสต็อก (Staff / ผู้ยื่น)</div>
@@ -1516,7 +1527,7 @@ export default function AdminStockAdjustmentsPage() {
 
               <div className="space-y-1">
                 <div className="text-black font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-black">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (ผู้จัดการ / บัญชี)</div>
                 <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
             </div>
@@ -1611,34 +1622,34 @@ export default function AdminStockAdjustmentsPage() {
           {/* Printable Report Sheet (A4 Landscape Style) */}
           <div
             id="official-stock-adjustments-report"
-            className="w-full max-w-5xl bg-white text-black p-6 sm:p-8 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
           >
             {/* Document Header */}
-            <div className="relative pb-2 mb-2 border-b border-black">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-base font-bold tracking-tight text-black uppercase">
-                    บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
-                  </h1>
-                  <h2 className="text-sm font-bold text-black mt-0.5">
-                    {printListStatus === 'APPROVED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่อนุมัติแล้ว - อัปเดตสต็อกจริง)'}
-                    {printListStatus === 'REJECTED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่ไม่อนุมัติ / ปฏิเสธคำขอ)'}
-                    {printListStatus === 'PENDING' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการรอการอนุมัติ)'}
-                    {printListStatus === 'ALL' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (ทุกสถานะคำขอ)'}
-                  </h2>
-                </div>
-                <div className="text-right text-[10px] text-black font-mono leading-tight">
-                  <div className="font-bold text-black">ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
-                  <div>เลขที่เอกสาร: ADJ-REP-{new Date().toISOString().slice(0, 10).replace(/-/g, '')}</div>
-                  <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })} น.</div>
-                </div>
+            <div className="relative pb-1 mb-2">
+              {/* Top Right Reference Meta */}
+              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
+                <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+                <div>ฝ่ายควบคุมสต็อกและคลังสินค้า</div>
               </div>
 
-              {/* Sub-Header: Filter Info */}
-              <div className="mt-2 flex items-center justify-between text-[10px] text-black font-medium">
+              {/* Company & Document Title */}
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-bold text-black tracking-tight">
+                  บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                </h2>
+                <h3 className="text-xs sm:text-sm font-bold text-black">
+                  {printListStatus === 'APPROVED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่อนุมัติแล้ว - อัปเดตสต็อกจริง)'}
+                  {printListStatus === 'REJECTED' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการที่ไม่อนุมัติ / ปฏิเสธคำขอ)'}
+                  {printListStatus === 'PENDING' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (เฉพาะรายการรอการอนุมัติ)'}
+                  {printListStatus === 'ALL' && 'รายงานสรุปรายการขอปรับปรุงสต็อกสินค้า (ทุกสถานะคำขอ)'}
+                </h3>
+              </div>
+
+              {/* Sub-Header: Document Number, Date, Store */}
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-b border-black pb-1 text-black">
                 <div>
-                  <span className="font-bold text-black">สถานะที่เลือกพิมพ์: </span>
-                  <span className="font-bold">
+                  <span className="font-bold">สถานะที่เลือกพิมพ์: </span>
+                  <span className="font-mono font-bold ml-1">
                     {printListStatus === 'ALL'
                       ? 'คำขอทั้งหมด'
                       : printListStatus === 'PENDING'
@@ -1649,42 +1660,45 @@ export default function AdminStockAdjustmentsPage() {
                   </span>
                   {storeFilter !== 'ALL' && (
                     <span className="ml-3">
-                      • <span className="font-bold text-black">สาขา: </span>
-                      {staffStores.find((s: any) => String(s.id) === storeFilter)?.name || 'เฉพาะสาขาที่เลือก'}
+                      (<span className="font-bold">สาขา: </span>{staffStores.find((s: any) => String(s.id) === storeFilter)?.name || 'เฉพาะสาขาที่เลือก'})
                     </span>
                   )}
                 </div>
                 <div>
-                  <span className="font-bold text-black">จำนวนคำขอที่แสดง: </span>
-                  <span className="font-bold font-mono">{printAdjustments.length}</span> ฉบับ
+                  <span className="font-bold">วันที่พิมพ์: </span>
+                  <span className="font-mono ml-1">
+                    {new Date().toLocaleDateString('th-TH')}
+                  </span>
+                  <span className="font-bold ml-4">จำนวน: </span>
+                  <span className="font-mono font-bold ml-1">{printAdjustments.length}</span> ฉบับ
                 </div>
               </div>
             </div>
 
             {/* 4 Primary KPI Summary Cards Strip */}
-            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2.5">
-              <div className={`p-2 rounded border border-black ${printListStatus === 'PENDING' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
+            <div className="print-avoid-break grid grid-cols-4 gap-2 text-center my-2">
+              <div className="p-1.5 border border-black bg-white">
                 <div className="text-[9.5px] font-bold text-black">รอการอนุมัติ (Pending)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.pendingCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className={`p-2 rounded border border-black ${printListStatus === 'APPROVED' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
+              <div className="p-1.5 border border-black bg-white">
                 <div className="text-[9.5px] font-bold text-black">อนุมัติแล้ว (Approved)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.approvedCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className={`p-2 rounded border border-black ${printListStatus === 'REJECTED' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
+              <div className="p-1.5 border border-black bg-white">
                 <div className="text-[9.5px] font-bold text-black">ไม่อนุมัติ (Rejected)</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.rejectedCount} <span className="text-[9.5px] font-normal">ใบ</span>
                 </div>
               </div>
 
-              <div className={`p-2 rounded border border-black ${printListStatus === 'ALL' ? 'bg-slate-100 font-bold' : 'bg-white'}`}>
+              <div className="p-1.5 border border-black bg-white">
                 <div className="text-[9.5px] font-bold text-black">รวมคำขอทั้งหมด</div>
                 <div className="text-xs sm:text-sm font-bold font-mono text-black mt-0.5">
                   {metrics.totalCount} <span className="text-[9.5px] font-normal">ใบ</span>
@@ -1693,19 +1707,19 @@ export default function AdminStockAdjustmentsPage() {
             </div>
 
             {/* Adjustments Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto print:overflow-visible">
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
-                  <tr className="border-b border-black text-black font-bold bg-white text-center">
-                    <th className="py-1 px-1 border-r border-black w-8">ลำดับ</th>
-                    <th className="py-1 px-2 border-r border-black w-28">เลขที่คำขอ</th>
-                    <th className="py-1 px-2 border-r border-black w-24">วันที่ยื่น</th>
-                    <th className="py-1 px-2 border-r border-black w-24 text-left">ผู้ขอปรับปรุง</th>
-                    <th className="py-1 px-2 border-r border-black text-left">เหตุผล</th>
-                    <th className="py-1 px-2 border-r border-black text-left w-44">รายการวัตถุดิบ & ผลต่าง</th>
-                    <th className="py-1 px-2 border-r border-black text-right w-24">มูลค่าผลต่าง (฿)</th>
-                    <th className="py-1 px-2 border-r border-black text-center w-20">สถานะ</th>
-                    <th className="py-1 px-2 text-left w-24">ผู้อนุมัติ/จัดการ</th>
+                  <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
+                    <th className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
+                    <th className="py-1 px-1.5 border-r border-black w-24 bg-white">เลขที่คำขอ</th>
+                    <th className="py-1 px-1.5 border-r border-black w-20 bg-white">วันที่ยื่น</th>
+                    <th className="py-1 px-2 border-r border-black text-left w-24 bg-white">ผู้ขอปรับปรุง</th>
+                    <th className="py-1 px-2 border-r border-black text-left bg-white">เหตุผล</th>
+                    <th className="py-1 px-2 border-r border-black text-left w-44 bg-white">รายการวัตถุดิบ & ผลต่าง</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-24 bg-white">มูลค่าผลต่าง (฿)</th>
+                    <th className="py-1 px-1.5 border-r border-black text-center w-18 bg-white">สถานะ</th>
+                    <th className="py-1 px-2 text-left w-24 bg-white">ผู้อนุมัติ/จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
@@ -1716,52 +1730,52 @@ export default function AdminStockAdjustmentsPage() {
                     );
                     return (
                       <tr key={adj.id} className="border-b border-black">
-                        <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 border-r border-black font-bold text-black font-mono">
                           {adj.adjustmentNumber}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-sans text-black text-center">
+                        <td className="py-0.5 px-1.5 border-r border-black font-sans text-black text-center">
                           {new Date(adj.createdAt).toLocaleDateString('th-TH')}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-sans text-black text-left font-bold">
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left font-bold">
                           {adj.requestedBy?.name}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-sans text-black text-left">
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left">
                           <div>{adj.reason}</div>
                           {adj.rejectReason && (
-                            <div className="text-[8.5px] text-black italic">(เหตุผล: {adj.rejectReason})</div>
+                            <div className="text-[8.5px] text-black font-bold">(เหตุผล: {adj.rejectReason})</div>
                           )}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
+                        <td className="py-0.5 px-2 border-r border-black font-sans text-left text-black">
                           {adj.items.map((i) => {
                             const diff = Number(i.diffQuantity);
                             return (
                               <div key={i.id} className="text-[9px] leading-tight text-black">
                                 • {i.ingredient?.name}:{' '}
-                                <span className="text-black font-bold">
+                                <span className="text-black font-bold font-mono">
                                   {diff > 0 ? `+${diff}` : diff} {i.ingredient?.unit}
                                 </span>
                               </div>
                             );
                           })}
                         </td>
-                        <td className="py-1 px-2 border-r border-black font-mono text-black text-right font-bold text-[9px]">
+                        <td className="py-0.5 px-1.5 border-r border-black font-mono text-black text-right font-bold text-[9px]">
                           {adjTotalDiffCost === 0 ? (
-                            <span>฿0.00</span>
+                            '฿0.00'
                           ) : adjTotalDiffCost > 0 ? (
-                            <span>+฿{adjTotalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `+฿${adjTotalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           ) : (
-                            <span>-฿{Math.abs(adjTotalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `-฿${Math.abs(adjTotalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           )}
                         </td>
-                        <td className="py-1 px-2 border-r border-black text-center font-sans font-bold text-black">
+                        <td className="py-0.5 px-1.5 border-r border-black text-center font-sans font-bold text-black">
                           {adj.status === 'PENDING' && <span>รออนุมัติ</span>}
                           {adj.status === 'APPROVED' && <span>อนุมัติแล้ว</span>}
                           {adj.status === 'REJECTED' && <span>ไม่อนุมัติ</span>}
                         </td>
-                        <td className="py-1 px-2 font-sans text-black text-left text-[9px]">
+                        <td className="py-0.5 px-2 font-sans text-black text-left text-[9px]">
                           {adj.approvedBy?.name || '-'}
                         </td>
                       </tr>
@@ -1788,22 +1802,22 @@ export default function AdminStockAdjustmentsPage() {
                     );
                     return (
                       <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
-                        <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-black">
+                        <td colSpan={5} className="py-1 px-2 text-right font-sans border-r border-black">
                           รวมคำขอทั้งหมดในรายงานนี้: <span className="font-mono font-bold">{printAdjustments.length}</span> ใบคำขอ
                         </td>
-                        <td className="py-1.5 px-2 text-right font-sans border-r border-black">
+                        <td className="py-1 px-2 text-right font-sans border-r border-black">
                           มูลค่าผลต่างสุทธิ:
                         </td>
-                        <td className="py-1.5 px-2 text-right font-mono font-black text-black border-r border-black">
+                        <td className="py-1 px-1.5 text-right font-mono font-bold text-black border-r border-black">
                           {grandTotalCost === 0 ? (
-                            <span>฿0.00</span>
+                            '฿0.00'
                           ) : grandTotalCost > 0 ? (
-                            <span>+฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `+฿${grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           ) : (
-                            <span>-฿{Math.abs(grandTotalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            `-฿${Math.abs(grandTotalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                           )}
                         </td>
-                        <td colSpan={2} className="py-1.5 px-2 text-center font-sans text-black">
+                        <td colSpan={2} className="py-1 px-2 text-center font-sans text-black">
                           {printAdjustments.length} ฉบับ
                         </td>
                       </tr>
@@ -1813,8 +1827,8 @@ export default function AdminStockAdjustmentsPage() {
               </table>
             </div>
 
-            {/* Signature Section */}
-            <div className="print-signature-section pt-4 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
+            {/* Bottom 3 Signature Blocks (Matching User Form in Stock-Count) */}
+            <div className="print-signature-section mt-4 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
               <div className="space-y-1">
                 <div className="text-black font-mono text-[10px]">___________________________________</div>
                 <div className="font-bold text-black">ผู้จัดทำรายงาน (เจ้าหน้าที่สต็อก / แคชเชียร์)</div>
@@ -1829,7 +1843,7 @@ export default function AdminStockAdjustmentsPage() {
 
               <div className="space-y-1">
                 <div className="text-black font-mono text-[10px]">___________________________________</div>
-                <div className="font-bold text-black">ผู้มีอำนาจอนุมัติ / ฝ่ายบัญชี</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (ผู้จัดการ / บัญชี)</div>
                 <div className="text-[9.5px] text-black font-mono">วันที่: ...... / ...... / ..........</div>
               </div>
             </div>
