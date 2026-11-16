@@ -1087,43 +1087,43 @@ export default function AdminStockAdjustmentsPage() {
             </div>
 
             {/* Meta Grid */}
-            <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-slate-400">ผู้ขอปรับปรุง:</span>
+            <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-500 font-medium">ผู้ขอปรับปรุง:</span>
                 <div className="font-bold text-slate-800">
                   {selectedAdjustment.requestedBy?.name} (@{selectedAdjustment.requestedBy?.username})
                 </div>
               </div>
 
-              <div>
-                <span className="text-slate-400">สถานะคำขอ:</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-slate-500 font-medium">สถานะคำขอ:</span>
                 <div>
                   {selectedAdjustment.status === 'PENDING' && (
-                    <span className="font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-200 text-xs">
+                    <span className="inline-block font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs">
                       รอการอนุมัติ (Pending)
                     </span>
                   )}
                   {selectedAdjustment.status === 'APPROVED' && (
-                    <span className="font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200 text-xs">
+                    <span className="inline-block font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
                       อนุมัติแล้ว (Approved)
                     </span>
                   )}
                   {selectedAdjustment.status === 'REJECTED' && (
-                    <span className="font-bold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 text-xs">
+                    <span className="inline-block font-bold text-rose-800 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 text-xs">
                       ไม่อนุมัติ (Rejected)
                     </span>
                   )}
                 </div>
               </div>
 
-              <div>
-                <span className="text-slate-400">เหตุผล:</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-slate-500 font-medium">เหตุผล:</span>
                 <div className="font-bold text-slate-800">{selectedAdjustment.reason}</div>
               </div>
 
               {selectedAdjustment.approvedBy && (
-                <div>
-                  <span className="text-slate-400">
+                <div className="flex flex-col gap-1">
+                  <span className="text-slate-500 font-medium">
                     {selectedAdjustment.status === 'APPROVED' ? 'ผู้อนุมัติ:' : 'ผู้ปฏิเสธ:'}
                   </span>
                   <div className="font-bold text-slate-800">
@@ -1134,7 +1134,7 @@ export default function AdminStockAdjustmentsPage() {
               )}
 
               {selectedAdjustment.rejectReason && (
-                <div className="sm:col-span-2 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700">
+                <div className="sm:col-span-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
                   <span className="font-bold">เหตุผลที่ปฏิเสธ: </span>
                   <span>{selectedAdjustment.rejectReason}</span>
                 </div>
