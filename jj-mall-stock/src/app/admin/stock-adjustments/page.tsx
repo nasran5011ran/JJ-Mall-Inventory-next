@@ -652,11 +652,11 @@ export default function AdminStockAdjustmentsPage() {
               <thead>
                 <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
                   <th className="py-4 px-3 text-center w-12 text-slate-400">#</th>
-                  <th className="py-4 px-4 w-44">เลขที่คำขอ</th>
+                  <th className="py-4 px-4 w-44">ใบปรับปรุงสต็อก</th>
                   <th className="py-4 px-4 w-36">วันที่ทำรายการ</th>
                   <th className="py-4 px-4 w-36">ร้านค้า / สาขา</th>
                   <th className="py-4 px-4 w-48">เหตุผลในการปรับปรุง</th>
-                  <th className="py-4 px-4 w-60">รายการวัตถุดิบ & ผลต่าง</th>
+                  <th className="py-4 px-4 w-64">รายการวัตถุดิบ & ผลต่าง</th>
                   <th className="py-4 px-4 w-36">ผู้ขอปรับปรุง</th>
                   <th className="py-4 px-4 text-center w-32">สถานะ</th>
                   <th className="py-4 px-4 text-right w-44">การดำเนินการ</th>
@@ -682,11 +682,8 @@ export default function AdminStockAdjustmentsPage() {
                       </td>
 
                       {/* Adjustment Number */}
-                      <td className="py-4 px-4">
-                        <div className="font-mono font-bold text-sm text-emerald-700 flex items-center gap-1.5 group-hover:underline">
-                          <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>{adj.adjustmentNumber}</span>
-                        </div>
+                      <td className="py-4 px-4 font-mono font-bold text-sm text-slate-800">
+                        <span className="hover:underline">{adj.adjustmentNumber}</span>
                       </td>
 
                       {/* Date & Time */}
@@ -716,10 +713,10 @@ export default function AdminStockAdjustmentsPage() {
                       </td>
 
                       {/* Reason */}
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-xs text-slate-800 line-clamp-1">{adj.reason}</div>
+                      <td className="py-4 px-4 max-w-xs">
+                        <div className="text-xs font-semibold text-slate-800 leading-relaxed">{adj.reason}</div>
                         {isRejected && adj.rejectReason && (
-                          <div className="text-[11px] text-rose-500 font-semibold line-clamp-1 mt-0.5">
+                          <div className="text-[11px] text-rose-600 font-medium mt-1">
                             เหตุผล: {adj.rejectReason}
                           </div>
                         )}
@@ -727,27 +724,29 @@ export default function AdminStockAdjustmentsPage() {
 
                       {/* Items Preview */}
                       <td className="py-4 px-4">
-                        <div className="space-y-1">
-                          {adj.items.slice(0, 2).map((item) => {
+                        <div className="space-y-1.5">
+                          {adj.items.map((item) => {
                             const diff = Number(item.diffQuantity);
+                            const sys = Number(item.systemQuantity);
+                            const act = Number(item.actualQuantity);
                             return (
-                              <div key={item.id} className="text-xs flex items-center gap-1.5">
-                                <span className="font-medium text-slate-700 truncate max-w-[150px]">{item.ingredient?.name}</span>
-                                <span
-                                  className={`font-mono font-bold ${
-                                    diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'
-                                  }`}
-                                >
-                                  {diff > 0 ? `+${diff}` : diff} {item.ingredient?.unit}
-                                </span>
+                              <div key={item.id} className="text-xs">
+                                <div className="font-bold text-slate-800">{item.ingredient?.name}</div>
+                                <div className="text-[11px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
+                                  <span>เดิม: {sys.toLocaleString()}</span>
+                                  <span>→</span>
+                                  <span className="font-bold text-slate-700">ปรับเป็น: {act.toLocaleString()}</span>
+                                  <span
+                                    className={`font-bold ml-1 ${
+                                      diff > 0 ? 'text-blue-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'
+                                    }`}
+                                  >
+                                    ({diff > 0 ? `+${diff}` : diff} {item.ingredient?.unit})
+                                  </span>
+                                </div>
                               </div>
                             );
                           })}
-                          {adj.items.length > 2 && (
-                            <div className="text-[11px] text-slate-400 font-semibold">
-                              + อีก {adj.items.length - 2} รายการ
-                            </div>
-                          )}
                         </div>
                       </td>
 
@@ -765,7 +764,7 @@ export default function AdminStockAdjustmentsPage() {
                       {/* Status Badge */}
                       <td className="py-4 px-4 text-center">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
                             <Clock className="w-3.5 h-3.5 text-amber-600" />
                             <span>รออนุมัติ</span>
                           </span>
