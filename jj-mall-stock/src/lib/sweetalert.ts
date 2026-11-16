@@ -108,6 +108,8 @@ export const confirmActionAlert = async (options?: {
   confirmButtonText?: string;
   cancelButtonText?: string;
   confirmButtonColor?: string;
+  isDanger?: boolean;
+  confirmButtonClass?: string;
 }): Promise<boolean> => {
   const {
     title = 'ยืนยันการทำรายการ?',
@@ -116,6 +118,8 @@ export const confirmActionAlert = async (options?: {
     confirmButtonText = 'ยืนยัน',
     cancelButtonText = 'ยกเลิก',
     confirmButtonColor = '#10b981',
+    isDanger = false,
+    confirmButtonClass = isDanger ? 'swal2-thai-confirm' : 'swal2-thai-confirm-success',
   } = options || {};
 
   const result = await Swal.fire({
@@ -134,7 +138,7 @@ export const confirmActionAlert = async (options?: {
       popup: 'swal2-thai-popup',
       title: 'swal2-thai-title',
       htmlContainer: 'swal2-thai-text',
-      confirmButton: 'swal2-thai-confirm',
+      confirmButton: confirmButtonClass,
       cancelButton: 'swal2-thai-cancel',
       actions: 'swal2-thai-actions',
     },
