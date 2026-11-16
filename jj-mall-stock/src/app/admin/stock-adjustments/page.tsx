@@ -131,8 +131,7 @@ export default function AdminStockAdjustmentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [formReason, setFormReason] = useState('วัตถุดิบเสียหาย / ชำรุด');
-  const [formCustomReason, setFormCustomReason] = useState('');
+  const [formReason, setFormReason] = useState('');
   const [autoApprove, setAutoApprove] = useState(true);
   const [formItems, setFormItems] = useState<NewItemForm[]>([
     { ingredientId: '', actualQuantity: '' },
@@ -174,8 +173,7 @@ export default function AdminStockAdjustmentsPage() {
   // Open Create Modal
   const openCreateModal = () => {
     const firstIng = ingredients[0];
-    setFormReason('วัตถุดิบเสียหาย / ชำรุด');
-    setFormCustomReason('');
+    setFormReason('');
     setAutoApprove(true);
     setFormItems([
       {
@@ -232,7 +230,7 @@ export default function AdminStockAdjustmentsPage() {
       return;
     }
 
-    const finalReason = formReason === 'อื่นๆ' ? formCustomReason.trim() : formReason;
+    const finalReason = formReason.trim();
     if (!finalReason) {
       setFormError('กรุณาระบุเหตุผลในการปรับปรุงสต็อก');
       return;
@@ -932,30 +930,39 @@ export default function AdminStockAdjustmentsPage() {
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   เหตุผลในการปรับปรุงสต็อก <span className="text-red-500">*</span>
                 </label>
-                <select
+                <input
+                  type="text"
+                  required
                   value={formReason}
                   onChange={(e) => setFormReason(e.target.value)}
+                  placeholder="พิมพ์เหตุผลได้เลย หรือกดเลือกจากตัวเลือกด้านล่าง..."
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                >
-                  <option value="วัตถุดิบเสียหาย / ชำรุด">🔴 วัตถุดิบเสียหาย / ชำรุด (Damaged)</option>
-                  <option value="วัตถุดิบหมดอายุ / เสื่อมสภาพ">⚠️ วัตถุดิบหมดอายุ / เสื่อมสภาพ (Expired)</option>
-                  <option value="นำไปใช้ทดลองสูตร / ฝึกอบรม">🧪 นำไปใช้ทดลองสูตร / ฝึกอบรมพนักงาน (R&D / Training)</option>
-                  <option value="ปรับปรุงจากการตรวจนับสต็อกจริง">📋 ปรับปรุงจากการตรวจนับสต็อกจริง (Physical Count Diff)</option>
-                  <option value="ได้รับแถมจากซัพพลายเออร์">🎁 ได้รับแถมจากซัพพลายเออร์ (Free Bonus)</option>
-                  <option value="สินค้าสูญหายไม่ทราบสาเหตุ">❓ วัตถุดิบสูญหายไม่ทราบสาเหตุ (Missing)</option>
-                  <option value="อื่นๆ">✏️ อื่นๆ (ระบุเอง)</option>
-                </select>
+                />
 
-                {formReason === 'อื่นๆ' && (
-                  <input
-                    type="text"
-                    required
-                    value={formCustomReason}
-                    onChange={(e) => setFormCustomReason(e.target.value)}
-                    placeholder="กรุณาระบุเหตุผลอย่างละเอียด..."
-                    className="mt-2 w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  />
-                )}
+                {/* Quick-pick reason chips (fills the input; user can still edit freely) */}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[
+                    'วัตถุดิบเสียหาย / ชำรุด',
+                    'วัตถุดิบหมดอายุ / เสื่อมสภาพ',
+                    'นำไปใช้ทดลองสูตร / ฝึกอบรม',
+                    'ปรับปรุงจากการตรวจนับสต็อกจริง',
+                    'ได้รับแถมจากซัพพลายเออร์',
+                    'สินค้าสูญหายไม่ทราบสาเหตุ',
+                  ].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setFormReason(r)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                        formReason === r
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Dynamic Items Rows */}
