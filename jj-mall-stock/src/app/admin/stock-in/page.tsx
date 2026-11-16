@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
+import { showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 
 interface Ingredient {
   id: number;
@@ -147,6 +148,36 @@ export default function AdminStockInPage() {
     }
     return map;
   }, [storeBalancesByStore, targetStoreId]);
+
+  
+  // Helper to accurately resolve store info for each transaction
+  const getStoreInfo = (tx: InboundTransaction) => {
+    // 1. Check [STORE_ID:X] in note
+    const matchId = tx.note?.match(/\[STORE_ID:(\d+)\]/);
+    if (matchId) {
+      const storeId = Number(matchId[1]);
+      const found = staffStores.find((s) => s.id === storeId);
+      if (found) return found;
+    }
+    // 2. Check createdBy if STAFF
+    if (tx.createdBy?.role === 'STAFF') {
+      return { id: tx.createdBy.id, name: tx.createdBy.name, username: tx.createdBy.username };
+    }
+    // 3. Check refId (STORE-X)
+    const matchRef = tx.refId?.match(/^STORE-(\d+)$/);
+    if (matchRef) {
+      const storeId = Number(matchRef[1]);
+      const found = staffStores.find((s) => s.id === storeId);
+      if (found) return found;
+    }
+    // 4. Check note containing store name or username
+    for (const st of staffStores) {
+      if (tx.note?.includes(st.name) || tx.note?.includes(`@${st.username}`)) {
+        return st;
+      }
+    }
+    return null;
+  };
 
   const targetStoreObj = useMemo(() => {
     return staffStores.find((s) => String(s.id) === String(targetStoreId));
@@ -322,15 +353,24 @@ export default function AdminStockInPage() {
         throw new Error(data.message || 'บันทึกรับสินค้าไม่สำเร็จ');
       }
 
-      showToast(data.message || 'บันทึกรับสินค้าเข้าสต็อกร้านเรียบร้อยแล้ว');
+      const targetStore = staffStores.find((s) => s.id === Number(targetStoreId));
+      const storeName = targetStore ? targetStore.name : 'ร้านค้า';
+      const totalQty = validItems.reduce((acc, it) => acc + (parseFloat(it.quantity) || 0), 0);
+
       await mutate();
       if (returnUrl) {
         router.push(returnUrl);
       } else {
         setModalOpen(false);
       }
+
+      await showSuccessAlert(
+        'บันทึกรับเข้าสต็อกสำเร็จ',
+        `รับเข้า ${validItems.length} รายการ (รวม +${totalQty.toLocaleString()} หน่วย) เข้าร้าน ${storeName} เรียบร้อยแล้ว`
+      );
     } catch (err: any) {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      await showErrorAlert('บันทึกรับเข้าไม่สำเร็จ', err.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     } finally {
       setSubmitting(false);
     }
@@ -345,13 +385,8 @@ export default function AdminStockInPage() {
       // Store Destination filter
       if (destinationFilter !== 'ALL') {
         const staffId = Number(destinationFilter);
-        const selectedStore = staffStores.find((st) => st.id === staffId);
-        const matchStore =
-          tx.createdBy?.id === staffId ||
-          tx.refId === `STORE-${staffId}` ||
-          (selectedStore && tx.note?.includes(selectedStore.name)) ||
-          tx.note?.includes(`[STORE_ID:${staffId}]`);
-        if (!matchStore) return false;
+        const storeInfo = getStoreInfo(tx);
+        if (storeInfo?.id !== staffId) return false;
       }
 
       // Search keyword
@@ -504,6 +539,58 @@ export default function AdminStockInPage() {
         </div>
       </div>
 
+      
+      {/* Store Selection Tabs */}
+      <div className="flex">
+        <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+          <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+            <span>เลือกร้านค้า:</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDestinationFilter('ALL');
+              setCurrentPage(1);
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+              destinationFilter === 'ALL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+            }`}
+          >
+            <Warehouse className="w-3.5 h-3.5" />
+            <span>ทุกร้านค้า ({transactions.length})</span>
+          </button>
+
+          {staffStores.map((st) => {
+            const count = transactions.filter((tx) => {
+              const info = getStoreInfo(tx);
+              return info?.id === st.id;
+            }).length;
+            const isSelected = destinationFilter === String(st.id);
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  setDestinationFilter(String(st.id));
+                  setCurrentPage(1);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Store className="w-3.5 h-3.5" />
+                <span>{st.name} ({count})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Filter & Search Bar */}
       <div className="bg-white p-3.5 sm:p-4 rounded-3xl border border-slate-200 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
         {/* Search */}
@@ -613,10 +700,20 @@ export default function AdminStockInPage() {
 
                       {/* Destination Store Badge */}
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                          <Store className="w-3 h-3 text-amber-700" />
-                          <span>{tx.createdBy?.name || 'ร้านค้า'}</span>
-                        </span>
+                        {(() => {
+                          const storeInfo = getStoreInfo(tx);
+                          return storeInfo ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                              <Store className="w-3.5 h-3.5 text-amber-700" />
+                              <span>{storeInfo.name}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                              <Store className="w-3.5 h-3.5 text-slate-500" />
+                              <span>{tx.createdBy?.name || 'ร้านค้า'}</span>
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Ingredient Name */}
@@ -705,7 +802,7 @@ export default function AdminStockInPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">ร้านค้าปลายทาง:</span>
                   <span className="font-bold text-emerald-800">
-                    🏪 {selectedTx.createdBy?.name || 'ร้านค้า'}
+                    🏪 {getStoreInfo(selectedTx)?.name || selectedTx.createdBy?.name || 'ร้านค้า'}
                   </span>
                 </div>
               </div>
