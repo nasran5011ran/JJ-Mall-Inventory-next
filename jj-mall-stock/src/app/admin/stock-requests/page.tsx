@@ -496,14 +496,14 @@ export default function AdminStockRequestsPage() {
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-900 font-bold uppercase tracking-wider text-[11px]">
-                  <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
-                  <th className="py-3 px-3.5">เลขที่ใบขอซื้อ</th>
-                  <th className="py-3 px-3.5">ร้านค้าที่ซื้อ</th>
-                  <th className="py-3 px-3.5 min-w-[420px]">รายการวัตถุดิบที่ซื้อ (พรีวิว)</th>
-                  <th className="py-3 px-3.5 text-right">ยอดเงินรวม (฿)</th>
-                  <th className="py-3 px-3.5">วันที่ส่งคำขอ</th>
-                  <th className="py-3 px-3.5 text-center">สถานะ</th>
-                  <th className="py-3 px-4 text-center">การดำเนินการ</th>
+                  <th className="py-3.5 px-3 text-center w-10 text-slate-400">#</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">เลขที่ใบขอซื้อ</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">ร้านค้าที่ซื้อ</th>
+                  <th className="py-3.5 px-3">รายการวัตถุดิบที่ซื้อ (พรีวิว)</th>
+                  <th className="py-3.5 px-3 text-right whitespace-nowrap">ยอดเงินรวม (฿)</th>
+                  <th className="py-3.5 px-3 whitespace-nowrap">วันที่ส่งคำขอ</th>
+                  <th className="py-3.5 px-3 text-center whitespace-nowrap">สถานะ</th>
+                  <th className="py-3.5 px-3 text-center whitespace-nowrap">การดำเนินการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -519,8 +519,8 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Requisition Number & Note */}
-                      <td className="py-3.5 px-3.5">
-                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 text-[11px]">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 text-[11px]">
                           {req.requisitionNumber}
                         </span>
                         {req.reason && (
@@ -531,7 +531,7 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Store */}
-                      <td className="py-3.5 px-3.5">
+                      <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="font-bold text-slate-900 flex items-center gap-1.5">
                           <Store className="w-3.5 h-3.5 text-slate-400" />
                           <span>{req.store.name}</span>
@@ -542,8 +542,8 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Purchased Items Preview (Wide Column, Full Names & Numbered 1, 2) */}
-                      <td className="py-3.5 px-3.5">
-                        <div className="flex flex-wrap items-center gap-2">
+                      <td className="py-3.5 px-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {req.items.slice(0, 2).map((it, itemIdx) => {
                             const qty = Number(req.status === 'APPROVED' && it.approvedQty !== null ? it.approvedQty : it.requestedQty);
                             return (
@@ -578,12 +578,12 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Total Cost */}
-                      <td className="py-3.5 px-3.5 text-right font-mono font-black text-slate-900 text-xs">
+                      <td className="py-3.5 px-3 text-right font-mono font-black text-slate-900 text-xs whitespace-nowrap">
                         ฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
 
                       {/* Date */}
-                      <td className="py-3.5 px-3.5 text-slate-600 text-[11px] whitespace-nowrap">
+                      <td className="py-3.5 px-3 text-slate-600 text-[11px] whitespace-nowrap">
                         {new Date(req.createdAt).toLocaleString('th-TH', {
                           day: '2-digit',
                           month: '2-digit',
@@ -594,7 +594,7 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Status */}
-                      <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
+                      <td className="py-3.5 px-3 text-center whitespace-nowrap">
                         {req.status === 'PENDING' && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                             <Clock className="w-3 h-3 text-amber-600" />
@@ -616,7 +616,7 @@ export default function AdminStockRequestsPage() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5 flex-wrap">
                           {req.status === 'PENDING' ? (
                             <>
