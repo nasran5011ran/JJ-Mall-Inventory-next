@@ -1096,7 +1096,7 @@ export default function AdminStockAdjustmentsPage() {
       {/* Modal 3: View Adjustment Detail */}
       {selectedAdjustment && !printVoucherOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
@@ -1172,7 +1172,7 @@ export default function AdminStockAdjustmentsPage() {
               )}
             </div>
 
-            {/* Items Table */}
+            {/* Items Table with Cost / Value */}
             <div className="mt-4 border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
               <table className="w-full text-left text-sm">
                 <thead className="bg-slate-100/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-xs">
@@ -1182,11 +1182,15 @@ export default function AdminStockAdjustmentsPage() {
                     <th className="py-3 px-4 text-right">ยอดในระบบเดิม</th>
                     <th className="py-3 px-4 text-right">ยอดที่ปรับใหม่</th>
                     <th className="py-3 px-4 text-right">ผลต่าง (Diff)</th>
+                    <th className="py-3 px-4 text-right">ราคาต้นทุน / หน่วย</th>
+                    <th className="py-3 px-4 text-right">มูลค่าผลต่าง (฿)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {selectedAdjustment.items.map((item, idx) => {
                     const diff = Number(item.diffQuantity);
+                    const cost = Number(item.ingredient?.costPerUnit || 0);
+                    const diffVal = diff * cost;
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/70">
                         <td className="py-3 px-3.5 text-center text-slate-400 font-mono text-xs font-bold">
@@ -1204,7 +1208,7 @@ export default function AdminStockAdjustmentsPage() {
                         </td>
                         <td className="py-3 px-4 text-right font-mono">
                           {diff === 0 ? (
-                            <span className="text-slate-400 font-bold">0</span>
+                            <span className="text-slate-400 font-bold">0 {item.ingredient?.unit}</span>
                           ) : (
                             <span
                               className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-black ${
@@ -1217,10 +1221,50 @@ export default function AdminStockAdjustmentsPage() {
                             </span>
                           )}
                         </td>
+                        <td className="py-3 px-4 text-right font-mono text-slate-600 text-xs">
+                          ฿{cost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-xs">
+                          {diffVal === 0 ? (
+                            <span className="text-slate-400">฿0.00</span>
+                          ) : (
+                            <span className={diffVal > 0 ? 'text-blue-700' : 'text-rose-600'}>
+                              {diffVal > 0
+                                ? `+฿${diffVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : `-฿${Math.abs(diffVal).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            </span>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  {(() => {
+                    const totalDiffCost = selectedAdjustment.items.reduce(
+                      (sum, item) => sum + Number(item.diffQuantity) * Number(item.ingredient?.costPerUnit || 0),
+                      0
+                    );
+                    return (
+                      <tr className="bg-slate-50/90 font-bold border-t border-slate-200 text-xs">
+                        <td colSpan={5} className="py-3 px-4 text-right text-slate-700">
+                          มูลค่าผลต่างสุทธิรวม (Total Net Adjustment Cost):
+                        </td>
+                        <td colSpan={2} className="py-3 px-4 text-right font-mono text-sm">
+                          {totalDiffCost === 0 ? (
+                            <span className="text-slate-500">฿0.00</span>
+                          ) : (
+                            <span className={totalDiffCost > 0 ? 'text-blue-700' : 'text-rose-600'}>
+                              {totalDiffCost > 0
+                                ? `+฿${totalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : `-฿${Math.abs(totalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })()}
+                </tfoot>
               </table>
             </div>
 
@@ -1360,41 +1404,45 @@ export default function AdminStockAdjustmentsPage() {
               </div>
             </div>
 
-            {/* Adjustment Items Table */}
+            {/* Adjustment Items Table with Price / Value */}
             <div className="overflow-x-auto my-2.5">
               <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <thead>
                   <tr className="border-b border-black text-black font-bold bg-white text-center">
-                    <th className="py-1.5 px-2 border-r border-black w-10">ลำดับ</th>
-                    <th className="py-1.5 px-3 border-r border-black w-28">รหัสวัตถุดิบ</th>
+                    <th className="py-1.5 px-2 border-r border-black w-8">ลำดับ</th>
+                    <th className="py-1.5 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
                     <th className="py-1.5 px-3 border-r border-black text-left">ชื่อวัตถุดิบ</th>
-                    <th className="py-1.5 px-3 border-r border-black text-right w-28">ยอดเดิมในระบบ</th>
-                    <th className="py-1.5 px-3 border-r border-black text-right w-28">ยอดที่ปรับใหม่</th>
-                    <th className="py-1.5 px-3 border-r border-black text-right w-28">ผลต่าง (Diff)</th>
-                    <th className="py-1.5 px-2 text-center w-20">หน่วย</th>
+                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ยอดเดิม</th>
+                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ปรับใหม่</th>
+                    <th className="py-1.5 px-2 border-r border-black text-right w-20">ผลต่าง</th>
+                    <th className="py-1.5 px-2 border-r border-black text-center w-14">หน่วย</th>
+                    <th className="py-1.5 px-2 border-r border-black text-right w-24">ต้นทุน/หน่วย (฿)</th>
+                    <th className="py-1.5 px-2 text-right w-28">มูลค่าผลต่าง (฿)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
                   {selectedAdjustment.items.map((item, idx) => {
                     const diff = Number(item.diffQuantity);
+                    const cost = Number(item.ingredient?.costPerUnit || 0);
+                    const diffVal = diff * cost;
                     return (
                       <tr key={item.id} className="border-b border-black">
                         <td className="py-1.5 px-2 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black font-bold text-black">
+                        <td className="py-1.5 px-2 border-r border-black font-bold text-black font-mono">
                           {item.ingredient?.code}
                         </td>
                         <td className="py-1.5 px-3 border-r border-black font-sans font-bold text-black text-left">
                           {item.ingredient?.name}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black text-right text-black">
+                        <td className="py-1.5 px-2 border-r border-black text-right text-black font-mono">
                           {Number(item.systemQuantity).toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black text-right font-bold text-black">
+                        <td className="py-1.5 px-2 border-r border-black text-right font-bold text-black font-mono">
                           {Number(item.actualQuantity).toLocaleString()}
                         </td>
-                        <td className="py-1.5 px-3 border-r border-black text-right font-bold text-black">
+                        <td className="py-1.5 px-2 border-r border-black text-right font-bold text-black font-mono">
                           {diff === 0 ? (
                             <span>0</span>
                           ) : diff > 0 ? (
@@ -1403,22 +1451,51 @@ export default function AdminStockAdjustmentsPage() {
                             <span>{diff.toLocaleString()}</span>
                           )}
                         </td>
-                        <td className="py-1.5 px-2 text-center font-sans text-black">
+                        <td className="py-1.5 px-2 text-center font-sans text-black border-r border-black">
                           {item.ingredient?.unit}
+                        </td>
+                        <td className="py-1.5 px-2 border-r border-black text-right font-mono text-black">
+                          ฿{cost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-bold font-mono text-black">
+                          {diffVal === 0 ? (
+                            <span>฿0.00</span>
+                          ) : diffVal > 0 ? (
+                            <span>+฿{diffVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span>-฿{Math.abs(diffVal).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          )}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
-                    <td colSpan={3} className="py-2 px-3 text-right font-sans border-r border-black">
-                      รวมรายการที่ขอปรับปรุงทั้งสิ้น:
-                    </td>
-                    <td colSpan={4} className="py-2 px-3 text-left font-sans text-black">
-                      <span className="font-mono font-bold">{selectedAdjustment.items.length}</span> รายการวัตถุดิบ
-                    </td>
-                  </tr>
+                  {(() => {
+                    const totalDiffCost = selectedAdjustment.items.reduce(
+                      (sum, item) => sum + Number(item.diffQuantity) * Number(item.ingredient?.costPerUnit || 0),
+                      0
+                    );
+                    return (
+                      <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
+                        <td colSpan={3} className="py-2 px-3 text-left font-sans border-r border-black">
+                          รวมรายการที่ขอปรับปรุง: <span className="font-mono font-bold">{selectedAdjustment.items.length}</span> รายการ
+                        </td>
+                        <td colSpan={4} className="py-2 px-3 text-right font-sans border-r border-black">
+                          มูลค่าผลต่างสุทธิรวม (Total Net Adjustment Value):
+                        </td>
+                        <td colSpan={2} className="py-2 px-3 text-right font-mono font-black text-black">
+                          {totalDiffCost === 0 ? (
+                            <span>฿0.00</span>
+                          ) : totalDiffCost > 0 ? (
+                            <span>+฿{totalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span>-฿{Math.abs(totalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tfoot>
               </table>
             </div>
@@ -1625,72 +1702,113 @@ export default function AdminStockAdjustmentsPage() {
                     <th className="py-1 px-2 border-r border-black w-24">วันที่ยื่น</th>
                     <th className="py-1 px-2 border-r border-black w-24 text-left">ผู้ขอปรับปรุง</th>
                     <th className="py-1 px-2 border-r border-black text-left">เหตุผล</th>
-                    <th className="py-1 px-2 border-r border-black text-left w-48">รายการวัตถุดิบ & ผลต่าง</th>
+                    <th className="py-1 px-2 border-r border-black text-left w-44">รายการวัตถุดิบ & ผลต่าง</th>
+                    <th className="py-1 px-2 border-r border-black text-right w-24">มูลค่าผลต่าง (฿)</th>
                     <th className="py-1 px-2 border-r border-black text-center w-20">สถานะ</th>
                     <th className="py-1 px-2 text-left w-24">ผู้อนุมัติ/จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
-                  {printAdjustments.map((adj, idx) => (
-                    <tr key={adj.id} className="border-b border-black">
-                      <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
-                        {idx + 1}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-bold text-black">
-                        {adj.adjustmentNumber}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-sans text-black text-center">
-                        {new Date(adj.createdAt).toLocaleDateString('th-TH')}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-sans text-black text-left font-bold">
-                        {adj.requestedBy?.name}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-sans text-black text-left">
-                        <div>{adj.reason}</div>
-                        {adj.rejectReason && (
-                          <div className="text-[8.5px] text-black italic">(เหตุผล: {adj.rejectReason})</div>
-                        )}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
-                        {adj.items.map((i) => {
-                          const diff = Number(i.diffQuantity);
-                          return (
-                            <div key={i.id} className="text-[9px] leading-tight text-black">
-                              • {i.ingredient?.name}:{' '}
-                              <span className="text-black font-bold">
-                                {diff > 0 ? `+${diff}` : diff} {i.ingredient?.unit}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black text-center font-sans font-bold text-black">
-                        {adj.status === 'PENDING' && <span>รออนุมัติ</span>}
-                        {adj.status === 'APPROVED' && <span>อนุมัติแล้ว</span>}
-                        {adj.status === 'REJECTED' && <span>ไม่อนุมัติ</span>}
-                      </td>
-                      <td className="py-1 px-2 font-sans text-black text-left text-[9px]">
-                        {adj.approvedBy?.name || '-'}
-                      </td>
-                    </tr>
-                  ))}
+                  {printAdjustments.map((adj, idx) => {
+                    const adjTotalDiffCost = adj.items.reduce(
+                      (sum, it) => sum + Number(it.diffQuantity) * Number(it.ingredient?.costPerUnit || 0),
+                      0
+                    );
+                    return (
+                      <tr key={adj.id} className="border-b border-black">
+                        <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
+                          {idx + 1}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-bold text-black">
+                          {adj.adjustmentNumber}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans text-black text-center">
+                          {new Date(adj.createdAt).toLocaleDateString('th-TH')}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans text-black text-left font-bold">
+                          {adj.requestedBy?.name}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans text-black text-left">
+                          <div>{adj.reason}</div>
+                          {adj.rejectReason && (
+                            <div className="text-[8.5px] text-black italic">(เหตุผล: {adj.rejectReason})</div>
+                          )}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
+                          {adj.items.map((i) => {
+                            const diff = Number(i.diffQuantity);
+                            return (
+                              <div key={i.id} className="text-[9px] leading-tight text-black">
+                                • {i.ingredient?.name}:{' '}
+                                <span className="text-black font-bold">
+                                  {diff > 0 ? `+${diff}` : diff} {i.ingredient?.unit}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black font-mono text-black text-right font-bold text-[9px]">
+                          {adjTotalDiffCost === 0 ? (
+                            <span>฿0.00</span>
+                          ) : adjTotalDiffCost > 0 ? (
+                            <span>+฿{adjTotalDiffCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span>-฿{Math.abs(adjTotalDiffCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          )}
+                        </td>
+                        <td className="py-1 px-2 border-r border-black text-center font-sans font-bold text-black">
+                          {adj.status === 'PENDING' && <span>รออนุมัติ</span>}
+                          {adj.status === 'APPROVED' && <span>อนุมัติแล้ว</span>}
+                          {adj.status === 'REJECTED' && <span>ไม่อนุมัติ</span>}
+                        </td>
+                        <td className="py-1 px-2 font-sans text-black text-left text-[9px]">
+                          {adj.approvedBy?.name || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {printAdjustments.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-black font-sans">
+                      <td colSpan={9} className="py-6 text-center text-black font-sans">
                         ไม่พบข้อมูลคำขอปรับปรุงสต็อกตามสถานะที่เลือก
                       </td>
                     </tr>
                   )}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
-                    <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-black">
-                      รวมคำขอทั้งหมดในรายงานนี้:
-                    </td>
-                    <td colSpan={3} className="py-1.5 px-3 text-left font-sans text-black">
-                      <span className="font-mono font-bold">{printAdjustments.length}</span> ใบคำขอ
-                    </td>
-                  </tr>
+                  {(() => {
+                    const grandTotalCost = printAdjustments.reduce(
+                      (total, adj) =>
+                        total +
+                        adj.items.reduce(
+                          (sum, it) => sum + Number(it.diffQuantity) * Number(it.ingredient?.costPerUnit || 0),
+                          0
+                        ),
+                      0
+                    );
+                    return (
+                      <tr className="border-t border-black bg-white font-bold text-[10px] text-black">
+                        <td colSpan={5} className="py-1.5 px-3 text-right font-sans border-r border-black">
+                          รวมคำขอทั้งหมดในรายงานนี้: <span className="font-mono font-bold">{printAdjustments.length}</span> ใบคำขอ
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-sans border-r border-black">
+                          มูลค่าผลต่างสุทธิ:
+                        </td>
+                        <td className="py-1.5 px-2 text-right font-mono font-black text-black border-r border-black">
+                          {grandTotalCost === 0 ? (
+                            <span>฿0.00</span>
+                          ) : grandTotalCost > 0 ? (
+                            <span>+฿{grandTotalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span>-฿{Math.abs(grandTotalCost).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          )}
+                        </td>
+                        <td colSpan={2} className="py-1.5 px-2 text-center font-sans text-black">
+                          {printAdjustments.length} ฉบับ
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tfoot>
               </table>
             </div>
