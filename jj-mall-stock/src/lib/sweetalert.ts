@@ -98,4 +98,49 @@ export const showErrorAlert = async (title: string, text?: string) => {
   });
 };
 
+/**
+ * Modern SweetAlert2 Action Confirmation Alert (e.g. Approve, Reject, Save)
+ */
+export const confirmActionAlert = async (options?: {
+  title?: string;
+  text?: string;
+  icon?: 'warning' | 'info' | 'question' | 'success';
+  confirmButtonText?: string;
+  cancelButtonText?: string;
+  confirmButtonColor?: string;
+}): Promise<boolean> => {
+  const {
+    title = 'ยืนยันการทำรายการ?',
+    text = '',
+    icon = 'question',
+    confirmButtonText = 'ยืนยัน',
+    cancelButtonText = 'ยกเลิก',
+    confirmButtonColor = '#10b981',
+  } = options || {};
+
+  const result = await Swal.fire({
+    title,
+    text,
+    icon,
+    width: 410,
+    showCancelButton: true,
+    confirmButtonColor,
+    cancelButtonColor: '#7a7a7a',
+    confirmButtonText,
+    cancelButtonText,
+    reverseButtons: true, // "ยกเลิก" on left, "ยืนยัน" on right
+    focusCancel: true,
+    customClass: {
+      popup: 'swal2-thai-popup',
+      title: 'swal2-thai-title',
+      htmlContainer: 'swal2-thai-text',
+      confirmButton: 'swal2-thai-confirm',
+      cancelButton: 'swal2-thai-cancel',
+      actions: 'swal2-thai-actions',
+    },
+  });
+
+  return result.isConfirmed;
+};
+
 export default Swal;

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import Pagination from '@/components/Pagination';
+import { showSuccessAlert, showErrorAlert, confirmActionAlert } from '@/lib/sweetalert';
 
 interface RequisitionItem {
   id: number;
@@ -129,12 +130,7 @@ export default function AdminStockRequestsPage() {
   const [approvalItems, setApprovalItems] = useState<Array<{ id: number; approvedQty: string }>>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
+  
 
   // Filtered list
   const filteredRequisitions = useMemo(() => {
@@ -190,6 +186,17 @@ export default function AdminStockRequestsPage() {
   // Confirm Approval (Approve store purchase & add stock)
   const handleConfirmApproval = async () => {
     if (!selectedRequisition) return;
+
+    const isConfirmed = await confirmActionAlert({
+      title: 'ยืนยันอนุมัติการซื้อวัตถุดิบ?',
+      text: `ต้องการอนุมัติใบขอซื้อเลขที่ ${selectedRequisition.requisitionNumber} และบันทึกรับเข้าสต็อกสาขาใช่หรือไม่?`,
+      icon: 'question',
+      confirmButtonText: 'ตกลง',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#10b981',
+    });
+    if (!isConfirmed) return;
+
     setActionError(null);
 
     try {
@@ -209,11 +216,15 @@ export default function AdminStockRequestsPage() {
         throw new Error(json.message || 'อนุมัติการซื้อไม่สำเร็จ');
       }
 
-      showToast(json.message || 'อนุมัติการซื้อและเพิ่มสต็อกเข้าหน้าร้านเรียบร้อยแล้ว');
       setIsApproveModalOpen(false);
       mutate();
+      await showSuccessAlert(
+        'อนุมัติการซื้อสำเร็จ',
+        `อนุมัติใบขอซื้อ ${selectedRequisition.requisitionNumber} และบันทึกเพิ่มสต็อกเข้าหน้าร้านเรียบร้อยแล้ว`
+      );
     } catch (e: any) {
       setActionError(e.message || 'เกิดข้อผิดพลาด');
+      await showErrorAlert('อนุมัติการซื้อไม่สำเร็จ', e.message || 'เกิดข้อผิดพลาดในการอนุมัติ');
     } finally {
       setIsProcessing(false);
     }
@@ -222,6 +233,17 @@ export default function AdminStockRequestsPage() {
   // Confirm Rejection
   const handleConfirmRejection = async () => {
     if (!selectedRequisition) return;
+
+    const isConfirmed = await confirmActionAlert({
+      title: 'ยืนยันปฏิเสธคำขอซื้อ?',
+      text: `ต้องการปฏิเสธใบขอซื้อเลขที่ ${selectedRequisition.requisitionNumber} ใช่หรือไม่?`,
+      icon: 'warning',
+      confirmButtonText: 'ตกลง',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#ef4444',
+    });
+    if (!isConfirmed) return;
+
     setActionError(null);
 
     try {
@@ -241,11 +263,15 @@ export default function AdminStockRequestsPage() {
         throw new Error(json.message || 'ปฏิเสธไม่สำเร็จ');
       }
 
-      showToast(json.message || 'ปฏิเสธใบขอซื้อเรียบร้อยแล้ว');
       setIsRejectModalOpen(false);
       mutate();
+      await showSuccessAlert(
+        'ปฏิเสธใบขอซื้อเรียบร้อย',
+        `ใบขอซื้อ ${selectedRequisition.requisitionNumber} ได้รับการบันทึกสถานะไม่อนุมัติแล้ว`
+      );
     } catch (e: any) {
       setActionError(e.message || 'เกิดข้อผิดพลาด');
+      await showErrorAlert('ปฏิเสธไม่สำเร็จ', e.message || 'เกิดข้อผิดพลาดในการปฏิเสธ');
     } finally {
       setIsProcessing(false);
     }
@@ -264,13 +290,7 @@ export default function AdminStockRequestsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Toast Alert */}
-      {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-semibold animate-in fade-in slide-in-from-top-4">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+
 
       {/* Header Banner */}
       <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
