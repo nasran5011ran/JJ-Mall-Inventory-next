@@ -638,11 +638,10 @@ export default function AdminStockRequestsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenDetailModal(req)}
-                                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                                className="p-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 shadow-2xs transition-all cursor-pointer flex items-center justify-center"
                                 title="ดูรายละเอียดใบขอซื้อทั้งหมด"
                               >
-                                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                <span>ดู</span>
+                                <Eye className="w-4 h-4 text-slate-600" />
                               </button>
 
                               <button
