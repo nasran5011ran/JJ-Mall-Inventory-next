@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
 import {
   ArrowUpFromLine,
@@ -145,6 +145,11 @@ export default function AdminStockRequestsPage() {
       return matchStatus && matchStore && matchSearch;
     });
   }, [requisitions, statusFilter, storeFilter, searchTerm]);
+
+  // Reset pagination to page 1 when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, storeFilter, searchTerm]);
 
   // Paginated list
   const totalPages = Math.ceil(filteredRequisitions.length / pageSize) || 1;
@@ -645,19 +650,14 @@ export default function AdminStockRequestsPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-500">
-              แสดงหน้า {currentPage} จาก {totalPages} (ทั้งหมด {filteredRequisitions.length} รายการ)
-            </span>
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredRequisitions.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+        {/* Pagination (10 items per page) */}
+        {filteredRequisitions.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredRequisitions.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 
