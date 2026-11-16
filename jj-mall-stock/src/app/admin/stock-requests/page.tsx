@@ -127,7 +127,6 @@ export default function AdminStockRequestsPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
-  const [approvalItems, setApprovalItems] = useState<Array<{ id: number; approvedQty: string }>>([]);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -159,12 +158,6 @@ export default function AdminStockRequestsPage() {
   // Open Approve Modal
   const handleOpenApproveModal = (req: RequisitionRecord) => {
     setSelectedRequisition(req);
-    setApprovalItems(
-      req.items.map((it) => ({
-        id: it.id,
-        approvedQty: String(it.requestedQty),
-      }))
-    );
     setActionError(null);
     setIsApproveModalOpen(true);
   };
@@ -207,7 +200,10 @@ export default function AdminStockRequestsPage() {
         body: JSON.stringify({
           requisitionId: selectedRequisition.id,
           action: 'APPROVE',
-          items: approvalItems,
+          items: selectedRequisition.items.map((it) => ({
+            id: it.id,
+            approvedQty: it.requestedQty,
+          })),
         }),
       });
 
@@ -281,12 +277,11 @@ export default function AdminStockRequestsPage() {
   const approveModalTotal = useMemo(() => {
     if (!selectedRequisition) return 0;
     return selectedRequisition.items.reduce((sum, item) => {
-      const it = approvalItems.find((a) => a.id === item.id);
-      const qty = parseFloat(it?.approvedQty || '0');
+      const qty = Number(item.requestedQty || 0);
       const cost = Number(item.ingredient.costPerUnit || 0);
-      return sum + (isNaN(qty) ? 0 : qty * cost);
+      return sum + qty * cost;
     }, 0);
-  }, [selectedRequisition, approvalItems]);
+  }, [selectedRequisition]);
 
   return (
     <div className="space-y-6">
@@ -637,9 +632,19 @@ export default function AdminStockRequestsPage() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        <div className="flex items-center justify-center gap-1.5 flex-nowrap">
                           {req.status === 'PENDING' ? (
                             <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailModal(req)}
+                                className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                                title="ดูรายละเอียดใบขอซื้อทั้งหมด"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                <span>ดู</span>
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => handleOpenApproveModal(req)}
@@ -653,26 +658,18 @@ export default function AdminStockRequestsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleOpenRejectModal(req)}
-                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs border border-rose-200 transition-all cursor-pointer flex items-center gap-1"
                                 title="ปฏิเสธคำขอซื้อ"
                               >
-                                ปฏิเสธ
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleOpenDetailModal(req)}
-                                className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-                                title="ตรวจสอบรายละเอียดก่อนอนุมัติ"
-                              >
-                                <Eye className="w-4 h-4" />
+                                <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                                <span>ปฏิเสธ</span>
                               </button>
                             </>
                           ) : (
                             <button
                               type="button"
                               onClick={() => handleOpenDetailModal(req)}
-                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5 text-slate-500" />
                               <span>ดูรายละเอียด</span>
@@ -780,11 +777,10 @@ export default function AdminStockRequestsPage() {
                   <tbody className="divide-y divide-slate-100">
                     {selectedRequisition.items.map((item) => {
                       const costPerUnit = Number(item.ingredient.costPerUnit || 0);
-                      const currentApprovedStr = approvalItems.find((it) => it.id === item.id)?.approvedQty || '0';
-                      const currentApprovedNum = parseFloat(currentApprovedStr) || 0;
+                      const purchasedQty = Number(item.requestedQty || 0);
                       const storeStockBefore = getStoreStock(selectedRequisition.store.id, item.ingredientId);
-                      const storeStockAfter = storeStockBefore + currentApprovedNum;
-                      const lineTotal = currentApprovedNum * costPerUnit;
+                      const storeStockAfter = storeStockBefore + purchasedQty;
+                      const lineTotal = purchasedQty * costPerUnit;
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/60">
@@ -807,26 +803,12 @@ export default function AdminStockRequestsPage() {
                             <span className="text-[10px] text-slate-400">{item.ingredient.unit}</span>
                           </td>
 
-                          {/* Purchased Quantity (Editable Input) */}
+                          {/* Purchased Quantity (Fixed / Non-editable) */}
                           <td className="py-3 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                step="any"
-                                min="0"
-                                value={currentApprovedStr}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setApprovalItems((prev) =>
-                                    prev.map((it) => (it.id === item.id ? { ...it, approvedQty: val } : it))
-                                  );
-                                }}
-                                className="w-24 px-2.5 py-1.5 rounded-xl border border-emerald-300 bg-emerald-50/50 text-emerald-950 focus:bg-white text-right text-xs font-black focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                              />
-                              <span className="text-[11px] font-semibold text-slate-500 w-10 text-left">
-                                {item.ingredient.unit}
-                              </span>
-                            </div>
+                            <span className="inline-flex items-center gap-1 font-mono font-black text-xs text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                              <span>+{purchasedQty.toLocaleString()}</span>
+                              <span className="text-[10px] font-medium text-emerald-600">{item.ingredient.unit}</span>
+                            </span>
                           </td>
 
                           {/* Stock After Approval */}
