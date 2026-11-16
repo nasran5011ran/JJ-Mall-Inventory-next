@@ -178,7 +178,7 @@ export default function AdminStockAdjustmentsPage() {
     setFormItems([
       {
         ingredientId: firstIng ? String(firstIng.id) : '',
-        actualQuantity: firstIng ? String(Number(firstIng.currentStock)) : '0',
+        actualQuantity: '',
       },
     ]);
     setFormError(null);
@@ -191,7 +191,7 @@ export default function AdminStockAdjustmentsPage() {
       ...prev,
       {
         ingredientId: firstIng ? String(firstIng.id) : '',
-        actualQuantity: firstIng ? String(Number(firstIng.currentStock)) : '0',
+        actualQuantity: '',
       },
     ]);
   };
@@ -205,13 +205,6 @@ export default function AdminStockAdjustmentsPage() {
     setFormItems((prev) => {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], [field]: value };
-
-      if (field === 'ingredientId') {
-        const found = ingredients.find((i) => i.id === Number(value));
-        if (found) {
-          updated[idx].actualQuantity = String(Number(found.currentStock));
-        }
-      }
       return updated;
     });
   };
@@ -986,7 +979,7 @@ export default function AdminStockAdjustmentsPage() {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                     const systemQty = selectedIng ? Number(selectedIng.currentStock) : 0;
                     const actualQty = parseFloat(item.actualQuantity);
-                    const diff = !isNaN(actualQty) ? actualQty - systemQty : 0;
+                    const diff = item.actualQuantity !== '' && !isNaN(actualQty) ? actualQty - systemQty : 0;
 
                     return (
                       <div
