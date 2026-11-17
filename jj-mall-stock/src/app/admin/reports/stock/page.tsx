@@ -273,19 +273,19 @@ export default function AdminStockReportPage() {
             onClick={() => setStatusFilter('ALL')}
             className={`p-4 rounded-3xl border transition-all cursor-pointer ${
               statusFilter === 'ALL'
-                ? 'bg-slate-900/5 border-slate-800 ring-2 ring-slate-800/15'
-                : 'bg-white border-slate-200 shadow-2xs hover:border-slate-300'
+                ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30'
+                : 'bg-white border-slate-200 shadow-2xs hover:border-emerald-300'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                 วัตถุดิบทั้งหมด
               </span>
-              <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
                 <Layers className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-slate-800 mt-1 font-mono">
+            <div className="text-2xl font-black text-emerald-700 mt-1 font-mono">
               {kpis.totalIngredients} <span className="text-xs font-semibold text-slate-500">รายการ</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">รายการวัตถุดิบทั้งหมดของร้าน</p>
