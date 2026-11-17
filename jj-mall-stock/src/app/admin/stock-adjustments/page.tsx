@@ -132,6 +132,8 @@ export default function AdminStockAdjustmentsPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [formStoreId, setFormStoreId] = useState<string>('');
+  const [storeQuery, setStoreQuery] = useState<string>('');
+  const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [formIngredients, setFormIngredients] = useState<Ingredient[]>([]);
   const [loadingStoreStock, setLoadingStoreStock] = useState(false);
   const [formReason, setFormReason] = useState('');
@@ -139,6 +141,8 @@ export default function AdminStockAdjustmentsPage() {
   const [formItems, setFormItems] = useState<NewItemForm[]>([
     { ingredientId: '', actualQuantity: '' },
   ]);
+  const [rowIngQueries, setRowIngQueries] = useState<Record<number, string>>({});
+  const [activeIngDropdownIdx, setActiveIngDropdownIdx] = useState<number | null>(null);
 
 
   // Detail Modal
@@ -195,43 +199,78 @@ export default function AdminStockAdjustmentsPage() {
   const openCreateModal = async () => {
     const firstStoreId = staffStores[0] ? String(staffStores[0].id) : '';
     const initialStore = storeFilter !== 'ALL' ? storeFilter : firstStoreId;
+    const initStoreObj = staffStores.find((s: any) => String(s.id) === String(initialStore));
     setFormStoreId(initialStore);
+    setStoreQuery(initStoreObj ? `${initStoreObj.name} (@${initStoreObj.username})` : '');
+    setStoreDropdownOpen(false);
     setFormReason('');
     setAutoApprove(true);
     setFormError(null);
-    setCreateModalOpen(true);
-
-    const locIngs = initialStore ? await fetchLocationStock(initialStore) : ingredients;
-    const firstIng = locIngs[0] || ingredients[0];
+    setRowIngQueries({ 0: '' });
+    setActiveIngDropdownIdx(null);
     setFormItems([
       {
-        ingredientId: firstIng ? String(firstIng.id) : '',
+        ingredientId: '',
         actualQuantity: '',
       },
     ]);
+    setCreateModalOpen(true);
+
+    if (initialStore) {
+      await fetchLocationStock(initialStore);
+    }
   };
 
   const handleFormStoreChange = async (newStoreId: string) => {
     setFormStoreId(newStoreId);
+    const stObj = staffStores.find((s: any) => String(s.id) === String(newStoreId));
+    if (stObj) {
+      setStoreQuery(`${stObj.name} (@${stObj.username})`);
+    }
+    setStoreDropdownOpen(false);
     setFormError(null);
-    await fetchLocationStock(newStoreId);
+    const updatedIngs = await fetchLocationStock(newStoreId);
+    // Refresh displayed stock in row queries if an ingredient is already selected
+    setRowIngQueries((prev) => {
+      const next: Record<number, string> = { ...prev };
+      formItems.forEach((it, idx) => {
+        if (it.ingredientId) {
+          const found = updatedIngs.find((i) => i.id === Number(it.ingredientId));
+          if (found) {
+            next[idx] = `${found.name} (${found.code})`;
+          }
+        }
+      });
+      return next;
+    });
   };
 
   const handleAddItemRow = () => {
-    const activeList = formIngredients.length > 0 ? formIngredients : ingredients;
-    const firstIng = activeList[0];
+    const nextIdx = formItems.length;
     setFormItems((prev) => [
       ...prev,
       {
-        ingredientId: firstIng ? String(firstIng.id) : '',
+        ingredientId: '',
         actualQuantity: '',
       },
     ]);
+    setRowIngQueries((prev) => ({ ...prev, [nextIdx]: '' }));
+    setActiveIngDropdownIdx(nextIdx);
   };
 
   const handleRemoveItemRow = (idx: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, i) => i !== idx));
+    setRowIngQueries((prev) => {
+      const updated: Record<number, string> = {};
+      Object.keys(prev).forEach((key) => {
+        const k = Number(key);
+        if (k < idx) updated[k] = prev[k];
+        else if (k > idx) updated[k - 1] = prev[k];
+      });
+      return updated;
+    });
+    if (activeIngDropdownIdx === idx) setActiveIngDropdownIdx(null);
   };
 
   const handleItemChange = (idx: number, field: keyof NewItemForm, value: string) => {
@@ -965,8 +1004,19 @@ export default function AdminStockAdjustmentsPage() {
             )}
 
             <form onSubmit={handleSubmitCreate} className="mt-5 space-y-4">
-              {/* Store Selector */}
-              <div>
+              {/* Click-away backdrop for autocomplete popovers */}
+              {(storeDropdownOpen || activeIngDropdownIdx !== null) && (
+                <div
+                  className="fixed inset-0 z-[55] bg-transparent"
+                  onClick={() => {
+                    setStoreDropdownOpen(false);
+                    setActiveIngDropdownIdx(null);
+                  }}
+                />
+              )}
+
+              {/* Store Autocomplete Input */}
+              <div className="relative z-[60]">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-700">
                     ร้านค้าที่ต้องการปรับสต็อก <span className="text-red-500">*</span>
@@ -977,18 +1027,82 @@ export default function AdminStockAdjustmentsPage() {
                     </span>
                   )}
                 </div>
-                <select
-                  value={formStoreId}
-                  onChange={(e) => handleFormStoreChange(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                >
-                  {staffStores.map((s: any) => (
-                    <option key={s.id} value={String(s.id)}>
-                      🏪 {s.name} (@{s.username})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Store className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={storeQuery}
+                    onFocus={() => {
+                      setStoreDropdownOpen(true);
+                      setActiveIngDropdownIdx(null);
+                    }}
+                    onChange={(e) => {
+                      setStoreQuery(e.target.value);
+                      setStoreDropdownOpen(true);
+                    }}
+                    placeholder="พิมพ์ชื่อร้านค้า หรือรหัสร้านค้าเพื่อค้นหา..."
+                    className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                  {storeQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStoreQuery('');
+                        setStoreDropdownOpen(true);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                      title="ล้างเพื่อพิมพ์ใหม่"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {storeDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-52 overflow-y-auto divide-y divide-slate-100">
+                    {(() => {
+                      const q = storeQuery.toLowerCase().trim();
+                      const currentSelectedStore = staffStores.find(
+                        (s: any) => String(s.id) === String(formStoreId)
+                      );
+                      const isShowingFullSelectedLabel =
+                        currentSelectedStore &&
+                        storeQuery === `${currentSelectedStore.name} (@${currentSelectedStore.username})`;
+                      const matchedStores =
+                        !q || isShowingFullSelectedLabel
+                          ? staffStores
+                          : staffStores.filter(
+                              (s: any) =>
+                                s.name?.toLowerCase().includes(q) ||
+                                s.username?.toLowerCase().includes(q)
+                            );
+
+                      if (matchedStores.length === 0) {
+                        return (
+                          <div className="p-3 text-center text-xs text-slate-400">
+                            ไม่พบร้านค้าที่ตรงกับ &ldquo;{storeQuery}&rdquo;
+                          </div>
+                        );
+                      }
+
+                      return matchedStores.map((s: any) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => handleFormStoreChange(String(s.id))}
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 flex items-center justify-between cursor-pointer transition-colors ${
+                            String(s.id) === String(formStoreId)
+                              ? 'bg-emerald-50/70 font-bold text-emerald-900'
+                              : 'text-slate-800 font-medium'
+                          }`}
+                        >
+                          <span>🏪 {s.name}</span>
+                          <span className="font-mono text-[11px] text-slate-500">@{s.username}</span>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Reason Selector */}
@@ -1047,7 +1161,7 @@ export default function AdminStockAdjustmentsPage() {
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-2">
                   {formItems.map((item, idx) => {
                     const activeIngredients = formIngredients.length > 0 ? formIngredients : ingredients;
                     const selectedIng = activeIngredients.find((i) => i.id === Number(item.ingredientId));
@@ -1055,27 +1169,115 @@ export default function AdminStockAdjustmentsPage() {
                     const wasteQty = parseFloat(item.actualQuantity);
                     const diff = item.actualQuantity !== '' && !isNaN(wasteQty) ? -Math.abs(wasteQty) : 0;
                     const remainQty = Math.max(0, systemQty + diff);
+                    const rowQuery = rowIngQueries[idx] ?? (selectedIng ? `${selectedIng.name} (${selectedIng.code})` : '');
+                    const isRowDropdownOpen = activeIngDropdownIdx === idx;
 
                     return (
                       <div
                         key={idx}
-                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-2 text-xs"
+                        className={`p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center gap-2 text-xs relative ${
+                          isRowDropdownOpen ? 'z-[60] border-emerald-400 bg-white shadow-sm' : ''
+                        }`}
                       >
-                        {/* Ingredient Select */}
-                        <div className="flex-1 w-full">
-                          <select
-                            value={item.ingredientId}
-                            onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
-                            required
-                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-medium focus:outline-none"
-                          >
-                            <option value="">-- เลือกวัตถุดิบ --</option>
-                            {activeIngredients.map((ing) => (
-                              <option key={ing.id} value={ing.id}>
-                                {ing.name} (ในระบบ: {Number(ing.currentStock)} {ing.unit})
-                              </option>
-                            ))}
-                          </select>
+                        {/* Ingredient Autocomplete Input */}
+                        <div className="flex-1 w-full relative">
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={rowQuery}
+                              onFocus={() => {
+                                setActiveIngDropdownIdx(idx);
+                                setStoreDropdownOpen(false);
+                              }}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setRowIngQueries((prev) => ({ ...prev, [idx]: val }));
+                                setActiveIngDropdownIdx(idx);
+                                if (!val.trim()) {
+                                  handleItemChange(idx, 'ingredientId', '');
+                                }
+                              }}
+                              placeholder="พิมพ์ชื่อ หรือรหัสวัตถุดิบเพื่อค้นหา..."
+                              className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            />
+                            {rowQuery && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRowIngQueries((prev) => ({ ...prev, [idx]: '' }));
+                                  handleItemChange(idx, 'ingredientId', '');
+                                  setActiveIngDropdownIdx(idx);
+                                }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                title="ล้างเพื่อพิมพ์ใหม่"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          {isRowDropdownOpen && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-56 overflow-y-auto divide-y divide-slate-100">
+                              {(() => {
+                                const q = rowQuery.toLowerCase().trim();
+                                const isShowingSelectedLabel =
+                                  selectedIng && rowQuery === `${selectedIng.name} (${selectedIng.code})`;
+                                const matchedIngs =
+                                  !q || isShowingSelectedLabel
+                                    ? activeIngredients
+                                    : activeIngredients.filter(
+                                        (ing) =>
+                                          ing.name.toLowerCase().includes(q) ||
+                                          ing.code.toLowerCase().includes(q) ||
+                                          (ing.category && ing.category.toLowerCase().includes(q))
+                                      );
+
+                                if (matchedIngs.length === 0) {
+                                  return (
+                                    <div className="p-3 text-center text-xs text-slate-400">
+                                      ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowQuery}&rdquo;
+                                    </div>
+                                  );
+                                }
+
+                                return matchedIngs.map((ing) => (
+                                  <button
+                                    key={ing.id}
+                                    type="button"
+                                    onClick={() => {
+                                      handleItemChange(idx, 'ingredientId', String(ing.id));
+                                      setRowIngQueries((prev) => ({
+                                        ...prev,
+                                        [idx]: `${ing.name} (${ing.code})`,
+                                      }));
+                                      setActiveIngDropdownIdx(null);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 hover:bg-emerald-50 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                                      String(ing.id) === String(item.ingredientId)
+                                        ? 'bg-emerald-50/70 font-bold'
+                                        : ''
+                                    }`}
+                                  >
+                                    <div className="min-w-0">
+                                      <div className="font-bold text-xs text-slate-800 truncate">
+                                        {ing.name}{' '}
+                                        <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
+                                      </div>
+                                      {ing.category && (
+                                        <div className="text-[10px] text-slate-400 truncate">
+                                          หมวด: {ing.category}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
+                                      ในระบบ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                                    </span>
+                                  </button>
+                                ));
+                              })()}
+                            </div>
+                          )}
                         </div>
 
                         {/* System Stock preview */}
