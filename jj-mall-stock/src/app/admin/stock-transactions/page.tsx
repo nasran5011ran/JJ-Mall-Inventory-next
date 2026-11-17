@@ -908,13 +908,13 @@ export default function AdminStockTransactionsPage() {
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[10px] text-black">
                   <tr className="border-b border-black">
-                    <td className="py-2 px-2 border-r border-black font-bold text-center">
+                    <td className="py-2 px-2 border-r border-black font-bold text-center break-all">
                       {selectedTx.ingredient?.code}
                     </td>
-                    <td className="py-2 px-3 border-r border-black font-sans font-semibold text-left">
+                    <td className="py-2 px-3 border-r border-black font-sans font-semibold text-left whitespace-normal break-words leading-snug">
                       {selectedTx.ingredient?.name}
                     </td>
-                    <td className="py-2 px-2 border-r border-black text-center font-sans">
+                    <td className="py-2 px-2 border-r border-black text-center font-sans whitespace-normal break-words leading-snug">
                       {selectedTx.ingredient?.category || '-'}
                     </td>
                     <td className="py-2 px-2 border-r border-black text-right">
@@ -1068,19 +1068,32 @@ export default function AdminStockTransactionsPage() {
             {/* Transactions Table */}
             <div className="w-full">
               <table className="w-full table-fixed text-left border-collapse border border-black text-[9px] leading-tight text-black">
+                <colgroup>
+                  <col style={{ width: '3.5%' }} />
+                  <col style={{ width: '8.5%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '6.5%' }} />
+                  <col style={{ width: '6.5%' }} />
+                  <col style={{ width: '7.5%' }} />
+                  <col style={{ width: '4.5%' }} />
+                  <col style={{ width: '10.5%' }} />
+                  <col style={{ width: '11.5%' }} />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-black text-black font-bold bg-white text-center">
-                    <th style={{ width: '4%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">ลำดับ</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">วันที่ & เวลา</th>
-                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-black text-center font-bold text-black">เลขที่รายการ</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">ประเภท</th>
-                    <th style={{ width: '13%' }} className="py-1 px-2 border-r border-black text-left font-bold text-black">วัตถุดิบ</th>
-                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">รับเข้า (+)</th>
-                    <th style={{ width: '7.5%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">จ่ายออก (-)</th>
-                    <th style={{ width: '9%' }} className="py-1 px-1 border-r border-black text-right font-bold text-black">คงเหลือ</th>
-                    <th style={{ width: '4.5%' }} className="py-1 px-1 border-r border-black text-center font-bold text-black">หน่วย</th>
-                    <th style={{ width: '12%' }} className="py-1 px-1.5 border-r border-black text-left font-bold text-black">เลขอ้างอิง</th>
-                    <th style={{ width: '12.5%' }} className="py-1 px-1.5 text-left font-bold text-black">ผู้ทำรายการ</th>
+                    <th className="py-1 px-1 border-r border-black text-center font-bold text-black">ลำดับ</th>
+                    <th className="py-1 px-1 border-r border-black text-center font-bold text-black">วันที่ & เวลา</th>
+                    <th className="py-1 px-1.5 border-r border-black text-center font-bold text-black">เลขที่รายการ</th>
+                    <th className="py-1 px-1 border-r border-black text-center font-bold text-black">ประเภท</th>
+                    <th className="py-1 px-2 border-r border-black text-left font-bold text-black">วัตถุดิบ</th>
+                    <th className="py-1 px-1 border-r border-black text-right font-bold text-black">รับเข้า (+)</th>
+                    <th className="py-1 px-1 border-r border-black text-right font-bold text-black">จ่ายออก (-)</th>
+                    <th className="py-1 px-1 border-r border-black text-right font-bold text-black">คงเหลือ</th>
+                    <th className="py-1 px-1 border-r border-black text-center font-bold text-black">หน่วย</th>
+                    <th className="py-1 px-1.5 border-r border-black text-left font-bold text-black">เลขอ้างอิง</th>
+                    <th className="py-1 px-1.5 text-left font-bold text-black">ผู้ทำรายการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[8.5px] text-black">
@@ -1090,43 +1103,44 @@ export default function AdminStockTransactionsPage() {
                     const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
                     const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                     return (
-                      <tr key={tx.id} className="border-b border-black">
-                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
+                      <tr key={tx.id} className="border-b border-black align-top">
+                        <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black font-sans text-center whitespace-nowrap text-black">
-                          {dateStr} <span className="text-[7.5px] text-black">{timeStr}</span>
+                        <td className="py-1 px-1 border-r border-black font-sans text-center whitespace-normal leading-snug text-black">
+                          <div>{dateStr}</div>
+                          <div className="text-[7.5px] text-black">{timeStr} น.</div>
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black font-bold font-mono text-black truncate">
+                        <td className="py-1 px-1.5 border-r border-black font-bold font-mono text-black whitespace-normal break-all leading-snug">
                           {tx.transactionNumber}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-center font-sans font-medium text-[8px] text-black truncate">
+                        <td className="py-1 px-1 border-r border-black text-center font-sans font-medium text-[8px] text-black whitespace-normal break-words leading-snug">
                           {badge.label}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans text-left overflow-hidden text-black">
-                          <div className="font-semibold text-black text-[8.5px] truncate" title={tx.ingredient?.name}>
+                        <td className="py-1 px-2 border-r border-black font-sans text-left text-black whitespace-normal break-words leading-snug">
+                          <div className="font-semibold text-black text-[8.5px] whitespace-normal break-words leading-snug">
                             {tx.ingredient?.name}
                           </div>
-                          <div className="text-[7.5px] text-black font-mono">
+                          <div className="text-[7.5px] text-black font-mono break-all">
                             {tx.ingredient?.code}
                           </div>
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right font-medium text-black">
+                        <td className="py-1 px-1 border-r border-black text-right font-medium text-black whitespace-nowrap">
                           {Number(tx.quantityIn) > 0 ? `+${Number(tx.quantityIn)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right font-medium text-black">
+                        <td className="py-1 px-1 border-r border-black text-right font-medium text-black whitespace-nowrap">
                           {Number(tx.quantityOut) > 0 ? `-${Number(tx.quantityOut)}` : '-'}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right font-bold text-black whitespace-nowrap">
+                        <td className="py-1 px-1 border-r border-black text-right font-bold text-black whitespace-nowrap">
                           {Number(tx.balanceAfter).toLocaleString()}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
+                        <td className="py-1 px-1 border-r border-black text-center font-sans text-black whitespace-normal break-words leading-snug">
                           {tx.ingredient?.unit}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black font-mono text-black text-[8px] truncate" title={tx.refId || ''}>
+                        <td className="py-1 px-1.5 border-r border-black font-mono text-black text-[8px] whitespace-normal break-all leading-snug">
                           {tx.refId || '-'}
                         </td>
-                        <td className="py-0.5 px-1.5 font-sans text-black text-[8.5px] truncate" title={tx.createdBy?.name || ''}>
+                        <td className="py-1 px-1.5 font-sans text-black text-[8.5px] whitespace-normal break-words leading-snug">
                           {tx.createdBy?.name || '-'}
                         </td>
                       </tr>
