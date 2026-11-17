@@ -142,6 +142,17 @@ export default function ProductsPage() {
   const [editRecipeProduct, setEditRecipeProduct] = useState<ProductItem | null>(null);
   const [recipeStoreId, setRecipeStoreId] = useState<number | null>(null);
 
+  // Lock background page scrollbar when any modal is open
+  useEffect(() => {
+    const anyModalOpen = modalOpen || Boolean(recipeModalProduct) || Boolean(editRecipeProduct);
+    if (!anyModalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [modalOpen, recipeModalProduct, editRecipeProduct]);
+
   const currentRecipeStore = useMemo(() => {
     if (!recipeStoreId) return null;
     return staffStores.find((s) => s.id === recipeStoreId) || null;
@@ -1323,9 +1334,10 @@ export default function ProductsPage() {
                         min="0"
                         required
                         value={formData.price}
+                        onWheel={(e) => e.currentTarget.blur()}
                         onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                         placeholder="เช่น 35.00"
-                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
 
@@ -1357,9 +1369,10 @@ export default function ProductsPage() {
                         step="0.01"
                         min="0"
                         value={formData.cost}
+                        onWheel={(e) => e.currentTarget.blur()}
                         onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
                         placeholder="เช่น 12.00"
-                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                        className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 font-mono font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
                     </div>
                   </div>
@@ -1469,8 +1482,8 @@ export default function ProductsPage() {
 
       {/* Inline Recipe Editor Modal (No page jump!) */}
       {editRecipeProduct && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-3xl lg:max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="bg-white rounded-3xl max-w-3xl lg:max-w-4xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -1899,8 +1912,9 @@ export default function ProductsPage() {
                                 required
                                 placeholder="0"
                                 value={item.quantity}
+                                onWheel={(e) => e.currentTarget.blur()}
                                 onChange={(e) => updateRecipeRow(idx, 'quantity', e.target.value)}
-                                className={`w-full px-3 py-2 pr-14 text-xs text-right font-mono font-bold rounded-xl border bg-white focus:outline-none focus:ring-2 text-slate-800 ${
+                                className={`w-full px-3 py-2 pr-14 text-xs text-right font-mono font-bold rounded-xl border bg-white focus:outline-none focus:ring-2 text-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                   isDuplicateOfEarlier
                                     ? 'border-amber-400 bg-amber-50/30 focus:ring-amber-500/30'
                                     : 'border-slate-300 focus:ring-emerald-500/20 focus:border-emerald-600'
