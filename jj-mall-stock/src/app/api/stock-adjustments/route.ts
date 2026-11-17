@@ -19,26 +19,9 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || 'ALL';
     const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-    // Lightweight mode (Admin): return current system stock for a chosen location
-    // stockFor=WAREHOUSE -> central warehouse stock, stockFor=<storeUserId> -> that store's stock
+    // Lightweight mode (Admin): return current system stock for a chosen store
     const stockFor = searchParams.get('stockFor');
     if (stockFor && session.role === 'ADMIN') {
-      if (stockFor === 'WAREHOUSE') {
-        const whIngredients = await prisma.ingredient.findMany({
-          where: { status: 'ACTIVE' },
-          select: { id: true, code: true, name: true, category: true, unit: true, currentStock: true, costPerUnit: true },
-          orderBy: { name: 'asc' },
-        });
-        return NextResponse.json({
-          success: true,
-          ingredients: whIngredients.map((ing) => ({
-            ...ing,
-            currentStock: Number(ing.currentStock),
-            costPerUnit: Number(ing.costPerUnit || 0),
-          })),
-        });
-      }
-
       const storeUserId = Number(stockFor);
       const storeUser = await prisma.user.findFirst({
         where: { id: storeUserId, role: 'STAFF' },
@@ -94,11 +77,18 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
-    // 2. Fetch all active ingredients for new adjustment creation
-    // For STAFF users, currentStock must represent their own store's stock!
-    let storeBalMap = new Map<number, number>();
-    if (session.role === 'STAFF') {
-      const storeBalances = await calculateStoreReconciliation(session.id);
+    // 2. Fetch Staff Stores
+    const staffStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, username: true, name: true },
+      orderBy: { id: 'asc' },
+    });
+
+    // 3. Fetch all active ingredients for new adjustment creation (using store stock)
+    const defaultStoreId = session.role === 'STAFF' ? session.id : staffStores[0]?.id;
+    const storeBalMap = new Map<number, number>();
+    if (defaultStoreId) {
+      const storeBalances = await calculateStoreReconciliation(defaultStoreId);
       storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, b.expectedStock));
     }
 
@@ -118,16 +108,11 @@ export async function GET(req: NextRequest) {
 
     const ingredients = rawIngredients.map((ing) => ({
       ...ing,
-      warehouseStock: Number(ing.currentStock),
-      currentStock: session.role === 'STAFF'
-        ? (storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0)
-        : Number(ing.currentStock),
-      storeStock: session.role === 'STAFF'
-        ? (storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0)
-        : null,
+      currentStock: storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0,
+      storeStock: storeBalMap.has(ing.id) ? storeBalMap.get(ing.id)! : 0,
     }));
 
-    // 3. Compute KPI metrics
+    // 4. Compute KPI metrics
     const allAdjustments = await prisma.stockAdjustment.findMany({
       where: session.role === 'STAFF' ? { requestedById: session.id } : undefined,
       select: { status: true },
@@ -136,13 +121,6 @@ export async function GET(req: NextRequest) {
     const pendingCount = allAdjustments.filter((a) => a.status === 'PENDING').length;
     const approvedCount = allAdjustments.filter((a) => a.status === 'APPROVED').length;
     const rejectedCount = allAdjustments.filter((a) => a.status === 'REJECTED').length;
-
-    // 4. Fetch Staff Stores
-    const staffStores = await prisma.user.findMany({
-      where: { role: 'STAFF', status: 'ACTIVE' },
-      select: { id: true, username: true, name: true },
-      orderBy: { id: 'asc' },
-    });
 
     return NextResponse.json({
       success: true,
@@ -205,20 +183,26 @@ export async function POST(req: NextRequest) {
     const isAdmin = session.role === 'ADMIN';
     const willApproveImmediately = autoApprove && isAdmin;
 
-    // Resolve the target store (null = central warehouse)
+    // Resolve the target store
     let targetStoreId: number | null = null;
     let targetStoreName = '';
     if (session.role === 'STAFF') {
       targetStoreId = session.id;
       targetStoreName = session.name;
-    } else if (isAdmin && storeId && storeId !== 'WAREHOUSE') {
-      const storeUser = await prisma.user.findFirst({
-        where: { id: Number(storeId), role: 'STAFF' },
-        select: { id: true, name: true },
-      });
+    } else if (isAdmin) {
+      const storeUser = storeId
+        ? await prisma.user.findFirst({
+            where: { id: Number(storeId), role: 'STAFF' },
+            select: { id: true, name: true },
+          })
+        : await prisma.user.findFirst({
+            where: { role: 'STAFF', status: 'ACTIVE' },
+            select: { id: true, name: true },
+            orderBy: { id: 'asc' },
+          });
       if (!storeUser) {
         return NextResponse.json(
-          { success: false, message: 'ไม่พบร้านค้าที่เลือก' },
+          { success: false, message: 'กรุณาเลือกร้านค้าที่ต้องการปรับสต็อก' },
           { status: 400 }
         );
       }

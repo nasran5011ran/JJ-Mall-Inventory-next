@@ -131,7 +131,7 @@ export default function AdminStockAdjustmentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [formStoreId, setFormStoreId] = useState<string>('WAREHOUSE');
+  const [formStoreId, setFormStoreId] = useState<string>('');
   const [formIngredients, setFormIngredients] = useState<Ingredient[]>([]);
   const [loadingStoreStock, setLoadingStoreStock] = useState(false);
   const [formReason, setFormReason] = useState('');
@@ -193,14 +193,15 @@ export default function AdminStockAdjustmentsPage() {
 
   // Open Create Modal
   const openCreateModal = async () => {
-    const initialStore = storeFilter !== 'ALL' ? storeFilter : 'WAREHOUSE';
+    const firstStoreId = staffStores[0] ? String(staffStores[0].id) : '';
+    const initialStore = storeFilter !== 'ALL' ? storeFilter : firstStoreId;
     setFormStoreId(initialStore);
     setFormReason('');
     setAutoApprove(true);
     setFormError(null);
     setCreateModalOpen(true);
 
-    const locIngs = await fetchLocationStock(initialStore);
+    const locIngs = initialStore ? await fetchLocationStock(initialStore) : ingredients;
     const firstIng = locIngs[0] || ingredients[0];
     setFormItems([
       {
@@ -790,15 +791,9 @@ export default function AdminStockAdjustmentsPage() {
 
                       {/* Store / Branch Badge (Single Line, Smaller Font) */}
                       <td className="py-3 px-4 whitespace-nowrap">
-                        {isStore ? (
-                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 whitespace-nowrap">
-                            {adj.requestedBy?.name}
-                          </span>
-                        ) : (
-                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200 whitespace-nowrap">
-                            คลังส่วนกลาง
-                          </span>
-                        )}
+                        <span className="inline-block px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200 whitespace-nowrap">
+                          {adj.requestedBy?.name || 'ร้านค้า'}
+                        </span>
                       </td>
 
                       {/* Reason (Single Line) */}
@@ -970,11 +965,11 @@ export default function AdminStockAdjustmentsPage() {
             )}
 
             <form onSubmit={handleSubmitCreate} className="mt-5 space-y-4">
-              {/* Store / Location Selector */}
+              {/* Store Selector */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-700">
-                    ร้านค้า / คลังที่ต้องการปรับสต็อก <span className="text-red-500">*</span>
+                    ร้านค้าที่ต้องการปรับสต็อก <span className="text-red-500">*</span>
                   </label>
                   {loadingStoreStock && (
                     <span className="text-[11px] font-bold text-emerald-700 animate-pulse">
@@ -985,9 +980,9 @@ export default function AdminStockAdjustmentsPage() {
                 <select
                   value={formStoreId}
                   onChange={(e) => handleFormStoreChange(e.target.value)}
+                  required
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 >
-                  <option value="WAREHOUSE">🏭 คลังสินค้าส่วนกลาง (Central Warehouse)</option>
                   {staffStores.map((s: any) => (
                     <option key={s.id} value={String(s.id)}>
                       🏪 {s.name} (@{s.username})
