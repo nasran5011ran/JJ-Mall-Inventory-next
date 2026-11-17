@@ -99,12 +99,19 @@ export async function GET(req: NextRequest) {
     const staffStores = await prisma.user.findMany({
       where: { role: 'STAFF', status: 'ACTIVE' },
       select: { id: true, username: true, name: true },
-      orderBy: { name: 'asc' },
+      orderBy: { id: 'asc' },
     });
+
+    const defaultStore = staffStores[0] || null;
+    const enrichedProducts = products.map((p) => ({
+      ...p,
+      storeId: p.storeId ?? defaultStore?.id ?? null,
+      store: p.store ?? defaultStore,
+    }));
 
     return NextResponse.json({
       success: true,
-      products,
+      products: enrichedProducts,
       categories,
       staffStores,
     });
@@ -132,9 +139,15 @@ export async function POST(req: NextRequest) {
     if (session.role === 'STAFF') {
       // พนักงานร้านค้า เพิ่มเมนูจะถูกผูกเข้ากับร้านตัวเองโดยอัตโนมัติ
       targetStoreId = session.id;
+    } else if (storeId) {
+      targetStoreId = Number(storeId);
     } else {
-      // แอดมินสามารถเลือกผูกร้าน หรือเว้นว่างให้เป็นส่วนกลาง
-      targetStoreId = storeId ? Number(storeId) : null;
+      const firstStore = await prisma.user.findFirst({
+        where: { role: 'STAFF', status: 'ACTIVE' },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      targetStoreId = firstStore?.id ?? null;
     }
 
     if (!code || !name || price === undefined) {
