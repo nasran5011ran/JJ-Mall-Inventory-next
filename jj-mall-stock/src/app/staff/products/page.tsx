@@ -370,8 +370,8 @@ export default function StaffProductsPage() {
                             <span>{p.store.name}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                            ส่วนกลาง
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            ทุกร้านค้า
                           </span>
                         )}
                       </td>

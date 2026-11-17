@@ -76,9 +76,16 @@ export async function GET(req: NextRequest) {
       storeBalances[store.id] = await calculateStoreReconciliation(store.id);
     }
 
+    const defaultStore = staffStores[0] || null;
+    const enrichedIngredients = ingredients.map((ing) => ({
+      ...ing,
+      storeId: ing.storeId ?? defaultStore?.id ?? null,
+      store: ing.store ?? defaultStore,
+    }));
+
     return NextResponse.json({
       success: true,
-      ingredients,
+      ingredients: enrichedIngredients,
       categories,
       staffStores,
       storeBalances,
@@ -145,7 +152,16 @@ export async function POST(req: NextRequest) {
     const safetyStock = minStock !== undefined && minStock !== '' ? Number(minStock) : 0;
     const unitCost = costPerUnit !== undefined && costPerUnit !== '' ? Number(costPerUnit) : 0;
 
-    const targetStoreId = storeId && storeId !== '' && storeId !== 'CENTRAL' ? Number(storeId) : null;
+    let targetStoreId: number | null =
+      storeId && storeId !== '' && storeId !== 'CENTRAL' ? Number(storeId) : null;
+    if (!targetStoreId) {
+      const firstStore = await prisma.user.findFirst({
+        where: { role: 'STAFF', status: 'ACTIVE' },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      targetStoreId = firstStore?.id ?? null;
+    }
 
     const ingredient = await prisma.ingredient.create({
       data: {

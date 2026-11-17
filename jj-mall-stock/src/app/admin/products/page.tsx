@@ -878,7 +878,7 @@ export default function ProductsPage() {
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/50 text-emerald-900 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
               <option value="ALL">ร้านค้าทั้งหมด ({staffStores.length + 1})</option>
-              <option value="CENTRAL">ส่วนกลาง (ทุกร้านค้า)</option>
+              <option value="CENTRAL">เมนูใช้ทุกร้าน (ทุกร้านค้า)</option>
               {staffStores.map((st) => (
                 <option key={st.id} value={st.id}>
                   {st.name}

@@ -509,6 +509,12 @@ export default function IngredientsPage() {
     setShowNameMenu(false);
     setShowUnitMenu(false);
     setShowCategoryMenu(false);
+    const defaultStoreId =
+      selectedStoreId && selectedStoreId !== 'ALL' && selectedStoreId !== 'CENTRAL'
+        ? selectedStoreId
+        : staffStores[0]
+        ? String(staffStores[0].id)
+        : '';
     setFormData({
       code: `ING-${Math.floor(100 + Math.random() * 900)}`,
       name: '',
@@ -518,7 +524,7 @@ export default function IngredientsPage() {
       minStock: '0',
       costPerUnit: '0',
       status: 'ACTIVE',
-      storeId: selectedStoreId && selectedStoreId !== 'ALL' && selectedStoreId !== 'CENTRAL' ? selectedStoreId : '',
+      storeId: defaultStoreId,
     });
     setFormError(null);
     setModalOpen(true);
@@ -538,7 +544,7 @@ export default function IngredientsPage() {
       minStock: ing.minStock.toString(),
       costPerUnit: ing.costPerUnit ? ing.costPerUnit.toString() : '0',
       status: ing.status,
-      storeId: ing.storeId ? String(ing.storeId) : '',
+      storeId: ing.storeId ? String(ing.storeId) : staffStores[0] ? String(staffStores[0].id) : '',
     });
     setFormError(null);
     setModalOpen(true);
@@ -765,19 +771,6 @@ export default function IngredientsPage() {
               <span>เลือกร้านค้า:</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setSelectedStoreId('CENTRAL')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                selectedStoreId === 'CENTRAL'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-            >
-              <Warehouse className="w-3.5 h-3.5" />
-              <span>คลังส่วนกลาง ({ingredients.filter((i) => !i.storeId).length})</span>
-            </button>
-
             {staffStores.map((st) => {
               const count = ingredients.filter((i) => i.storeId === st.id || !i.storeId).length;
               const isSelected = selectedStoreId === String(st.id);
@@ -915,7 +908,6 @@ export default function IngredientsPage() {
               onChange={(e) => setSelectedStoreId(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-emerald-50/70 text-emerald-950 font-bold focus:outline-none cursor-pointer flex-1 md:flex-initial"
             >
-              <option value="CENTRAL">คลังส่วนกลาง</option>
               {staffStores.map((st) => (
                 <option key={st.id} value={st.id}>
                   ร้าน: {st.name}
@@ -1159,15 +1151,9 @@ export default function IngredientsPage() {
                               <div className="font-normal text-slate-700 text-xs">{ing.name}</div>
                               <div className="text-[11px] font-mono text-slate-400 mt-0.5 flex items-center gap-1.5">
                                 <span>{ing.code}</span>
-                                {ing.store ? (
-                                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
-                                    เฉพาะร้าน: {ing.store.name}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] bg-slate-100 text-slate-600">
-                                    ส่วนกลาง
-                                  </span>
-                                )}
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] bg-amber-50 text-amber-700 border border-amber-200">
+                                  ร้าน: {(ing.store || currentSelectedStore || staffStores[0])?.name || 'หน้าร้าน'}
+                                </span>
                               </div>
                             </td>
 
@@ -1519,22 +1505,22 @@ export default function IngredientsPage() {
               {/* Store Owner Selector */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ร้านค้าเจ้าของวัตถุดิบ
+                  ร้านค้าเจ้าของวัตถุดิบ <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.storeId}
                   onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+                  required
                   className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white font-medium text-slate-800"
                 >
-                  <option value="">ส่วนกลาง (ทุกร้านค้าใช้งานได้)</option>
                   {staffStores.map((st) => (
                     <option key={st.id} value={st.id}>
-                      เฉพาะร้าน: {st.name} (@{st.username})
+                      🏪 {st.name} (@{st.username})
                     </option>
                   ))}
                 </select>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  เลือก &ldquo;ส่วนกลาง&rdquo; หากต้องการให้ทุกร้านเห็นและใช้วัตถุดิบนี้ หรือเลือกร้านค้าเฉพาะเพื่อจำกัดการใช้งาน
+                  เลือกร้านค้าที่เป็นเจ้าของวัตถุดิบรายการนี้
                 </p>
               </div>
 
