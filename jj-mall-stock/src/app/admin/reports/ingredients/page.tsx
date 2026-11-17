@@ -229,54 +229,41 @@ export default function AdminIngredientsReportPage() {
       {/* Normal Screen UI (Hidden on print so it occupies 0px and avoids blank pages) */}
       <div className="print:hidden space-y-6">
         {/* 1. Header Toolbar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
-            <Wheat className="w-4 h-4" />
-            <span>รายงาน & การเงิน</span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="text-slate-500 dark:text-slate-400">การใช้วัตถุดิบและต้นทุน</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-xs text-slate-500">
+              วิเคราะห์ปริมาณการใช้วัตถุดิบทำเครื่องดื่ม, ต้นทุนขาย (COGS), ของเสีย และมูลค่าสต็อกคงคลัง ({filteredItems.length} รายการ)
+            </p>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span>รายงานการใช้วัตถุดิบ (Ingredient Usage)</span>
-            <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
-              {filteredItems.length} รายการ
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            วิเคราะห์ปริมาณการใช้วัตถุดิบทำเครื่องดื่ม, ต้นทุนขาย (COGS), ของเสีย และมูลค่าสต็อกคงคลัง
-          </p>
+
+          <div className="flex items-center gap-2.5 ml-auto">
+            <button
+              onClick={() => mutate()}
+              disabled={isValidating}
+              className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+              title="รีเฟรชข้อมูล"
+            >
+              <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">รีเฟรช</span>
+            </button>
+
+            <button
+              onClick={() => setPrintModalOpen(true)}
+              className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer transition-colors"
+            >
+              <Printer className="w-4 h-4 text-emerald-600" />
+              <span>พิมพ์รายงาน / PDF</span>
+            </button>
+
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>ส่งออก Excel</span>
+            </button>
+          </div>
         </div>
-
-        {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => mutate()}
-            disabled={isValidating}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
-            title="รีเฟรชข้อมูล"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isValidating ? 'animate-spin text-emerald-600' : ''}`} />
-            <span>รีเฟรช</span>
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-          >
-            <Download className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>ส่งออก Excel</span>
-          </button>
-
-          <button
-            onClick={() => setPrintModalOpen(true)}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-sm shadow-emerald-700/20"
-          >
-            <Printer className="w-4 h-4" />
-            <span>พิมพ์รายงาน / PDF</span>
-          </button>
-        </div>
-      </div>
 
       {/* Store Selection Tabs */}
       {stores.length > 0 && (
