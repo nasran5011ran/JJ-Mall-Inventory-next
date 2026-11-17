@@ -71,16 +71,30 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Action Header */}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-slate-500 hidden sm:block">
-          ภาพรวมยอดขาย สต็อกสินค้า และสถานะคลังวัตถุดิบแบบเรียลไทม์
-        </p>
-        <div className="flex items-center gap-2.5 ml-auto">
+      {/* 1. Header Banner & Quick Action Buttons */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-900 rounded-3xl p-6 sm:p-8 text-white shadow-lg shadow-emerald-900/10 relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 mb-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            แผงควบคุมหลัก • Real-time Inventory & Sales
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            JJ Mall Inventory Dashboard
+          </h1>
+          <p className="text-emerald-100 text-xs sm:text-sm mt-1 max-w-xl">
+            ติดตามสต็อกสินค้า วัตถุดิบ และยอดขายแบบเรียลไทม์ พร้อมระบบตัดสต็อกอัตโนมัติจากสูตรการผลิต (BOM)
+          </p>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2.5 relative z-10">
           <button
             onClick={fetchDashboardData}
             disabled={isValidating}
-            className="p-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors flex items-center gap-2 text-xs font-semibold cursor-pointer"
+            className="p-2.5 rounded-2xl bg-white/15 hover:bg-white/25 text-white transition-colors flex items-center gap-2 text-xs font-semibold backdrop-blur-xs cursor-pointer"
             title="รีเฟรชข้อมูล"
           >
             <RefreshCw className={`w-4 h-4 ${isValidating ? 'animate-spin' : ''}`} />
@@ -90,17 +104,17 @@ export default function DashboardPage() {
           <Link
             href="/admin/reports/sales"
             prefetch={true}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-emerald-700/20 cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 transition-all font-bold text-xs flex items-center gap-2 shadow-sm cursor-pointer"
           >
-            <ShoppingCart className="w-4 h-4" />
-            <span>ดูรายงานยอดขายประจำวัน</span>
+            <ShoppingCart className="w-4 h-4 text-emerald-700" />
+            <span>เปิดหน้าขาย POS</span>
           </Link>
 
           <Link
             href="/admin/stock-in"
-            className="px-4 py-2.5 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2 shadow-2xs cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-emerald-800/80 hover:bg-emerald-800 border border-emerald-500/30 text-white transition-all font-semibold text-xs flex items-center gap-2 cursor-pointer"
           >
-            <ArrowDownToLine className="w-4 h-4 text-emerald-600" />
+            <ArrowDownToLine className="w-4 h-4" />
             <span>รับสินค้าเข้า</span>
           </Link>
         </div>
