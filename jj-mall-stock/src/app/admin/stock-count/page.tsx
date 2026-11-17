@@ -869,26 +869,27 @@ export default function AdminStockCountPage() {
                   <tr>
                     <th className="py-2.5 px-3 text-center w-12 text-slate-400 font-normal">#</th>
                     <th className="py-2.5 px-3">รายการสินค้า / วัตถุดิบ</th>
+                    <th className="py-2.5 px-2 text-center w-16">หน่วยนับ</th>
                     {targetLocation === 'STORE' ? (
                       <>
                         <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
                         <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-orange-700">จ่ายทำลาย (-)</th>
-                        <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
+                        <th className="py-2.5 px-2.5 text-right w-24 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
                       </>
                     ) : (
-                      <th className="py-2.5 px-3 text-right">สต็อกในระบบ (คลังกลาง)</th>
+                      <th className="py-2.5 px-3 text-right">สต็อกในระบบ</th>
                     )}
-                    <th className="py-2.5 px-3 text-center w-36">ยอดนับได้จริง</th>
-                    <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
-                    <th className="py-2.5 px-3 text-center">สถานะ</th>
+                    <th className="py-2.5 px-3 text-center w-32">ยอดนับได้จริง</th>
+                    <th className="py-2.5 px-3 text-right w-24">ผลต่าง (Variance)</th>
+                    <th className="py-2.5 px-3 text-center w-28">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredModalIngredients.length === 0 ? (
                     <tr>
-                      <td colSpan={targetLocation === 'STORE' ? 10 : 6} className="py-12 text-center text-slate-400">
+                      <td colSpan={targetLocation === 'STORE' ? 11 : 7} className="py-12 text-center text-slate-400">
                         ไม่พบรายการสินค้าหรือวัตถุดิบที่ตรงกับการค้นหา
                       </td>
                     </tr>
@@ -961,23 +962,30 @@ export default function AdminStockCountPage() {
                             </div>
                           </td>
 
-                          {/* Location Specific Columns */}
+                          {/* Unit Column */}
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[11px]">
+                              {ing.unit}
+                            </span>
+                          </td>
+
+                          {/* Location Specific Columns (Numbers only, no repeated units) */}
                           {targetLocation === 'STORE' ? (
                             <>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-600">
-                                {openingQty.toLocaleString()} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                                {openingQty.toLocaleString()}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-emerald-700 font-bold">
-                                {inboundQty > 0 ? `+${inboundQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                                {inboundQty > 0 ? `+${inboundQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
-                                {salesQty > 0 ? `-${salesQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                                {salesQty > 0 ? `-${salesQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-orange-700 font-bold">
-                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
-                                {systemQty.toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{ing.unit}</span>
+                                {systemQty.toLocaleString()}
                               </td>
                             </>
                           ) : (
@@ -985,21 +993,17 @@ export default function AdminStockCountPage() {
                               <span className="font-mono font-black text-xs sm:text-sm text-slate-800">
                                 {systemQty.toLocaleString()}
                               </span>
-                              <span className="text-xs font-semibold text-slate-500 ml-1.5">{ing.unit}</span>
                             </td>
                           )}
 
                           {/* Actual Input - Read-only (พิมพ์ไม่ได้) */}
                           <td className="py-2.5 px-3 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <input
-                                type="text"
-                                readOnly
-                                value={systemQty.toLocaleString()}
-                                className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 bg-slate-50 text-slate-800 focus:outline-none select-none"
-                              />
-                              <span className="text-[11px] font-bold text-slate-600 w-8 text-left truncate">{ing.unit}</span>
-                            </div>
+                            <input
+                              type="text"
+                              readOnly
+                              value={systemQty.toLocaleString()}
+                              className="w-24 sm:w-28 px-2.5 py-1 text-xs sm:text-sm text-right font-mono font-black rounded-xl border-2 border-slate-300 bg-slate-50 text-slate-800 focus:outline-none select-none"
+                            />
                           </td>
 
                           {/* Diff */}
@@ -1009,11 +1013,11 @@ export default function AdminStockCountPage() {
                                 <span className="text-emerald-600 font-black">0</span>
                               ) : diff < 0 ? (
                                 <span className="text-red-600 font-black">
-                                  {diff.toLocaleString()} {ing.unit}
+                                  {diff.toLocaleString()}
                                 </span>
                               ) : (
                                 <span className="text-blue-600 font-black">
-                                  +{diff.toLocaleString()} {ing.unit}
+                                  +{diff.toLocaleString()}
                                 </span>
                               )
                             ) : (
@@ -1202,26 +1206,27 @@ export default function AdminStockCountPage() {
                 <thead className="sticky top-0 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 text-slate-700 font-extrabold uppercase tracking-wider z-10">
                   <tr>
                     <th className="py-2.5 px-3">รหัส / รายการสินค้า-วัตถุดิบ</th>
+                    <th className="py-2.5 px-2 text-center w-16">หน่วยนับ</th>
                     {selectedCount.location === 'STORE' || selectedCount.storeId ? (
                       <>
                         <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
                         <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-orange-700">จ่ายทำลาย (-)</th>
-                        <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
+                        <th className="py-2.5 px-2.5 text-right w-24 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
                       </>
                     ) : (
-                      <th className="py-2.5 px-3 text-right">ยอดในคลังกลาง</th>
+                      <th className="py-2.5 px-3 text-right">ยอดในระบบ</th>
                     )}
-                    <th className="py-2.5 px-3 text-right">ยอดนับจริง</th>
-                    <th className="py-2.5 px-3 text-right">ผลต่าง (Variance)</th>
-                    <th className="py-2.5 px-3 text-center">สถานะ</th>
+                    <th className="py-2.5 px-3 text-right w-24">ยอดนับจริง</th>
+                    <th className="py-2.5 px-3 text-right w-24">ผลต่าง (Variance)</th>
+                    <th className="py-2.5 px-3 text-center w-28">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredDetailItems.length === 0 ? (
                     <tr>
-                      <td colSpan={selectedCount.location === 'STORE' || selectedCount.storeId ? 9 : 5} className="py-12 text-center text-slate-400">
+                      <td colSpan={selectedCount.location === 'STORE' || selectedCount.storeId ? 10 : 6} className="py-12 text-center text-slate-400">
                         ไม่พบรายการที่ตรงกับการค้นหา
                       </td>
                     </tr>
@@ -1250,22 +1255,29 @@ export default function AdminStockCountPage() {
                             </div>
                           </td>
 
+                          {/* Unit Column */}
+                          <td className="py-2.5 px-2 text-center">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[11px]">
+                              {item.ingredient?.unit}
+                            </span>
+                          </td>
+
                           {isStoreCount ? (
                             <>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-slate-600">
-                                {openQty.toLocaleString()} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                                {openQty.toLocaleString()}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-emerald-700 font-bold">
-                                {inQty > 0 ? `+${inQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                                {inQty > 0 ? `+${inQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
-                                {saleQty > 0 ? `-${saleQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                                {saleQty > 0 ? `-${saleQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-orange-700 font-bold">
-                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'}
                               </td>
                               <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
-                                {Number(item.systemQuantity).toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{item.ingredient?.unit}</span>
+                                {Number(item.systemQuantity).toLocaleString()}
                               </td>
                             </>
                           ) : (
@@ -1273,7 +1285,6 @@ export default function AdminStockCountPage() {
                               <span className="font-mono font-bold text-xs sm:text-sm text-slate-700">
                                 {Number(item.systemQuantity).toLocaleString()}
                               </span>
-                              <span className="text-[11px] text-slate-500 ml-1">{item.ingredient?.unit}</span>
                             </td>
                           )}
 
@@ -1281,7 +1292,6 @@ export default function AdminStockCountPage() {
                             <span className="font-mono font-black text-xs sm:text-sm text-slate-900">
                               {Number(item.actualQuantity).toLocaleString()}
                             </span>
-                            <span className="text-[11px] font-bold text-slate-600 ml-1">{item.ingredient?.unit}</span>
                           </td>
 
                           <td className="py-2.5 px-3 text-right font-mono font-bold text-xs sm:text-sm">
@@ -1289,11 +1299,11 @@ export default function AdminStockCountPage() {
                               <span className="text-emerald-600 font-black">0</span>
                             ) : diff < 0 ? (
                               <span className="text-red-600 font-black">
-                                {diff.toLocaleString()} {item.ingredient?.unit}
+                                {diff.toLocaleString()}
                               </span>
                             ) : (
                               <span className="text-blue-600 font-black">
-                                +{diff.toLocaleString()} {item.ingredient?.unit}
+                                +{diff.toLocaleString()}
                               </span>
                             )}
                           </td>
