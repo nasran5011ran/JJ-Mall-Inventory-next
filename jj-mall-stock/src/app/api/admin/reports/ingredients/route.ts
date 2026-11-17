@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { TransactionType } from '@prisma/client';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,6 +17,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get('period') || '30days';
     const category = searchParams.get('category') || 'ALL';
+    const storeIdParam = searchParams.get('storeId') || '';
     const startDateParam = searchParams.get('startDate');
     const endDateParam = searchParams.get('endDate');
 
@@ -40,75 +42,114 @@ export async function GET(req: NextRequest) {
       dateFilter = { gte: thirtyDaysAgo };
     } // 'all' means no dateFilter
 
-    // 1. Fetch active ingredients
-    const ingredientWhere: any = { status: 'ACTIVE' };
-    if (category !== 'ALL') {
-      ingredientWhere.category = category;
+    // 1. Fetch active STAFF stores
+    const stores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, name: true, username: true },
+      orderBy: { id: 'asc' },
+    });
+
+    const selectedStore =
+      (storeIdParam ? stores.find((s) => String(s.id) === String(storeIdParam)) : null) ||
+      stores[0] ||
+      null;
+
+    // 2. Calculate real store reconciliation balances (no central warehouse stock)
+    const storeBalances = selectedStore
+      ? await calculateStoreReconciliation(selectedStore.id)
+      : [];
+
+    // 3. Distinct categories from store ingredients
+    const categories = Array.from(
+      new Set(storeBalances.map((b) => b.category || 'ทั่วไป').filter(Boolean))
+    );
+
+    // 4. Filter by category if requested
+    const filteredBalances =
+      category === 'ALL'
+        ? storeBalances
+        : storeBalances.filter((b) => (b.category || 'ทั่วไป') === category);
+
+    // 5. Fetch store transactions within dateFilter for period-specific usage/inbound/waste if dateFilter is active
+    const hasDateFilter = Boolean(dateFilter.gte || dateFilter.lte);
+    const periodInboundMap = new Map<number, number>();
+    const periodSalesMap = new Map<number, number>();
+    const periodWasteMap = new Map<number, number>();
+
+    if (hasDateFilter && selectedStore) {
+      const periodTxs = await prisma.stockTransaction.findMany({
+        where: {
+          createdAt: dateFilter,
+          OR: [
+            { createdById: selectedStore.id },
+            { note: { contains: `[STORE_ID:${selectedStore.id}]` } },
+            { note: { contains: `@${selectedStore.username}` } },
+            { note: { contains: selectedStore.name } },
+          ],
+        },
+      });
+
+      for (const tx of periodTxs) {
+        if (tx.type === TransactionType.PURCHASE_IN) {
+          periodInboundMap.set(
+            tx.ingredientId,
+            (periodInboundMap.get(tx.ingredientId) || 0) + Number(tx.quantityIn)
+          );
+        } else if (tx.type === TransactionType.TRANSFER_OUT) {
+          periodInboundMap.set(
+            tx.ingredientId,
+            (periodInboundMap.get(tx.ingredientId) || 0) + Number(tx.quantityOut)
+          );
+        } else if (tx.type === TransactionType.ADJUST_ADD) {
+          periodInboundMap.set(
+            tx.ingredientId,
+            (periodInboundMap.get(tx.ingredientId) || 0) + Number(tx.quantityIn)
+          );
+        } else if (tx.type === TransactionType.SALE_DEDUCT) {
+          periodSalesMap.set(
+            tx.ingredientId,
+            (periodSalesMap.get(tx.ingredientId) || 0) + Number(tx.quantityOut)
+          );
+        } else if (
+          tx.type === TransactionType.DAMAGE_OUT ||
+          tx.type === TransactionType.ADJUST_SUB
+        ) {
+          periodWasteMap.set(
+            tx.ingredientId,
+            (periodWasteMap.get(tx.ingredientId) || 0) + Number(tx.quantityOut)
+          );
+        }
+      }
     }
 
-    const ingredients = await prisma.ingredient.findMany({
-      where: ingredientWhere,
-      orderBy: [{ category: 'asc' }, { name: 'asc' }],
-    });
-
-    // 2. Fetch all categories for filter options
-    const allIngredients = await prisma.ingredient.findMany({
-      where: { status: 'ACTIVE' },
-      select: { category: true },
-      distinct: ['category'],
-    });
-    const categories = allIngredients.map((i) => i.category).filter(Boolean);
-
-    // 3. Fetch transaction aggregates within dateFilter
-    const txWhere: any = {};
-    if (dateFilter.gte || dateFilter.lte) {
-      txWhere.createdAt = dateFilter;
-    }
-
-    const txGrouped = await prisma.stockTransaction.groupBy({
-      by: ['ingredientId', 'type'],
-      where: txWhere,
-      _sum: {
-        quantityIn: true,
-        quantityOut: true,
-      },
-    });
-
-    // Create lookup map
-    const txMap = new Map<string, number>();
-    txGrouped.forEach((row) => {
-      const inVal = Number(row._sum.quantityIn || 0);
-      const outVal = Number(row._sum.quantityOut || 0);
-      txMap.set(`${row.ingredientId}_${row.type}_IN`, inVal);
-      txMap.set(`${row.ingredientId}_${row.type}_OUT`, outVal);
-    });
-
-    // 4. Calculate stats per ingredient
+    // 6. Calculate stats per ingredient using real store stock
     let totalUsedCost = 0;
     let totalWasteCost = 0;
     let totalInboundCost = 0;
     let totalInventoryValue = 0;
     let totalUsedVolume = 0;
 
-    const items = ingredients.map((ing) => {
-      const id = ing.id;
-      const cost = Number(ing.costPerUnit || 0);
-      const currStock = Number(ing.currentStock || 0);
-      const minStock = Number(ing.minStock || 0);
+    const items = filteredBalances.map((b) => {
+      const id = b.ingredientId;
+      const cost = Number(b.costPerUnit || 0);
+      const currStock = Number(b.expectedStock || 0);
+      const openingStock = Number(b.openingQuantity || 0);
 
-      // Quantities
-      const purchaseIn = txMap.get(`${id}_${TransactionType.PURCHASE_IN}_IN`) || 0;
-      const adjustAdd = txMap.get(`${id}_${TransactionType.ADJUST_ADD}_IN`) || 0;
-      const inboundQty = purchaseIn + adjustAdd;
+      // Use store reconciliation totals, or period-filtered store totals when a short period ('today' / '7days') is selected
+      const inboundQty =
+        period === 'today' || period === '7days'
+          ? periodInboundMap.get(id) ?? Number(b.inboundQuantity || 0)
+          : Number(b.inboundQuantity || 0);
 
-      const salesUsage = txMap.get(`${id}_${TransactionType.SALE_DEDUCT}_OUT`) || 0;
-      const damageOut = txMap.get(`${id}_${TransactionType.DAMAGE_OUT}_OUT`) || 0;
-      const adjustSub = txMap.get(`${id}_${TransactionType.ADJUST_SUB}_OUT`) || 0;
-      const wasteQty = damageOut + adjustSub;
-      const transferOut = txMap.get(`${id}_${TransactionType.TRANSFER_OUT}_OUT`) || 0;
+      const salesUsage =
+        period === 'today' || period === '7days'
+          ? periodSalesMap.get(id) ?? Number(b.salesQuantity || 0)
+          : Number(b.salesQuantity || 0);
 
-      // Opening stock estimate
-      const openingStock = Math.max(0, currStock - inboundQty + salesUsage + wasteQty + transferOut);
+      const wasteQty =
+        period === 'today' || period === '7days'
+          ? periodWasteMap.get(id) ?? Number(b.wasteQuantity || 0)
+          : Number(b.wasteQuantity || 0);
 
       // Financials
       const usedCost = salesUsage * cost;
@@ -126,33 +167,34 @@ export async function GET(req: NextRequest) {
       totalUsedVolume += salesUsage;
 
       return {
-        id: ing.id,
-        code: ing.code,
-        name: ing.name,
-        category: ing.category,
-        unit: ing.unit,
+        id,
+        code: b.code,
+        name: b.name,
+        category: b.category || 'ทั่วไป',
+        unit: b.unit,
         costPerUnit: cost,
         openingStock: parseFloat(openingStock.toFixed(2)),
         inboundQty: parseFloat(inboundQty.toFixed(2)),
         salesUsage: parseFloat(salesUsage.toFixed(2)),
         wasteQty: parseFloat(wasteQty.toFixed(2)),
-        transferOut: parseFloat(transferOut.toFixed(2)),
+        transferOut: 0,
         currentStock: parseFloat(currStock.toFixed(2)),
-        minStock: parseFloat(minStock.toFixed(2)),
+        minStock: 0,
         usedCost: parseFloat(usedCost.toFixed(2)),
         wasteCost: parseFloat(wasteCost.toFixed(2)),
         inventoryValue: parseFloat(inventoryValue.toFixed(2)),
         wastePercent: parseFloat(wastePercent.toFixed(1)),
+        storeName: selectedStore?.name || 'หน้าร้าน',
       };
     });
 
-    // 5. Top 5 ingredients by cost used
+    // 7. Top 5 ingredients by cost used
     const topUsed = [...items]
       .filter((i) => i.salesUsage > 0 || i.usedCost > 0)
       .sort((a, b) => b.usedCost - a.usedCost)
       .slice(0, 5);
 
-    // 6. Category breakdown
+    // 8. Category breakdown
     const catMap = new Map<string, { count: number; usedCost: number; inventoryValue: number }>();
     items.forEach((item) => {
       const catKey = item.category || 'ทั่วไป';
@@ -174,6 +216,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
+        stores,
+        selectedStore,
         items,
         summary: {
           totalIngredientsCount: items.length,
@@ -189,6 +233,7 @@ export async function GET(req: NextRequest) {
         filter: {
           period,
           category,
+          storeId: selectedStore?.id || null,
           startDate: startDateParam,
           endDate: endDateParam,
         },

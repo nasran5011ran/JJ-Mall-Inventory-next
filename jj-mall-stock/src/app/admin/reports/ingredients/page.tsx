@@ -24,6 +24,7 @@ import {
   BarChart3,
   DollarSign,
   Boxes,
+  Store,
 } from 'lucide-react';
 
 interface IngredientReportItem {
@@ -64,6 +65,7 @@ interface ReportSummary {
 }
 
 export default function AdminIngredientsReportPage() {
+  const [storeId, setStoreId] = useState('');
   const [period, setPeriod] = useState<'today' | '7days' | '30days' | 'all'>('30days');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [search, setSearch] = useState('');
@@ -73,12 +75,16 @@ export default function AdminIngredientsReportPage() {
   const apiUrl = useMemo(() => {
     const params = new URLSearchParams();
     params.set('period', period);
+    if (storeId) params.set('storeId', storeId);
     if (categoryFilter !== 'ALL') params.set('category', categoryFilter);
     return `/api/admin/reports/ingredients?${params.toString()}`;
-  }, [period, categoryFilter]);
+  }, [period, storeId, categoryFilter]);
 
   const { data: swrData, isLoading, isValidating, mutate } = useSWR(apiUrl);
 
+  const stores: { id: number; name: string; username: string }[] = swrData?.data?.stores || [];
+  const selectedStore: { id: number; name: string; username: string } | null =
+    swrData?.data?.selectedStore || stores[0] || null;
   const reportItems: IngredientReportItem[] = swrData?.data?.items || [];
   const summary: ReportSummary | undefined = swrData?.data?.summary;
   const categories: string[] = swrData?.data?.categories || [];
@@ -271,6 +277,35 @@ export default function AdminIngredientsReportPage() {
           </button>
         </div>
       </div>
+
+      {/* Store Selection Tabs */}
+      {stores.length > 0 && (
+        <div className="flex">
+          <div className="w-fit max-w-full inline-flex items-center gap-1.5 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto border border-slate-200">
+            <div className="px-3 py-1.5 text-xs font-bold text-slate-500 flex items-center shrink-0">
+              <span>เลือกร้านค้า:</span>
+            </div>
+            {stores.map((st) => {
+              const isSelected = String(selectedStore?.id) === String(st.id);
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setStoreId(String(st.id))}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  <span>สต็อกร้าน: {st.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 2. Quick Period & Category Filters */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
@@ -823,6 +858,10 @@ export default function AdminIngredientsReportPage() {
               <div className="mt-3.5 flex items-center justify-between text-[11px] font-normal border-t border-black pt-2 text-black">
                 <div className="flex items-center gap-5">
                   <div>
+                    <span className="font-medium">ร้านค้า: </span>
+                    <span className="font-semibold">{selectedStore?.name || 'หน้าร้าน'}</span>
+                  </div>
+                  <div>
                     <span className="font-medium">ช่วงเวลา: </span>
                     <span className="font-mono">{periodLabel}</span>
                   </div>
@@ -862,22 +901,36 @@ export default function AdminIngredientsReportPage() {
                   แสดงทั้งหมด {filteredItems.length} รายการ
                 </span>
               </div>
-              <div className="border border-black overflow-hidden bg-white">
-                <table className="w-full text-left text-[9.5px] border-collapse text-black font-normal">
+              <div className="border border-black bg-white">
+                <table className="w-full table-fixed text-left text-[9.5px] border-collapse text-black font-normal">
+                  <colgroup>
+                    <col style={{ width: '4.5%' }} />
+                    <col style={{ width: '9.5%' }} />
+                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '9.5%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '6.5%' }} />
+                    <col style={{ width: '6.5%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '6.5%' }} />
+                    <col style={{ width: '7.5%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '8.5%' }} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-black text-black font-semibold bg-white text-center">
-                      <th className="py-1.5 px-1.5 border-r border-black w-8 text-center">ลำดับ</th>
-                      <th className="py-1.5 px-2 border-r border-black w-24">รหัสวัตถุดิบ</th>
-                      <th className="py-1.5 px-2.5 border-r border-black text-left">ชื่อวัตถุดิบ</th>
-                      <th className="py-1.5 px-2 border-r border-black w-20 text-center">หมวดหมู่</th>
-                      <th className="py-1.5 px-1.5 border-r border-black w-12 text-center">หน่วย</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ยกมา</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-16">รับเข้า</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-20">ใช้ผลิต/ขาย</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ของเสีย</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-20">คงเหลือ</th>
-                      <th className="py-1.5 px-2 border-r border-black text-right w-16">ต้นทุน/หน.</th>
-                      <th className="py-1.5 px-2.5 text-right w-24">มูลค่าใช้จริง (฿)</th>
+                      <th className="py-1.5 px-1 border-r border-black text-center">ลำดับ</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-center">รหัสวัตถุดิบ</th>
+                      <th className="py-1.5 px-2 border-r border-black text-left">ชื่อวัตถุดิบ</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-center">หมวดหมู่</th>
+                      <th className="py-1.5 px-1 border-r border-black text-center">หน่วย</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">ยกมา</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">รับเข้า</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">ใช้ผลิต/ขาย</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">ของเสีย</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">คงเหลือ</th>
+                      <th className="py-1.5 px-1.5 border-r border-black text-right">ต้นทุน/หน.</th>
+                      <th className="py-1.5 px-2 text-right">มูลค่าใช้จริง (฿)</th>
                     </tr>
                   </thead>
 
@@ -890,41 +943,41 @@ export default function AdminIngredientsReportPage() {
                       </tr>
                     ) : (
                       filteredItems.map((item, idx) => (
-                        <tr key={item.id} className="border-b border-black hover:bg-slate-50/50">
-                          <td className="py-1 px-1.5 text-center border-r border-black font-sans text-black">
+                        <tr key={item.id} className="border-b border-black align-top">
+                          <td className="py-1 px-1 text-center border-r border-black font-sans text-black">
                             {idx + 1}
                           </td>
-                          <td className="py-1 px-2 border-r border-black text-black whitespace-nowrap">
+                          <td className="py-1 px-1.5 border-r border-black text-center text-black break-all">
                             {item.code}
                           </td>
-                          <td className="py-1 px-2.5 border-r border-black font-sans text-black truncate max-w-[180px] text-left">
+                          <td className="py-1 px-2 border-r border-black font-sans text-black whitespace-normal break-words leading-snug text-left">
                             {item.name}
                           </td>
-                          <td className="py-1 px-2 border-r border-black text-center font-sans text-black">
+                          <td className="py-1 px-1.5 border-r border-black text-center font-sans text-black whitespace-normal break-words leading-snug">
                             {item.category}
                           </td>
-                          <td className="py-1 px-1.5 border-r border-black text-center font-sans text-black">
+                          <td className="py-1 px-1 border-r border-black text-center font-sans text-black whitespace-normal break-words leading-snug">
                             {item.unit}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.openingStock.toFixed(2)}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.inboundQty > 0 ? item.inboundQty.toFixed(2) : '-'}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.salesUsage > 0 ? `(${item.salesUsage.toFixed(2)})` : '-'}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.wasteQty > 0 ? `(${item.wasteQty.toFixed(2)})` : '-'}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.currentStock.toFixed(2)}
                           </td>
-                          <td className="py-1 px-2 text-right border-r border-black text-black">
+                          <td className="py-1 px-1.5 text-right border-r border-black text-black whitespace-nowrap">
                             {item.costPerUnit.toFixed(2)}
                           </td>
-                          <td className="py-1 px-2.5 text-right font-medium text-black">
+                          <td className="py-1 px-2 text-right font-medium text-black whitespace-nowrap">
                             {item.usedCost > 0 ? item.usedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 }) : '0.00'}
                           </td>
                         </tr>
