@@ -201,35 +201,28 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        {/* Card 4: Stock Alert (Out of Stock / In Stock) */}
+        {/* Card 4: Stock Summary */}
         <Link
           href="/admin/reports/stock"
-          className={`group p-4 sm:p-5 rounded-3xl border shadow-2xs hover:shadow-md transition-all block cursor-pointer min-w-0 overflow-hidden ${
-            Number(kpis.outOfStockIngredients || 0) > 0
-              ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400'
-              : 'bg-white border-slate-200/80 hover:border-emerald-300'
-          }`}
-          title="คลิกเพื่อดูรายงานสต็อกและสั่งซื้อเพิ่ม"
+          className="group bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-emerald-300 transition-all block cursor-pointer min-w-0 overflow-hidden"
+          title="คลิกเพื่อดูรายงานสรุปสต็อกคงเหลือและมูลค่า"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-bold text-slate-400 group-hover:text-amber-800 uppercase tracking-wider transition-colors truncate">
-              แจ้งเตือนสต็อก
+            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-700 uppercase tracking-wider transition-colors truncate">
+              คลังวัตถุดิบพร้อมใช้
             </span>
-            <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 group-hover:bg-amber-600 group-hover:text-white transition-all flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 min-w-0">
-            <div className="text-2xl sm:text-3xl font-black text-amber-700 truncate">
-              {Number(kpis.outOfStockIngredients || 0)}{' '}
+            <div className="text-2xl sm:text-3xl font-black text-slate-800 group-hover:text-emerald-700 transition-colors truncate">
+              {Number(kpis.inStockIngredients ?? kpis.totalIngredients ?? 0)}{' '}
               <span className="text-sm font-semibold text-slate-500">รายการ</span>
             </div>
-            <div className="text-xs text-amber-800 mt-1 flex items-center justify-between gap-1 font-medium">
-              <span className="truncate">
-                <span className="text-emerald-700">มีสต็อก {kpis.inStockIngredients ?? (Number(kpis.totalIngredients || 0) - Number(kpis.outOfStockIngredients || 0))}</span> •{' '}
-                <span className="text-red-600">สต็อกหมด {Number(kpis.outOfStockIngredients || 0)}</span>
-              </span>
-              <ChevronRight className="w-3.5 h-3.5 text-amber-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+            <div className="text-xs text-slate-500 mt-1 flex items-center justify-between gap-1">
+              <span className="truncate">ดูรายงานสต็อกและมูลค่าคงเหลือ</span>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all shrink-0" />
             </div>
           </div>
         </Link>
@@ -392,8 +385,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* 4. Row 2: Top Ingredients Consumed & Stock Warnings */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="alerts">
+      {/* 4. Row 2: Top Ingredients Consumed & Recent Sales Transactions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Widget: Ingredients Consumed Today */}
         <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-2xs min-w-0 overflow-hidden">
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -449,66 +442,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Widget: Out of Stock Warnings */}
+        {/* 5. Recent Sales Transactions */}
         <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-2xs min-w-0 overflow-hidden">
-          <div className="flex items-center justify-between gap-2 mb-4">
-            <div className="min-w-0">
-              <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                <span className="truncate">แจ้งเตือนวัตถุดิบสต็อกหมด (0)</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                รายการวัตถุดิบของร้านที่ยอดคงเหลือเป็น 0 ต้องรับเข้าสต็อกเพิ่ม
-              </p>
-            </div>
-            <Link
-              href="/admin/ingredients"
-              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer shrink-0"
-            >
-              ดูคลังวัตถุดิบ
-            </Link>
-          </div>
-
-          {lowStockList.length === 0 ? (
-            <div className="p-8 text-center text-emerald-800 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-xs flex flex-col items-center gap-2">
-              <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-              <span className="font-bold">สต็อกวัตถุดิบทุกรายการมีพร้อมใช้งาน</span>
-              <span className="text-[11px] text-emerald-700/80">ไม่มีรายการใดที่สต็อกหมด (0)</span>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {lowStockList.map((item: any) => (
-                <div
-                  key={item.code}
-                  className="p-3 rounded-2xl border bg-red-50/70 border-red-200 text-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-all min-w-0"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-xl bg-red-200 text-red-800 shrink-0">
-                      <XCircle className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-bold text-slate-800 truncate">{item.name}</div>
-                      <div className="text-[11px] text-slate-500 font-mono truncate">
-                        รหัส: {item.code} • คงเหลือ {item.currentStock} {item.unit}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/admin/stock-in?code=${item.code}`}
-                    className="px-3 py-1.5 rounded-xl font-bold text-xs bg-white border border-slate-200 shadow-2xs hover:bg-slate-50 text-slate-800 transition-colors cursor-pointer shrink-0 text-center"
-                  >
-                    + สั่งซื้อ/รับเข้า
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 5. Recent Sales Transactions */}
-      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-2xs min-w-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
           <div className="min-w-0">
             <h3 className="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
@@ -571,6 +506,7 @@ export default function DashboardPage() {
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

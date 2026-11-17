@@ -53,3 +53,8 @@ Remove-Item -Recurse -Force .next //
 
 
 
+git pull origin main   //อัปเดตเวอร์ชั่นใหม่
+cd jj-mall-stock 
+npm install
+npx prisma generate
+
