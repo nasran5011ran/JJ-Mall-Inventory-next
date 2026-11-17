@@ -14,10 +14,27 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const myOnly = searchParams.get('myOnly') === 'true';
 
+    const [activeStores, inactiveStores] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'ACTIVE' },
+        select: { id: true },
+      }),
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'INACTIVE' },
+        select: { id: true },
+      }),
+    ]);
+
+    if (activeStores.length === 0) {
+      return NextResponse.json({ success: true, sales: [] });
+    }
+
+    const inactiveIds = inactiveStores.map((s) => s.id);
     const where: any = {};
     if (myOnly || session.role === 'STAFF') {
-      // If staff requests or myOnly flag, filter by current user
       if (myOnly) where.createdById = session.id;
+    } else if (inactiveIds.length > 0) {
+      where.createdById = { notIn: inactiveIds };
     }
 
     const sales = await prisma.sale.findMany({

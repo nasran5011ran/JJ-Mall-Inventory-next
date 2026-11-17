@@ -43,25 +43,38 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { name, role, status, newPassword } = body;
 
     // Safety guard: Cannot deactivate or demote own active admin account
-    if (session.id === userId) {
+    if (session.id === userId || user.role === 'ADMIN') {
       if (status === 'INACTIVE') {
         return NextResponse.json(
-          { success: false, message: 'ไม่สามารถระงับการใช้งานบัญชีของตนเองได้' },
+          { success: false, message: 'ไม่สามารถระงับการใช้งานบัญชีผู้ดูแลระบบ (Admin) ได้' },
           { status: 400 }
         );
       }
       if (role && role !== 'ADMIN') {
         return NextResponse.json(
-          { success: false, message: 'ไม่สามารถเปลี่ยนสิทธิ์ของตนเองออกจากผู้ดูแลระบบได้' },
+          { success: false, message: 'ไม่สามารถเปลี่ยนสิทธิ์ของบัญชีผู้ดูแลระบบ (Admin) ได้' },
           { status: 400 }
         );
       }
     }
 
+    // Prevent promoting a STAFF user to ADMIN when an ADMIN already exists
+    if (user.role !== 'ADMIN' && role === 'ADMIN') {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'ระบบอนุญาตให้มีบัญชีผู้ดูแลระบบ (Admin) ได้เพียง 1 บัญชีเท่านั้น',
+        },
+        { status: 400 }
+      );
+    }
+
     const updateData: any = {};
     if (name && name.trim()) updateData.name = name.trim();
-    if (role && (role === 'ADMIN' || role === 'STAFF')) {
-      updateData.role = role === 'ADMIN' ? Role.ADMIN : Role.STAFF;
+    if (user.role === 'ADMIN') {
+      updateData.role = Role.ADMIN;
+    } else {
+      updateData.role = Role.STAFF;
     }
     if (status && (status === 'ACTIVE' || status === 'INACTIVE')) {
       updateData.status = status;
@@ -104,7 +117,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 }
 
 // DELETE: Remove or deactivate user (Admin only)
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     const session = await getSession();
     if (!session || session.role !== 'ADMIN') {
@@ -150,6 +163,13 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       return NextResponse.json(
         { success: false, message: 'ไม่พบผู้ใช้งานนี้ในระบบ' },
         { status: 404 }
+      );
+    }
+
+    if (user.role === 'ADMIN') {
+      return NextResponse.json(
+        { success: false, message: 'ไม่สามารถลบบัญชีผู้ดูแลระบบ (Admin) หลักได้' },
+        { status: 400 }
       );
     }
 

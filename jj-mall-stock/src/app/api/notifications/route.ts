@@ -12,6 +12,34 @@ export async function GET() {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
+    const activeStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true },
+    });
+
+    if (activeStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          kpis: {
+            totalCount: 0,
+            totalActionable: 0,
+            outOfStockCount: 0,
+            lowStockCount: 0,
+            centralLowCount: 0,
+            storeLowCount: 0,
+            lowIngredientsCount: 0,
+            pendingAdjustmentsCount: 0,
+            pendingRequisitionsCount: 0,
+            discrepancyCount: 0,
+            recentActivityCount: 0,
+            staffMenuActivityCount: 0,
+          },
+          notifications: [],
+        },
+      });
+    }
+
     // 1. Fetch Ingredients for Stock Alerts (Critical & Low)
     const activeIngredients = await prisma.ingredient.findMany({
       where: { status: 'ACTIVE' },

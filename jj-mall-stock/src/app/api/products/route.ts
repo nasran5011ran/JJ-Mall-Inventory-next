@@ -102,9 +102,24 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
+    // If all store accounts are suspended (INACTIVE), hide all products
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        products: [],
+        categories: [],
+        staffStores: [],
+      });
+    }
+
+    const activeStoreIds = new Set(staffStores.map((s) => s.id));
+    const visibleProducts = products.filter(
+      (p) => !p.storeId || activeStoreIds.has(p.storeId)
+    );
+
     return NextResponse.json({
       success: true,
-      products,
+      products: visibleProducts,
       categories,
       staffStores,
     });

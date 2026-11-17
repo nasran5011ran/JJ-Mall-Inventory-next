@@ -56,6 +56,21 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    const inactiveStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'INACTIVE' },
+      select: { id: true, username: true, name: true },
+    });
+
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        stockCounts: [],
+        ingredients: [],
+        staffStores: [],
+        storeBalances: {},
+      });
+    }
+
     // 3. Pre-calculate store balances for each staff store for instant UI selection
     const storeBalances: Record<number, any[]> = {};
     for (const store of staffStores) {
@@ -63,7 +78,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Fetch Stock Count records with items
-    const rawStockCounts = await prisma.stockCount.findMany({
+    const allRawStockCounts = await prisma.stockCount.findMany({
       where: whereClause,
       include: {
         createdBy: {
@@ -79,6 +94,21 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
+    });
+
+    const inactiveIds = new Set(inactiveStores.map((s) => s.id));
+    const rawStockCounts = allRawStockCounts.filter((sc) => {
+      if (sc.storeId && inactiveIds.has(sc.storeId)) return false;
+      if (inactiveIds.has(sc.createdById)) return false;
+      for (const inact of inactiveStores) {
+        if (
+          sc.note?.includes(inact.name) ||
+          sc.note?.includes(`@${inact.username}`)
+        ) {
+          return false;
+        }
+      }
+      return true;
     });
 
     // 5. Transaction breakdown for warehouse reporting and daily sales rate

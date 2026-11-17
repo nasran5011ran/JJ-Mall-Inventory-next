@@ -84,6 +84,40 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    const inactiveStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'INACTIVE' },
+      select: { id: true, username: true, name: true },
+    });
+
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        adjustments: [],
+        ingredients: [],
+        staffStores: [],
+        metrics: {
+          pendingCount: 0,
+          approvedCount: 0,
+          rejectedCount: 0,
+          totalCount: 0,
+        },
+      });
+    }
+
+    const inactiveIds = new Set(inactiveStores.map((s) => s.id));
+    const visibleAdjustments = adjustments.filter((adj) => {
+      if (inactiveIds.has(adj.requestedById)) return false;
+      for (const inact of inactiveStores) {
+        if (
+          adj.reason?.includes(inact.name) ||
+          adj.reason?.includes(`@${inact.username}`)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
     // 3. Fetch all active ingredients for new adjustment creation (using store stock)
     const defaultStoreId = session.role === 'STAFF' ? session.id : staffStores[0]?.id;
     const storeBalMap = new Map<number, number>();
@@ -113,25 +147,20 @@ export async function GET(req: NextRequest) {
     }));
 
     // 4. Compute KPI metrics
-    const allAdjustments = await prisma.stockAdjustment.findMany({
-      where: session.role === 'STAFF' ? { requestedById: session.id } : undefined,
-      select: { status: true },
-    });
-
-    const pendingCount = allAdjustments.filter((a) => a.status === 'PENDING').length;
-    const approvedCount = allAdjustments.filter((a) => a.status === 'APPROVED').length;
-    const rejectedCount = allAdjustments.filter((a) => a.status === 'REJECTED').length;
+    const pendingCount = visibleAdjustments.filter((a) => a.status === 'PENDING').length;
+    const approvedCount = visibleAdjustments.filter((a) => a.status === 'APPROVED').length;
+    const rejectedCount = visibleAdjustments.filter((a) => a.status === 'REJECTED').length;
 
     return NextResponse.json({
       success: true,
-      adjustments,
+      adjustments: visibleAdjustments,
       ingredients,
       staffStores,
       metrics: {
         pendingCount,
         approvedCount,
         rejectedCount,
-        totalCount: allAdjustments.length,
+        totalCount: visibleAdjustments.length,
       },
     });
   } catch (error: any) {

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
-    // 2. Fetch all staff users / stores for selection
+    // 2. Fetch all active staff users / stores for selection
     const staffStores = await prisma.user.findMany({
       where: { role: 'STAFF', status: 'ACTIVE' },
       select: {
@@ -45,6 +45,22 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { id: 'asc' },
     });
+
+    const inactiveStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'INACTIVE' },
+      select: { id: true, username: true, name: true },
+    });
+
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        transactions: [],
+        ingredients: [],
+        storeBalances: session.role === 'STAFF' ? [] : {},
+        storeBalancesByStore: {},
+        staffStores: [],
+      });
+    }
 
     // 3. Calculate store balances for all staff stores
     const storeBalancesByStore: Record<number, any[]> = {};
@@ -84,19 +100,43 @@ export async function GET(req: NextRequest) {
           { note: { contains: `@${storeObj.username}` } },
           { note: { contains: `[STORE_ID:${storeIdNum}]` } },
         ];
+      } else {
+        return NextResponse.json({
+          success: true,
+          transactions: [],
+          ingredients,
+          storeBalances: storeBalancesByStore,
+          storeBalancesByStore,
+          staffStores,
+        });
       }
     }
 
-    const transactions = await prisma.stockTransaction.findMany({
+    const rawTransactions = await prisma.stockTransaction.findMany({
       where: txWhere,
       include: {
         ingredient: true,
         createdBy: {
-          select: { id: true, name: true, username: true, role: true },
+          select: { id: true, name: true, username: true, role: true, status: true },
         },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
+    });
+
+    const inactiveIds = new Set(inactiveStores.map((s) => s.id));
+    const transactions = rawTransactions.filter((tx) => {
+      if (inactiveIds.has(tx.createdById)) return false;
+      for (const inact of inactiveStores) {
+        if (
+          tx.note?.includes(`[STORE_ID:${inact.id}]`) ||
+          tx.note?.includes(`@${inact.username}`) ||
+          tx.note?.includes(inact.name)
+        ) {
+          return false;
+        }
+      }
+      return true;
     });
 
     return NextResponse.json({

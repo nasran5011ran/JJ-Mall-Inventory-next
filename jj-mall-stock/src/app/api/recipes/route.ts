@@ -35,13 +35,28 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    // If all store accounts are suspended (INACTIVE), hide all recipes, products, and ingredients
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        recipes: [],
+        productsWithoutRecipe: [],
+        allProducts: [],
+        ingredients: [],
+        staffStores: [],
+        storeBalances: {},
+      });
+    }
+
+    const activeStoreIds = new Set(staffStores.map((s) => s.id));
+
     // Compute store balances for each store
     const storeBalances: Record<number, any[]> = {};
     for (const store of staffStores) {
       storeBalances[store.id] = await calculateStoreReconciliation(store.id);
     }
 
-    const recipes = await prisma.recipe.findMany({
+    const rawRecipes = await prisma.recipe.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -59,6 +74,10 @@ export async function GET(req: NextRequest) {
         },
       },
     });
+
+    const recipes = rawRecipes.filter(
+      (r) => !r.product.storeId || activeStoreIds.has(r.product.storeId)
+    );
 
     // Compute metrics for each recipe based on store inventory
     const enrichedRecipes = recipes.map((recipe) => {
@@ -173,9 +192,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       recipes: enrichedRecipes,
-      productsWithoutRecipe,
-      allProducts,
-      ingredients,
+      productsWithoutRecipe: productsWithoutRecipe.filter(
+        (p) => !p.storeId || activeStoreIds.has(p.storeId)
+      ),
+      allProducts: allProducts.filter((p) => !p.storeId || activeStoreIds.has(p.storeId)),
+      ingredients: ingredients.filter((i) => !i.storeId || activeStoreIds.has(i.storeId)),
       staffStores,
       storeBalances,
     });

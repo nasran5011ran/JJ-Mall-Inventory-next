@@ -5,7 +5,7 @@ import { getSession } from '@/lib/auth';
 import { Role } from '@prisma/client';
 
 // GET: Fetch all users (Admin only)
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const session = await getSession();
     if (!session || session.role !== 'ADMIN') {
@@ -13,6 +13,30 @@ export async function GET(req: NextRequest) {
         { success: false, message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลผู้ใช้งาน (Admin Only)' },
         { status: 403 }
       );
+    }
+
+    // Enforce single ADMIN rule: if extra ADMIN accounts exist, convert them to STAFF (keeping the primary/current ADMIN)
+    const allAdmins = await prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true, username: true },
+      orderBy: { id: 'asc' },
+    });
+
+    if (allAdmins.length > 1) {
+      const primaryAdminId =
+        allAdmins.find((a) => a.id === session.id)?.id ||
+        allAdmins.find((a) => a.username === 'admin')?.id ||
+        allAdmins[0].id;
+      const extraAdminIds = allAdmins
+        .filter((a) => a.id !== primaryAdminId)
+        .map((a) => a.id);
+
+      if (extraAdminIds.length > 0) {
+        await prisma.user.updateMany({
+          where: { id: { in: extraAdminIds } },
+          data: { role: Role.STAFF },
+        });
+      }
     }
 
     const users = await prisma.user.findMany({
@@ -52,7 +76,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Create new user (Admin only)
+// POST: Create new user (Admin only - creates STAFF store accounts; only 1 ADMIN is allowed in the system)
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
@@ -75,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     if (!name || !name.trim()) {
       return NextResponse.json(
-        { success: false, message: 'กรุณากรอกชื่อ-นามสกุล' },
+        { success: false, message: 'กรุณากรอกชื่อร้าน' },
         { status: 400 }
       );
     }
@@ -85,6 +109,22 @@ export async function POST(req: NextRequest) {
         { success: false, message: 'กรุณากำหนดรหัสผ่านสำหรับผู้ใช้งานนี้' },
         { status: 400 }
       );
+    }
+
+    // Strictly block creating another ADMIN if an ADMIN already exists
+    if (role === 'ADMIN') {
+      const existingAdminCount = await prisma.user.count({
+        where: { role: 'ADMIN' },
+      });
+      if (existingAdminCount >= 1) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'ระบบอนุญาตให้มีบัญชีผู้ดูแลระบบ (Admin) ได้เพียง 1 บัญชีเท่านั้น',
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -101,7 +141,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Hash password (allows simple passwords without complexity restriction)
     const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
     const newUser = await prisma.user.create({
@@ -109,7 +148,7 @@ export async function POST(req: NextRequest) {
         username: cleanUsername,
         name: name.trim(),
         password: hashedPassword,
-        role: role === 'ADMIN' ? Role.ADMIN : Role.STAFF,
+        role: Role.STAFF,
         status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
       },
       select: {
@@ -124,7 +163,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `เพิ่มผู้ใช้งาน "${newUser.name}" (${newUser.username}) เรียบร้อยแล้ว`,
+      message: `เพิ่มบัญชีร้านค้า "${newUser.name}" (${newUser.username}) เรียบร้อยแล้ว`,
       user: newUser,
     });
   } catch (error: any) {

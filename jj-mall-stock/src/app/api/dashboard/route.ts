@@ -17,7 +17,7 @@ export async function GET() {
     todayEnd.setHours(23, 59, 59, 999);
 
     // 1. Basic Counts & Store Stock Reconciliation
-    const [totalProducts, totalIngredients, stores] = await Promise.all([
+    const [totalProducts, totalIngredients, stores, inactiveStores] = await Promise.all([
       prisma.product.count({ where: { status: 'ACTIVE' } }),
       prisma.ingredient.count({ where: { status: 'ACTIVE' } }),
       prisma.user.findMany({
@@ -25,8 +25,53 @@ export async function GET() {
         select: { id: true, name: true, username: true },
         orderBy: { id: 'asc' },
       }),
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'INACTIVE' },
+        select: { id: true, name: true, username: true },
+      }),
     ]);
 
+    // If all store accounts are suspended (INACTIVE), return empty/zero dashboard data
+    if (stores.length === 0) {
+      const emptyTrend = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const thaiDays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+        const dayLabel = `${thaiDays[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+        emptyTrend.push({
+          date: d.toISOString().split('T')[0],
+          label: i === 0 ? 'วันนี้' : i === 1 ? 'เมื่อวาน' : dayLabel,
+          total: 0,
+          cups: 0,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          kpis: {
+            totalProducts: 0,
+            totalIngredients: 0,
+            inStockIngredients: 0,
+            lowStockIngredients: 0,
+            outOfStockIngredients: 0,
+            todaySalesAmount: 0,
+            todayCupsSold: 0,
+            todayIngredientsUsedCount: 0,
+            discrepancyCount: 0,
+            pendingAdjustmentsCount: 0,
+          },
+          salesTrend: emptyTrend,
+          topSellingProducts: [],
+          topIngredientsUsed: [],
+          lowStockList: [],
+          recentSales: [],
+        },
+      });
+    }
+
+    const inactiveIds = inactiveStores.map((s) => s.id);
     const primaryStore = stores[0] || null;
     const storeBalances = primaryStore
       ? await calculateStoreReconciliation(primaryStore.id)
@@ -54,13 +99,14 @@ export async function GET() {
       }
     });
 
-    // 2. Sales Today
+    // 2. Sales Today (excluding suspended stores)
     const todaySales = await prisma.sale.findMany({
       where: {
         createdAt: {
           gte: todayStart,
           lte: todayEnd,
         },
+        ...(inactiveIds.length > 0 ? { createdById: { notIn: inactiveIds } } : {}),
       },
       include: {
         items: {
@@ -82,6 +128,7 @@ export async function GET() {
           gte: todayStart,
           lte: todayEnd,
         },
+        ...(inactiveIds.length > 0 ? { createdById: { notIn: inactiveIds } } : {}),
       },
       include: {
         ingredient: true,
@@ -106,10 +153,16 @@ export async function GET() {
 
     // 4. Pending Adjustments & Stock Discrepancies
     const [pendingAdjustmentsCount, discrepancyCount] = await Promise.all([
-      prisma.stockAdjustment.count({ where: { status: 'PENDING' } }),
+      prisma.stockAdjustment.count({
+        where: {
+          status: 'PENDING',
+          ...(inactiveIds.length > 0 ? { requestedById: { notIn: inactiveIds } } : {}),
+        },
+      }),
       prisma.stockCountItem.count({
         where: {
           diffQuantity: { not: 0 },
+          ...(inactiveIds.length > 0 ? { stockCount: { createdById: { notIn: inactiveIds } } } : {}),
         },
       }),
     ]);
@@ -125,7 +178,10 @@ export async function GET() {
       end.setHours(23, 59, 59, 999);
 
       const daySales = await prisma.sale.findMany({
-        where: { createdAt: { gte: start, lte: end } },
+        where: {
+          createdAt: { gte: start, lte: end },
+          ...(inactiveIds.length > 0 ? { createdById: { notIn: inactiveIds } } : {}),
+        },
         select: { totalAmount: true, totalItems: true },
       });
 
@@ -145,6 +201,7 @@ export async function GET() {
 
     // 6. Top Selling Products
     const allSaleItems = await prisma.saleItem.findMany({
+      where: inactiveIds.length > 0 ? { sale: { createdById: { notIn: inactiveIds } } } : undefined,
       include: { product: true },
     });
 
@@ -168,6 +225,7 @@ export async function GET() {
 
     // 7. Recent 5 Sales
     const recentSales = await prisma.sale.findMany({
+      where: inactiveIds.length > 0 ? { createdById: { notIn: inactiveIds } } : undefined,
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {

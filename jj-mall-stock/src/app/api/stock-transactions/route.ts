@@ -50,8 +50,53 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const [activeStores, inactiveStores] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'ACTIVE' },
+        select: { id: true, name: true, username: true },
+      }),
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'INACTIVE' },
+        select: { id: true, name: true, username: true },
+      }),
+    ]);
+
+    if (activeStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        transactions: [],
+        ingredients: [],
+        metrics: {
+          totalTransactions: 0,
+          purchaseCount: 0,
+          saleDeductCount: 0,
+          transferCount: 0,
+          damageCount: 0,
+          adjustCount: 0,
+          physicalCount: 0,
+          totalQtyIn: 0,
+          totalQtyOut: 0,
+        },
+      });
+    }
+
+    const inactiveIds = new Set(inactiveStores.map((s) => s.id));
+    const isFromInactiveStore = (tx: { createdById: number; note?: string | null }) => {
+      if (inactiveIds.has(tx.createdById)) return true;
+      for (const inact of inactiveStores) {
+        if (
+          tx.note?.includes(`[STORE_ID:${inact.id}]`) ||
+          tx.note?.includes(`@${inact.username}`) ||
+          tx.note?.includes(inact.name)
+        ) {
+          return true;
+        }
+      }
+      return false;
+    };
+
     // 1. Fetch transactions with relations
-    const transactions = await prisma.stockTransaction.findMany({
+    const rawTransactions = await prisma.stockTransaction.findMany({
       where: whereClause,
       include: {
         ingredient: {
@@ -78,6 +123,8 @@ export async function GET(req: NextRequest) {
       take: limit,
     });
 
+    const transactions = rawTransactions.filter((tx) => !isFromInactiveStore(tx));
+
     // 2. Fetch all active ingredients for filter dropdown
     const ingredients = await prisma.ingredient.findMany({
       where: { status: 'ACTIVE' },
@@ -92,10 +139,11 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     });
 
-    // 3. Compute KPI metrics across all transactions
-    const allTxTypes = await prisma.stockTransaction.findMany({
-      select: { type: true, quantityIn: true, quantityOut: true },
+    // 3. Compute KPI metrics across all visible transactions
+    const rawAllTxTypes = await prisma.stockTransaction.findMany({
+      select: { type: true, quantityIn: true, quantityOut: true, createdById: true, note: true },
     });
+    const allTxTypes = rawAllTxTypes.filter((tx) => !isFromInactiveStore(tx));
 
     let purchaseCount = 0;
     let saleDeductCount = 0;

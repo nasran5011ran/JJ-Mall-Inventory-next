@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import {
   Users,
   ShieldCheck,
@@ -46,6 +46,7 @@ interface UserData {
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
+  const { mutate: globalMutate } = useSWRConfig();
   const [users, setUsers] = useState<UserData[]>([]);
 
   // Instant SWR Cache: Shows cached users immediately on page switch
@@ -232,6 +233,7 @@ export default function AdminUsersPage() {
             : u
         )
       );
+      globalMutate(() => true);
 
       setEditingUser(null);
     } catch (err: any) {
@@ -315,6 +317,7 @@ export default function AdminUsersPage() {
       setUsers((prev) =>
         prev.map((item) => (item.id === u.id ? { ...item, status: nextStatus } : item))
       );
+      globalMutate(() => true);
     } catch (err: any) {
       showToast('❌ เกิดข้อผิดพลาด: ' + (err.message || 'ไม่สามารถเปลี่ยนสถานะได้'));
     }
@@ -353,6 +356,7 @@ export default function AdminUsersPage() {
         // Hard deleted
         setUsers((prev) => prev.filter((item) => item.id !== u.id));
       }
+      globalMutate(() => true);
     } catch (err: any) {
       await showErrorAlert('เกิดข้อผิดพลาดในการลบผู้ใช้งาน', err.message || 'เกิดข้อผิดพลาดในการลบผู้ใช้งาน');
     }
@@ -671,8 +675,8 @@ export default function AdminUsersPage() {
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">เพิ่มผู้ใช้งานใหม่</h3>
-                  <p className="text-xs text-slate-500">สร้างบัญชีสำหรับ Admin หรือพนักงานขาย</p>
+                  <h3 className="text-lg font-bold text-slate-800">เพิ่มบัญชีร้านค้าใหม่</h3>
+                  <p className="text-xs text-slate-500">สร้างบัญชีสำหรับร้านค้า / พนักงานขาย (Staff) • บัญชี Admin มีได้เพียง 1 บัญชี</p>
                 </div>
               </div>
               <button
@@ -749,14 +753,9 @@ export default function AdminUsersPage() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     บทบาท & สิทธิ์ (Role)
                   </label>
-                  <select
-                    value={addForm.role}
-                    onChange={(e) => setAddForm({ ...addForm, role: e.target.value as any })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  >
-                    <option value="STAFF">👤 เจ้าหน้าที่ขาย (Staff)</option>
-                    <option value="ADMIN">👑 ผู้ดูแลระบบ (Admin)</option>
-                  </select>
+                  <div className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold flex items-center gap-1.5 select-none">
+                    <span>👤 เจ้าหน้าที่ขาย (Staff)</span>
+                  </div>
                 </div>
 
                 <div>
@@ -844,15 +843,13 @@ export default function AdminUsersPage() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     บทบาท & สิทธิ์ (Role)
                   </label>
-                  <select
-                    value={editForm.role}
-                    disabled={editingUser.id === currentUser?.id}
-                    onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-50 disabled:text-slate-400"
-                  >
-                    <option value="STAFF">👤 เจ้าหน้าที่ขาย (Staff)</option>
-                    <option value="ADMIN">👑 ผู้ดูแลระบบ (Admin)</option>
-                  </select>
+                  <div className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-bold flex items-center gap-1.5 select-none">
+                    <span>
+                      {editingUser.role === 'ADMIN'
+                        ? '👑 ผู้ดูแลระบบ (Admin)'
+                        : '👤 เจ้าหน้าที่ขาย (Staff)'}
+                    </span>
+                  </div>
                 </div>
 
                 <div>

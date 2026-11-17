@@ -70,6 +70,22 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    // If all store accounts are suspended (INACTIVE), hide all store ingredients and balances
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        ingredients: [],
+        categories: [],
+        staffStores: [],
+        storeBalances: {},
+      });
+    }
+
+    const activeStoreIds = new Set(staffStores.map((s) => s.id));
+    const visibleIngredients = ingredients.filter(
+      (ing) => !ing.storeId || activeStoreIds.has(ing.storeId)
+    );
+
     // Compute store balances for each store
     const storeBalances: Record<number, any[]> = {};
     for (const store of staffStores) {
@@ -77,7 +93,7 @@ export async function GET(req: NextRequest) {
     }
 
     const defaultStore = staffStores[0] || null;
-    const enrichedIngredients = ingredients.map((ing) => ({
+    const enrichedIngredients = visibleIngredients.map((ing) => ({
       ...ing,
       storeId: ing.storeId ?? defaultStore?.id ?? null,
       store: ing.store ?? defaultStore,

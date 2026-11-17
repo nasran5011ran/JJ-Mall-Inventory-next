@@ -61,6 +61,39 @@ export async function GET(req: NextRequest) {
       orderBy: { id: 'asc' },
     });
 
+    const inactiveStores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'INACTIVE' },
+      select: { id: true },
+    });
+    const inactiveStoreIds = inactiveStores.map((s) => s.id);
+
+    if (staffStores.length === 0) {
+      return NextResponse.json({
+        success: true,
+        sales: [],
+        staffStores: [],
+        kpis: {
+          totalRevenue: 0,
+          totalBills: 0,
+          totalCups: 0,
+          averageTicket: 0,
+        },
+        paymentBreakdown: {
+          cash: { revenue: 0, bills: 0, percentage: 0 },
+          qr: { revenue: 0, bills: 0, percentage: 0 },
+        },
+        topProducts: [],
+        storeBreakdown: [],
+        hourlySales: [],
+      });
+    }
+
+    if (inactiveStoreIds.length > 0 && storeId === 'ALL') {
+      whereClause.createdById = { notIn: inactiveStoreIds };
+    } else if (storeId !== 'ALL' && inactiveStoreIds.includes(Number(storeId))) {
+      whereClause.createdById = -1;
+    }
+
     // 5. Fetch sales matching filter
     const sales = await prisma.sale.findMany({
       where: whereClause,

@@ -21,9 +21,9 @@ export interface StoreIngredientBalance {
 export async function calculateStoreReconciliation(storeId: number): Promise<StoreIngredientBalance[]> {
   const targetStore = await prisma.user.findUnique({
     where: { id: storeId },
-    select: { id: true, name: true, username: true },
+    select: { id: true, name: true, username: true, status: true },
   });
-  if (!targetStore) return [];
+  if (!targetStore || targetStore.status === 'INACTIVE') return [];
 
   // Find the most recent completed stock count for this store
   const lastCount = await prisma.stockCount.findFirst({
