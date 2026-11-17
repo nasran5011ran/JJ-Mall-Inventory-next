@@ -109,9 +109,66 @@ export async function GET(req: NextRequest) {
       storeSalesMap.set(`${s.createdById}_${s.ingredientId}`, Number(s._sum.quantityOut || 0));
     });
 
+    // 7. Fetch approved waste / damage transactions for store count periods
+    const wasteTransactions = await prisma.stockTransaction.findMany({
+      where: {
+        type: { in: [TransactionType.ADJUST_SUB, TransactionType.DAMAGE_OUT] },
+      },
+      select: {
+        ingredientId: true,
+        quantityOut: true,
+        createdAt: true,
+        createdById: true,
+        note: true,
+      },
+    });
+
     const stockCounts = rawStockCounts.map((sc) => {
       const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
       const storeUser = sc.storeId || sc.createdById;
+      const storeObj = staffStores.find((s) => s.id === storeUser);
+
+      // Determine the count period window for this store: (prevCount.createdAt, toDate]
+      const prevCount = isStore
+        ? rawStockCounts.find(
+            (other) =>
+              (other.location === 'STORE' || Boolean(other.storeId)) &&
+              (other.storeId || other.createdById) === storeUser &&
+              new Date(other.createdAt).getTime() < new Date(sc.createdAt).getTime()
+          )
+        : null;
+      const isLatestStoreCount = isStore
+        ? !rawStockCounts.some(
+            (other) =>
+              (other.location === 'STORE' || Boolean(other.storeId)) &&
+              (other.storeId || other.createdById) === storeUser &&
+              new Date(other.createdAt).getTime() > new Date(sc.createdAt).getTime()
+          )
+        : false;
+      const fromTime = prevCount ? new Date(prevCount.createdAt).getTime() : 0;
+      const toTime = isLatestStoreCount ? Date.now() : new Date(sc.createdAt).getTime();
+
+      const periodWasteMap = new Map<number, number>();
+      if (isStore && storeUser) {
+        for (const wtx of wasteTransactions) {
+          const t = new Date(wtx.createdAt).getTime();
+          if (t <= fromTime || t > toTime) continue;
+          const belongsToStore =
+            wtx.createdById === storeUser ||
+            Boolean(wtx.note && wtx.note.includes(`[STORE_ID:${storeUser}]`)) ||
+            Boolean(
+              storeObj &&
+                wtx.note &&
+                (wtx.note.includes(storeObj.name) || wtx.note.includes(`@${storeObj.username}`))
+            );
+          if (belongsToStore) {
+            periodWasteMap.set(
+              wtx.ingredientId,
+              (periodWasteMap.get(wtx.ingredientId) || 0) + Number(wtx.quantityOut || 0)
+            );
+          }
+        }
+      }
 
       const enrichedItems = sc.items.map((item) => {
         const ingId = item.ingredientId;
@@ -129,6 +186,7 @@ export async function GET(req: NextRequest) {
           const salesQty = item.salesQuantity !== null && item.salesQuantity !== undefined
             ? Number(item.salesQuantity)
             : 0;
+          const wasteQty = periodWasteMap.get(ingId) || 0;
 
           // Calculate DOH: (Actual Stock / Daily Sales Rate)
           const recent7DaySales = storeSalesMap.get(`${storeUser}_${ingId}`) || salesQty;
@@ -140,7 +198,7 @@ export async function GET(req: NextRequest) {
             openingQuantity: openingQty,
             inboundQuantity: inboundQty,
             salesQuantity: salesQty,
-            wasteQuantity: 0,
+            wasteQuantity: wasteQty,
             doh,
           };
         } else {

@@ -868,6 +868,7 @@ export default function AdminStockCountPage() {
                         <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
                         <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-orange-700">จ่ายทำลาย (-)</th>
                         <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
                       </>
                     ) : (
@@ -881,7 +882,7 @@ export default function AdminStockCountPage() {
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredModalIngredients.length === 0 ? (
                     <tr>
-                      <td colSpan={targetLocation === 'STORE' ? 9 : 6} className="py-12 text-center text-slate-400">
+                      <td colSpan={targetLocation === 'STORE' ? 10 : 6} className="py-12 text-center text-slate-400">
                         ไม่พบรายการสินค้าหรือวัตถุดิบที่ตรงกับการค้นหา
                       </td>
                     </tr>
@@ -891,12 +892,14 @@ export default function AdminStockCountPage() {
                       let openingQty = 0;
                       let inboundQty = 0;
                       let salesQty = 0;
+                      let wasteQty = 0;
 
                       if (targetLocation === 'STORE' && currentStoreBalances) {
                         const b = currentStoreBalances.get(ing.id);
                         openingQty = b ? b.openingQuantity : 0;
                         inboundQty = b ? b.inboundQuantity : 0;
                         salesQty = b ? b.salesQuantity : 0;
+                        wasteQty = b ? Number(b.wasteQuantity || 0) : 0;
                         systemQty = b ? b.expectedStock : 0;
                       }
 
@@ -963,6 +966,9 @@ export default function AdminStockCountPage() {
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
                                 {salesQty > 0 ? `-${salesQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-orange-700 font-bold">
+                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{ing.unit}</span>
                               </td>
                               <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
                                 {systemQty.toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{ing.unit}</span>
@@ -1197,6 +1203,7 @@ export default function AdminStockCountPage() {
                         <th className="py-2.5 px-2 text-right w-20">ยอดยกมา</th>
                         <th className="py-2.5 px-2 text-right w-20 text-emerald-700">เบิกเข้า (+)</th>
                         <th className="py-2.5 px-2 text-right w-20 text-red-700">ขายตามสูตร (-)</th>
+                        <th className="py-2.5 px-2 text-right w-20 text-orange-700">จ่ายทำลาย (-)</th>
                         <th className="py-2.5 px-2.5 text-right w-28 bg-amber-50/80 text-amber-950 font-black">ควรมีในร้าน</th>
                       </>
                     ) : (
@@ -1210,7 +1217,7 @@ export default function AdminStockCountPage() {
                 <tbody className="divide-y divide-slate-100 font-medium">
                   {filteredDetailItems.length === 0 ? (
                     <tr>
-                      <td colSpan={selectedCount.location === 'STORE' || selectedCount.storeId ? 8 : 5} className="py-12 text-center text-slate-400">
+                      <td colSpan={selectedCount.location === 'STORE' || selectedCount.storeId ? 9 : 5} className="py-12 text-center text-slate-400">
                         ไม่พบรายการที่ตรงกับการค้นหา
                       </td>
                     </tr>
@@ -1221,6 +1228,7 @@ export default function AdminStockCountPage() {
                       const openQty = Number(item.openingQuantity ?? 0);
                       const inQty = Number(item.inboundQuantity ?? 0);
                       const saleQty = Number(item.salesQuantity ?? 0);
+                      const wasteQty = Number(item.wasteQuantity ?? 0);
 
                       return (
                         <tr key={item.id} className="hover:bg-amber-50/40 transition-colors border-b border-slate-100">
@@ -1248,6 +1256,9 @@ export default function AdminStockCountPage() {
                               </td>
                               <td className="py-2.5 px-2 text-right font-mono text-xs text-red-700 font-bold">
                                 {saleQty > 0 ? `-${saleQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-xs text-orange-700 font-bold">
+                                {wasteQty > 0 ? `-${wasteQty.toLocaleString()}` : '0'} <span className="text-[10px] text-slate-400">{item.ingredient?.unit}</span>
                               </td>
                               <td className="py-2.5 px-2.5 text-right bg-amber-50/80 font-mono font-black text-xs sm:text-sm text-amber-950">
                                 {Number(item.systemQuantity).toLocaleString()} <span className="text-[10px] font-semibold text-slate-500 ml-1">{item.ingredient?.unit}</span>

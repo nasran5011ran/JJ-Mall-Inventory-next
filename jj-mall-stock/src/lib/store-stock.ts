@@ -12,6 +12,7 @@ export interface StoreIngredientBalance {
   openingQuantity: number;
   inboundQuantity: number;
   salesQuantity: number;
+  wasteQuantity: number;
   expectedStock: number;
   hasStockHistory: boolean;
 }
@@ -127,10 +128,13 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
   });
 
   const adjustmentDiffMap = new Map<number, number>();
+  const wasteMap = new Map<number, number>();
   for (const tx of adjustmentTxs) {
     const prev = adjustmentDiffMap.get(tx.ingredientId) || 0;
     if (tx.type === TransactionType.ADJUST_SUB || tx.type === TransactionType.DAMAGE_OUT) {
-      adjustmentDiffMap.set(tx.ingredientId, prev - Number(tx.quantityOut));
+      const outQty = Number(tx.quantityOut);
+      adjustmentDiffMap.set(tx.ingredientId, prev - outQty);
+      wasteMap.set(tx.ingredientId, (wasteMap.get(tx.ingredientId) || 0) + outQty);
     } else if (tx.type === TransactionType.ADJUST_ADD) {
       adjustmentDiffMap.set(tx.ingredientId, prev + Number(tx.quantityIn));
     }
@@ -147,6 +151,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
     const opening = lastCountItemsMap.get(ing.id) ?? 0;
     const inbound = inboundMap.get(ing.id) ?? 0;
     const sales = salesMap.get(ing.id) ?? 0;
+    const waste = wasteMap.get(ing.id) ?? 0;
     const adj = adjustmentDiffMap.get(ing.id) ?? 0;
     const expected = Math.max(0, opening + inbound - sales + adj);
     const hasStockHistory = opening > 0 || inbound > 0 || lastCountItemsMap.has(ing.id);
@@ -162,6 +167,7 @@ export async function calculateStoreReconciliation(storeId: number): Promise<Sto
       openingQuantity: opening,
       inboundQuantity: inbound,
       salesQuantity: sales,
+      wasteQuantity: waste,
       expectedStock: expected,
       hasStockHistory,
     };
