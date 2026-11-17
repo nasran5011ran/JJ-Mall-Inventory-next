@@ -556,7 +556,6 @@ export default function AdminStockCountPage() {
                   className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer"
                 >
                   <option value="ALL">🏢 ทุกจุดตรวจนับ</option>
-                  <option value="WAREHOUSE">📦 คลังสินค้าส่วนกลาง</option>
                   {staffStores.map((st) => (
                     <option key={st.id} value={st.id}>
                       🏪 {st.name} (@{st.username})
@@ -589,7 +588,7 @@ export default function AdminStockCountPage() {
               <ClipboardCheck className="w-12 h-12 mx-auto text-slate-300" />
               <p className="text-sm font-bold text-slate-600">ยังไม่มีประวัติการตรวจนับสต็อกที่ตรงกับเงื่อนไข</p>
               <p className="max-w-md mx-auto text-xs text-slate-400">
-                กดปุ่ม <span className="text-emerald-700 font-bold">&quot;+ ทำรายการตรวจนับสต็อกจริงใหม่&quot;</span> ด้านบน เพื่อเริ่มตรวจนับของคลังกลางหรือหน้าร้านค้า
+                กดปุ่ม <span className="text-emerald-700 font-bold">&quot;+ ทำรายการตรวจนับสต็อกจริงใหม่&quot;</span> ด้านบน เพื่อเริ่มตรวจนับสต็อกของหน้าร้านค้า
               </p>
             </div>
           ) : (
@@ -648,17 +647,10 @@ export default function AdminStockCountPage() {
 
                         {/* Store / Location Badge */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          {isStore ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
-                              <Store className="w-3.5 h-3.5 text-amber-700" />
-                              <span>จุดขาย: {sc.storeName || 'หน้าร้าน'}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              <Warehouse className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>คลังสินค้าส่วนกลาง</span>
-                            </span>
-                          )}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                            <Store className="w-3.5 h-3.5 text-amber-700" />
+                            <span>จุดขาย: {sc.storeName || staffStores[0]?.name || 'หน้าร้าน'}</span>
+                          </span>
                         </td>
 
                         {/* Created By */}
@@ -1150,9 +1142,7 @@ export default function AdminStockCountPage() {
               <div>
                 <span className="text-slate-400">จุดตรวจนับ:</span>
                 <div className="font-bold text-slate-800 mt-0.5">
-                  {selectedCount.location === 'STORE' || selectedCount.storeId
-                    ? `🏪 จุดขาย: ${selectedCount.storeName}`
-                    : '📦 คลังสินค้าส่วนกลาง JJ Mall'}
+                  🏪 จุดขาย: {selectedCount.storeName || staffStores[0]?.name || 'หน้าร้าน'}
                 </div>
               </div>
               <div>
@@ -1484,8 +1474,8 @@ export default function AdminStockCountPage() {
                           {item.ingredient?.code}
                         </td>
 
-                        {/* Product Name */}
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black truncate max-w-[180px]">
+                        {/* Product Name (Wrap onto next line if long) */}
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black whitespace-normal break-words">
                           {item.ingredient?.name}
                         </td>
 

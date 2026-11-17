@@ -1733,7 +1733,7 @@ export default function AdminStockAdjustmentsPage() {
                         <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
                           {item.ingredient?.code}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-bold text-black truncate max-w-[200px]">
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-bold text-black whitespace-normal break-words">
                           {item.ingredient?.name}
                         </td>
                         <td className="py-0.5 px-1.5 border-r border-black text-right text-black font-mono font-bold">
