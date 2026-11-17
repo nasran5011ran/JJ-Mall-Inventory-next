@@ -179,6 +179,20 @@ export default function AdminStockInPage() {
     return null;
   };
 
+  // Resolve the store's actual current stock for a transaction's ingredient
+  const getStoreBalanceForTx = (tx: InboundTransaction): number => {
+    const storeInfo = getStoreInfo(tx);
+    if (storeInfo && storeBalancesByStore[storeInfo.id]) {
+      const match = storeBalancesByStore[storeInfo.id].find(
+        (b: any) => Number(b.ingredientId) === Number(tx.ingredientId)
+      );
+      if (match !== undefined) {
+        return Number(match.expectedStock);
+      }
+    }
+    return Number(tx.balanceAfter);
+  };
+
   const targetStoreObj = useMemo(() => {
     return staffStores.find((s) => String(s.id) === String(targetStoreId));
   }, [staffStores, targetStoreId]);
@@ -744,9 +758,9 @@ export default function AdminStockInPage() {
                         </span>
                       </td>
 
-                      {/* Balance After */}
+                      {/* Balance After (Synced with actual store stock) */}
                       <td className="py-3.5 px-4 text-right font-mono text-slate-700">
-                        {Number(tx.balanceAfter).toLocaleString()} {tx.ingredient?.unit}
+                        {getStoreBalanceForTx(tx).toLocaleString()} {tx.ingredient?.unit}
                       </td>
 
                       {/* Note / Created By */}

@@ -176,6 +176,14 @@ export async function POST(req: NextRequest) {
         ? `รับเข้าสต็อกร้าน: ${targetStore.name} (@${targetStore.username})`
         : 'รับเข้าสต็อก';
 
+    // Pre-fetch current store stock balances so balanceAfter reflects the store's true stock
+    const recipientUserId = targetStore ? targetStore.id : session.id;
+    const storeBalMap = new Map<number, number>();
+    if (targetStore) {
+      const storeBalances = await calculateStoreReconciliation(targetStore.id);
+      storeBalances.forEach((b) => storeBalMap.set(b.ingredientId, Number(b.expectedStock)));
+    }
+
     // Execute atomic transaction in database
     const createdTransactions = await prisma.$transaction(async (tx) => {
       const results: any[] = [];
@@ -239,8 +247,11 @@ export async function POST(req: NextRequest) {
         // 2. Generate unique transaction number
         const txNumber = `TX-IN-${receiptNumber}-${updatedIng.code}-${Date.now().toString().slice(-4)}`;
 
-        // 3. Record stock transaction in DB (PURCHASE_IN)
-        const recipientUserId = targetStore ? targetStore.id : session.id;
+        // 3. Record stock transaction in DB (PURCHASE_IN) with the store's true stock balance
+        const prevStoreStock = storeBalMap.get(ingId) ?? 0;
+        const newStoreStock = prevStoreStock + qtyIn;
+        storeBalMap.set(ingId, newStoreStock);
+
         const txRecord = await tx.stockTransaction.create({
           data: {
             transactionNumber: txNumber,
@@ -248,7 +259,7 @@ export async function POST(req: NextRequest) {
             type: TransactionType.PURCHASE_IN,
             quantityIn: qtyIn,
             quantityOut: 0,
-            balanceAfter: updatedIng.currentStock,
+            balanceAfter: targetStore ? newStoreStock : updatedIng.currentStock,
             refType: 'PURCHASE',
             refId: targetStore ? `STORE-${targetStore.id}` : receiptNumber,
             note: `${destinationLabel} • ซัพพลายเออร์: ${supplier || 'ทั่วไป'} ${note ? '• ' + note : ''} [STORE_ID:${recipientUserId}]`,
