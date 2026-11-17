@@ -102,8 +102,8 @@ export default function DashboardPage() {
             prefetch={true}
             className="px-4 py-2.5 rounded-2xl bg-white text-emerald-800 hover:bg-emerald-50 transition-all font-bold text-xs flex items-center gap-2 shadow-sm cursor-pointer"
           >
-            <ShoppingCart className="w-4 h-4 text-emerald-700 shrink-0" />
-            <span>เปิดหน้าขาย POS</span>
+            <TrendingUp className="w-4 h-4 text-emerald-700 shrink-0" />
+            <span>ดูรายงานยอดขาย</span>
           </Link>
 
           <Link
