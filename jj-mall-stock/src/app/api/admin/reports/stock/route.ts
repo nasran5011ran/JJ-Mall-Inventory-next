@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import { TransactionType } from '@prisma/client';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,155 +15,101 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const categoryFilter = searchParams.get('category') || 'ALL';
-    const statusFilter = searchParams.get('status') || 'ALL'; // ALL | CRITICAL | LOW | OPTIMAL | OVERSTOCK
+    const statusFilter = searchParams.get('status') || 'ALL'; // ALL | IN_STOCK | OUT_OF_STOCK
+    const storeIdParam = searchParams.get('storeId') || '';
 
-    // 1. Fetch all active ingredients
-    const ingredients = await prisma.ingredient.findMany({
-      where: { status: 'ACTIVE' },
-      orderBy: [{ category: 'asc' }, { name: 'asc' }],
+    // 1. Fetch active STAFF stores
+    const stores = await prisma.user.findMany({
+      where: { role: 'STAFF', status: 'ACTIVE' },
+      select: { id: true, name: true, username: true },
+      orderBy: { id: 'asc' },
     });
 
-    // 2. Fetch usage from StockTransactions in the last 7 days (SALE_DEDUCT)
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentDeductions = await prisma.stockTransaction.findMany({
-      where: {
-        type: TransactionType.SALE_DEDUCT,
-        createdAt: { gte: sevenDaysAgo },
-      },
-      select: {
-        ingredientId: true,
-        quantityOut: true,
-      },
-    });
+    const selectedStore =
+      (storeIdParam ? stores.find((s) => String(s.id) === String(storeIdParam)) : null) ||
+      stores[0] ||
+      null;
 
-    // Map total 7-day usage per ingredient
-    const usageMap = new Map<number, number>();
-    recentDeductions.forEach((tx) => {
-      const current = usageMap.get(tx.ingredientId) || 0;
-      usageMap.set(tx.ingredientId, current + Number(tx.quantityOut));
-    });
+    // 2. Calculate store reconciliation balances
+    const storeBalances = selectedStore
+      ? await calculateStoreReconciliation(selectedStore.id)
+      : [];
 
-    // Also get all-time SALE_DEDUCT if 7-day is empty (for bootstrap demo data)
-    const allDeductions = await prisma.stockTransaction.findMany({
-      where: { type: TransactionType.SALE_DEDUCT },
-      select: { ingredientId: true, quantityOut: true },
-    });
-    const allTimeUsageMap = new Map<number, number>();
-    allDeductions.forEach((tx) => {
-      const current = allTimeUsageMap.get(tx.ingredientId) || 0;
-      allTimeUsageMap.set(tx.ingredientId, current + Number(tx.quantityOut));
-    });
-
-    // 3. Compute DoH, Stock Valuation, and Health Status for each ingredient
     let totalStockValue = 0;
-    let criticalCount = 0;
-    let lowCount = 0;
-    let optimalCount = 0;
-    let overstockCount = 0;
+    let inStockCount = 0;
+    let outOfStockCount = 0;
 
-    const items = ingredients.map((ing) => {
-      const currentStock = Number(ing.currentStock);
-      const minStock = Number(ing.minStock);
-      const costPerUnit = Number(ing.costPerUnit || 0);
+    const items = storeBalances.map((b) => {
+      const currentStock = Number(b.expectedStock || 0);
+      const openingQuantity = Number(b.openingQuantity || 0);
+      const inboundQuantity = Number(b.inboundQuantity || 0);
+      const salesQuantity = Number(b.salesQuantity || 0);
+      const wasteQuantity = Number(b.wasteQuantity || 0);
+      const totalOutQuantity = salesQuantity + wasteQuantity;
+      const costPerUnit = Number(b.costPerUnit || 0);
       const totalValue = currentStock * costPerUnit;
       totalStockValue += totalValue;
 
-      // Calculate daily consumption rate (assume 7 days)
-      const sevenDayUsage = usageMap.get(ing.id) || 0;
-      const allTimeUsage = allTimeUsageMap.get(ing.id) || 0;
-      const dailyUsage = sevenDayUsage > 0 ? sevenDayUsage / 7 : allTimeUsage > 0 ? allTimeUsage / 3 : 0;
+      const healthStatus: 'IN_STOCK' | 'OUT_OF_STOCK' =
+        currentStock > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK';
 
-      // Calculate Days on Hand (DoH)
-      let doh = 0;
-      if (dailyUsage > 0) {
-        doh = Math.round(currentStock / dailyUsage);
+      if (healthStatus === 'IN_STOCK') {
+        inStockCount++;
       } else {
-        // If no sales yet, estimate based on min stock
-        doh = currentStock > minStock ? 60 : currentStock > 0 ? 14 : 0;
+        outOfStockCount++;
       }
 
-      // Status classification purely based on currentStock and minStock (Simple & Understandable)
-      let healthStatus: 'OUT_OF_STOCK' | 'CRITICAL' | 'LOW' | 'OPTIMAL' | 'OVERSTOCK' = 'OPTIMAL';
-      let riskLabel = 'สต็อกเพียงพอ (Healthy)';
-
-      if (currentStock <= 0) {
-        healthStatus = 'OUT_OF_STOCK';
-        riskLabel = 'สินค้าหมด (Out of Stock)';
-        criticalCount++;
-      } else if (currentStock < minStock) {
-        healthStatus = 'CRITICAL';
-        riskLabel = 'วิกฤต / ต่ำกว่าเกณฑ์ (Critical)';
-        criticalCount++;
-      } else if (currentStock <= minStock * 1.25) {
-        healthStatus = 'LOW';
-        riskLabel = 'ใกล้หมด / เฝ้าระวัง (Low Stock)';
-        lowCount++;
-      } else if (currentStock > minStock * 4) {
-        healthStatus = 'OVERSTOCK';
-        riskLabel = 'สต็อกเกินเกณฑ์ (Overstock)';
-        overstockCount++;
-      } else {
-        healthStatus = 'OPTIMAL';
-        riskLabel = 'สต็อกเพียงพอ (Healthy)';
-        optimalCount++;
-      }
-
-      // Recommended Reorder Amount
-      const recommendedReorder =
-        healthStatus === 'OUT_OF_STOCK' || healthStatus === 'CRITICAL' || healthStatus === 'LOW'
-          ? Math.max(0, minStock * 2 - currentStock)
-          : 0;
+      const riskLabel =
+        healthStatus === 'IN_STOCK' ? 'มีสต็อกพร้อมใช้' : 'สต็อกหมด (0)';
 
       return {
-        id: ing.id,
-        code: ing.code,
-        name: ing.name,
-        category: ing.category || 'ทั่วไป',
-        unit: ing.unit,
+        id: b.ingredientId,
+        code: b.code,
+        name: b.name,
+        category: b.category || 'ทั่วไป',
+        unit: b.unit,
+        openingQuantity,
+        inboundQuantity,
+        salesQuantity,
+        wasteQuantity,
+        totalOutQuantity,
         currentStock,
-        minStock,
         costPerUnit,
         totalValue,
-        dailyUsage: parseFloat(dailyUsage.toFixed(2)),
-        doh,
         healthStatus,
         riskLabel,
-        recommendedReorder: Math.ceil(recommendedReorder),
+        storeName: selectedStore?.name || 'หน้าร้าน',
       };
     });
 
-    // 4. Distinct categories for filter
-    const categories = Array.from(new Set(ingredients.map((i) => i.category || 'ทั่วไป')));
+    // 3. Distinct categories for filter
+    const categories = Array.from(new Set(items.map((i) => i.category || 'ทั่วไป')));
 
-    // 5. Apply filters
+    // 4. Apply filters
     const filteredItems = items.filter((item) => {
       if (categoryFilter !== 'ALL' && item.category !== categoryFilter) return false;
-      if (statusFilter !== 'ALL') {
-        if (statusFilter === 'CRITICAL' && item.healthStatus !== 'CRITICAL' && item.healthStatus !== 'OUT_OF_STOCK') return false;
-        if (statusFilter === 'LOW' && item.healthStatus !== 'LOW') return false;
-        if (statusFilter === 'OPTIMAL' && item.healthStatus !== 'OPTIMAL') return false;
-        if (statusFilter === 'OVERSTOCK' && item.healthStatus !== 'OVERSTOCK') return false;
-      }
+      if (statusFilter === 'IN_STOCK' && item.healthStatus !== 'IN_STOCK') return false;
+      if (statusFilter === 'OUT_OF_STOCK' && item.healthStatus !== 'OUT_OF_STOCK') return false;
       return true;
     });
 
     return NextResponse.json({
       success: true,
+      stores,
+      selectedStore,
       items: filteredItems,
       categories,
       kpis: {
-        totalIngredients: ingredients.length,
+        totalIngredients: items.length,
         totalStockValue,
-        criticalCount,
-        lowCount,
-        optimalCount,
-        overstockCount,
+        inStockCount,
+        outOfStockCount,
       },
     });
   } catch (error: any) {
-    console.error('Error fetching stock DoH report:', error);
+    console.error('Error fetching stock report:', error);
     return NextResponse.json(
-      { success: false, message: 'เกิดข้อผิดพลาดในการดึงรายงาน DoH: ' + error.message },
+      { success: false, message: 'เกิดข้อผิดพลาดในการดึงรายงานสต็อก: ' + error.message },
       { status: 500 }
     );
   }
