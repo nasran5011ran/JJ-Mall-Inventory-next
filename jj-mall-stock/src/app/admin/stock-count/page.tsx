@@ -1412,42 +1412,56 @@ export default function AdminStockCountPage() {
 
             {/* Official Report Table */}
             <div className="overflow-x-auto print:overflow-visible">
-              <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
+              <table className="w-full table-fixed text-left border-collapse text-[10px] leading-tight text-black border border-black">
+                <colgroup>
+                  <col style={{ width: '4%' }} />
+                  <col style={{ width: '9%' }} />
+                  <col style={{ width: '27%' }} />
+                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '5%' }} />
+                </colgroup>
                 <thead>
                   {/* Super Header Groups */}
                   <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
-                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-24 bg-white">รหัสสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white">ชื่อสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-12 text-center bg-white">หน่วยนับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-14 text-right bg-white">ยกมา</th>
-                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
-                      &lt;------------ รายการรับ ------------&gt;
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-center bg-white align-middle">ลำดับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black bg-white align-middle">รหัสสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white align-middle">ชื่อสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-center bg-white align-middle">หน่วยนับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right bg-white align-middle">ยกมา</th>
+                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap align-middle">
+                      &lt;- รายการรับ -&gt;
                     </th>
-                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
-                      &lt;------------ รายการจ่าย ------------&gt;
+                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap align-middle">
+                      &lt;---- รายการจ่าย ----&gt;
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-right bg-white align-middle">
                       คงเหลือจาก<br />การคำนวณ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-right bg-white align-middle">
                       คงเหลือจาก<br />การตรวจนับ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right bg-white align-middle">
                       ผลต่าง
                     </th>
-                    <th rowSpan={2} className="py-1 px-1 text-right w-14 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 text-right bg-white align-middle">
                       DOH<br />(Day)
                     </th>
                   </tr>
 
                   {/* Sub Header Columns */}
                   <tr className="border-b border-black text-black font-bold text-center bg-white">
-                    <th className="py-0.5 px-1 border-r border-black text-right w-18 bg-white">
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">
                       ปรับปรุงเพิ่ม
                     </th>
-                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">ขาย</th>
-                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">จ่ายทำลาย</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">ขาย</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">จ่ายทำลาย</th>
                   </tr>
                 </thead>
 
@@ -1465,62 +1479,62 @@ export default function AdminStockCountPage() {
                     return (
                       <tr key={item.id} className="border-b border-black">
                         {/* No. */}
-                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black align-middle">
                           {idx + 1}
                         </td>
 
                         {/* Product Code */}
-                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
+                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold align-middle">
                           {item.ingredient?.code}
                         </td>
 
                         {/* Product Name (Wrap onto next line if long) */}
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black whitespace-normal break-words">
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black whitespace-normal break-words align-middle">
                           {item.ingredient?.name}
                         </td>
 
                         {/* Unit */}
-                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black align-middle">
                           {item.ingredient?.unit}
                         </td>
 
                         {/* ยกมา (Opening) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-black text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black text-black align-middle">
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
 
                         {/* ปรับปรุงเพิ่ม (รับเข้า) */}
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {inQty > 0 ? inQty.toFixed(2) : ''}
                         </td>
 
                         {/* ขาย (Sales) */}
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {saleQty > 0 ? `(${saleQty.toFixed(2)})` : ''}
                         </td>
 
                         {/* จ่ายทำลาย (Waste) */}
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : ''}
                         </td>
 
                         {/* คงเหลือจากการคำนวณ (System) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {sysQty.toFixed(2)}
                         </td>
 
                         {/* คงเหลือจากการตรวจนับ (Actual) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {actQty.toFixed(2)}
                         </td>
 
                         {/* ผลต่าง (Variance) */}
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {diff === 0 ? '0.00' : diff < 0 ? `(${Math.abs(diff).toFixed(2)})` : `+${diff.toFixed(2)}`}
                         </td>
 
                         {/* DOH (Day) */}
-                        <td className="py-0.5 px-1 text-right text-black font-bold">
+                        <td className="py-0.5 px-1 text-right text-black font-bold align-middle">
                           {dohVal > 0 ? dohVal.toFixed(1) : '0'}
                         </td>
                       </tr>
