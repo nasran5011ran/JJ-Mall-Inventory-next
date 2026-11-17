@@ -148,6 +148,20 @@ export default function AdminStockCountPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Lock webpage outer scrollbar on the far right when any modal is open
+  React.useEffect(() => {
+    const anyModalOpen = modalOpen || Boolean(selectedCount) || printModalOpen;
+    if (!anyModalOpen) return;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, [modalOpen, selectedCount, printModalOpen]);
+
   // Distinct Categories
   const categories = useMemo(() => {
     const set = new Set<string>();
