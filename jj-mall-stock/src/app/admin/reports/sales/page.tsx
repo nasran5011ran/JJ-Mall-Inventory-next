@@ -1061,172 +1061,6 @@ export default function AdminSalesReportPage() {
               </div>
             </div>
 
-            {/* Financial KPI Summary Grid (6 Blocks in Normal Black & White) */}
-            <div className="print-avoid-break grid grid-cols-6 gap-2.5 text-center text-black">
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">ยอดขายรวมสุทธิ</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  ฿{kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[9px] text-black font-sans">รวมภาษี/ส่วนลด</div>
-              </div>
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">รับเงินสด (Cash)</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  ฿{paymentBreakdown.cash.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[9px] text-black font-mono">
-                  {paymentBreakdown.cash.bills} บิล ({paymentBreakdown.cash.percentage.toFixed(0)}%)
-                </div>
-              </div>
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">สแกน QR PromptPay</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  ฿{paymentBreakdown.qr.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[9px] text-black font-mono">
-                  {paymentBreakdown.qr.bills} บิล ({paymentBreakdown.qr.percentage.toFixed(0)}%)
-                </div>
-              </div>
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">จำนวนบิลขาย</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  {kpis.totalBills.toLocaleString()}
-                </div>
-                <div className="text-[9px] text-black font-sans">ใบเสร็จ</div>
-              </div>
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">ปริมาณเครื่องดื่มขาย</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  {kpis.totalCups.toLocaleString()}
-                </div>
-                <div className="text-[9px] text-black font-sans">แก้ว</div>
-              </div>
-              <div className="p-2.5 border border-black bg-white flex flex-col justify-between">
-                <div className="text-[10px] font-bold text-black">ยอดเฉลี่ย / บิล</div>
-                <div className="text-base font-black font-mono text-black my-0.5">
-                  ฿{kpis.averageTicket.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                </div>
-                <div className="text-[9px] text-black font-sans">บาท/บิล</div>
-              </div>
-            </div>
-
-            {/* Side-by-Side Breakdown Tables: Payment Summary & Top 5 Best Sellers */}
-            <div className="print-avoid-break grid grid-cols-2 gap-4 pt-1 text-black">
-              {/* Payment Methods Breakdown */}
-              <div className="border border-black overflow-hidden bg-white">
-                <div className="bg-white px-3 py-1.5 border-b border-black flex items-center justify-between">
-                  <span className="text-[10.5px] font-bold text-black">สรุปช่องทางรับชำระเงิน (Payment Summary)</span>
-                  <span className="text-[9.5px] text-black font-mono">2 ช่องทาง</span>
-                </div>
-                <table className="w-full text-left text-[9.5px] border-collapse text-black">
-                  <thead>
-                    <tr className="border-b border-black text-black font-bold bg-white text-center">
-                      <th className="py-1.5 px-2 w-7 border-r border-black text-center">#</th>
-                      <th className="py-1.5 px-2.5 border-r border-black text-left">ช่องทางชำระเงิน</th>
-                      <th className="py-1.5 px-2 text-center w-16 border-r border-black">จำนวนบิล</th>
-                      <th className="py-1.5 px-2.5 text-right w-24 border-r border-black">ยอดรวม (฿)</th>
-                      <th className="py-1.5 px-2 text-right w-16">สัดส่วน</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black font-mono text-black">
-                    <tr className="border-b border-black">
-                      <td className="py-1 px-2 text-center font-sans text-black border-r border-black">1</td>
-                      <td className="py-1 px-2.5 font-sans font-bold text-black border-r border-black">
-                        เงินสด (Cash)
-                      </td>
-                      <td className="py-1 px-2 text-center text-black border-r border-black">{paymentBreakdown.cash.bills} บิล</td>
-                      <td className="py-1 px-2.5 text-right font-bold text-black border-r border-black">
-                        {paymentBreakdown.cash.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-1 px-2 text-right text-black">
-                        {paymentBreakdown.cash.percentage.toFixed(1)}%
-                      </td>
-                    </tr>
-                    <tr className="border-b border-black">
-                      <td className="py-1 px-2 text-center font-sans text-black border-r border-black">2</td>
-                      <td className="py-1 px-2.5 font-sans font-bold text-black border-r border-black">
-                        สแกน QR (PromptPay)
-                      </td>
-                      <td className="py-1 px-2 text-center text-black border-r border-black">{paymentBreakdown.qr.bills} บิล</td>
-                      <td className="py-1 px-2.5 text-right font-bold text-black border-r border-black">
-                        {paymentBreakdown.qr.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-1 px-2 text-right text-black">
-                        {paymentBreakdown.qr.percentage.toFixed(1)}%
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-black font-bold text-black bg-white">
-                      <td colSpan={2} className="py-1.5 px-2.5 text-right font-sans border-r border-black">รวมรับชำระทั้งสิ้น:</td>
-                      <td className="py-1.5 px-2 text-center font-mono border-r border-black">{kpis.totalBills} บิล</td>
-                      <td className="py-1.5 px-2.5 text-right font-mono font-black border-r border-black">
-                        {kpis.totalRevenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-1.5 px-2 text-right font-mono">100%</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Top 5 Best Sellers */}
-              <div className="border border-black overflow-hidden bg-white">
-                <div className="bg-white px-3 py-1.5 border-b border-black flex items-center justify-between">
-                  <span className="text-[10.5px] font-bold text-black">5 อันดับสินค้าขายดีประจำวัน</span>
-                  <span className="text-[9.5px] text-black font-mono">Top Best Sellers</span>
-                </div>
-                <table className="w-full text-left text-[9.5px] border-collapse text-black">
-                  <thead>
-                    <tr className="border-b border-black text-black font-bold bg-white text-center">
-                      <th className="py-1.5 px-2 w-7 border-r border-black text-center">#</th>
-                      <th className="py-1.5 px-2.5 border-r border-black text-left">รายการเครื่องดื่ม</th>
-                      <th className="py-1.5 px-2 text-center w-16 border-r border-black">จำนวน</th>
-                      <th className="py-1.5 px-2.5 text-right w-22 border-r border-black">ยอดรวม (฿)</th>
-                      <th className="py-1.5 px-2 text-right w-14">สัดส่วน</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black font-mono text-black">
-                    {topProducts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="py-3 text-center text-black font-sans">ไม่มีข้อมูลสินค้า</td>
-                      </tr>
-                    ) : (
-                      topProducts.slice(0, 5).map((tp, idx) => (
-                        <tr key={tp.id || idx} className="border-b border-black">
-                          <td className="py-1 px-2 text-center font-sans text-black border-r border-black">{idx + 1}</td>
-                          <td className="py-1 px-2.5 font-sans font-bold text-black truncate max-w-[160px] border-r border-black">
-                            {tp.name}
-                          </td>
-                          <td className="py-1 px-2 text-center font-bold text-black border-r border-black">{tp.qty} {tp.unit || 'แก้ว'}</td>
-                          <td className="py-1 px-2.5 text-right font-bold text-black border-r border-black">
-                            {tp.revenue.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-1 px-2 text-right text-black">{tp.percentage.toFixed(1)}%</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                  {topProducts.length > 0 && (
-                    <tfoot>
-                      <tr className="border-t border-black font-bold text-black bg-white">
-                        <td colSpan={2} className="py-1.5 px-2.5 text-right font-sans border-r border-black">รวม Top 5:</td>
-                        <td className="py-1.5 px-2 text-center font-mono border-r border-black">
-                          {topProducts.slice(0, 5).reduce((acc, p) => acc + p.qty, 0)} แก้ว
-                        </td>
-                        <td className="py-1.5 px-2.5 text-right font-mono border-r border-black">
-                          {topProducts.slice(0, 5).reduce((acc, p) => acc + p.revenue, 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-1.5 px-2 text-right font-mono">
-                          {topProducts.slice(0, 5).reduce((acc, p) => acc + p.percentage, 0).toFixed(1)}%
-                        </td>
-                      </tr>
-                    </tfoot>
-                  )}
-                </table>
-              </div>
-            </div>
-
             {/* Daily Sales Transaction List Table */}
             <div className="pt-1 text-black">
               <div className="flex items-center justify-between pb-1.5">
@@ -1237,18 +1071,28 @@ export default function AdminSalesReportPage() {
                   แสดงทั้งหมด {filteredSales.length} ใบเสร็จ
                 </span>
               </div>
-              <div className="border border-black overflow-hidden bg-white">
-                <table className="w-full text-left text-[9.5px] border-collapse text-black">
+              <div className="border border-black bg-white">
+                <table className="w-full table-fixed text-left text-[9.5px] border-collapse text-black">
+                  <colgroup>
+                    <col style={{ width: '5%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '8%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '9%' }} />
+                    <col style={{ width: '7%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '11%' }} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-black text-black font-bold bg-white text-center">
-                      <th className="py-1.5 px-2 w-8 text-center border-r border-black">ลำดับ</th>
-                      <th className="py-1.5 px-2.5 w-28 text-left border-r border-black">เลขที่ใบเสร็จ</th>
-                      <th className="py-1.5 px-2 w-16 text-center border-r border-black">เวลา</th>
-                      <th className="py-1.5 px-2.5 w-28 text-left border-r border-black">จุดขาย / แคชเชียร์</th>
-                      <th className="py-1.5 px-2 w-18 text-center border-r border-black">ชำระเงิน</th>
-                      <th className="py-1.5 px-2 w-12 text-center border-r border-black">จำนวน</th>
+                      <th className="py-1.5 px-2 text-center border-r border-black">ลำดับ</th>
+                      <th className="py-1.5 px-2.5 text-left border-r border-black">เลขที่ใบเสร็จ</th>
+                      <th className="py-1.5 px-2 text-center border-r border-black">เวลา</th>
+                      <th className="py-1.5 px-2.5 text-left border-r border-black">จุดขาย / แคชเชียร์</th>
+                      <th className="py-1.5 px-2 text-center border-r border-black">ชำระเงิน</th>
+                      <th className="py-1.5 px-2 text-center border-r border-black">จำนวน</th>
                       <th className="py-1.5 px-2.5 text-left border-r border-black">รายการสินค้า</th>
-                      <th className="py-1.5 px-2.5 text-right w-24">ยอดรวม (฿)</th>
+                      <th className="py-1.5 px-2.5 text-right">ยอดรวม (฿)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black font-mono text-black">
@@ -1260,23 +1104,23 @@ export default function AdminSalesReportPage() {
                       </tr>
                     ) : (
                       filteredSales.map((sale, idx) => (
-                        <tr key={sale.id || idx} className="border-b border-black hover:bg-slate-50/50">
+                        <tr key={sale.id || idx} className="border-b border-black align-top">
                           <td className="py-1 px-2 text-center font-sans text-black border-r border-black">{idx + 1}</td>
-                          <td className="py-1 px-2.5 font-bold text-black whitespace-nowrap border-r border-black">{sale.saleNumber}</td>
-                          <td className="py-1 px-2 text-center text-black border-r border-black">
+                          <td className="py-1 px-2.5 font-bold text-black whitespace-normal break-all leading-snug border-r border-black">{sale.saleNumber}</td>
+                          <td className="py-1 px-2 text-center text-black border-r border-black whitespace-nowrap">
                             {new Date(sale.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                           </td>
-                          <td className="py-1 px-2.5 font-sans text-black truncate max-w-[120px] border-r border-black">
+                          <td className="py-1 px-2.5 font-sans text-black whitespace-normal break-words leading-snug border-r border-black">
                             {sale.createdBy?.name || '-'}
                           </td>
-                          <td className="py-1 px-2 text-center font-sans text-black border-r border-black">
+                          <td className="py-1 px-2 text-center font-sans text-black border-r border-black whitespace-nowrap">
                             {sale.paymentMethod === 'CASH' ? 'เงินสด' : 'สแกน QR'}
                           </td>
-                          <td className="py-1 px-2 text-center font-bold text-black border-r border-black">{sale.totalItems}</td>
-                          <td className="py-1 px-2.5 font-sans text-black truncate max-w-[260px] border-r border-black">
+                          <td className="py-1 px-2 text-center font-bold text-black border-r border-black whitespace-nowrap">{sale.totalItems}</td>
+                          <td className="py-1 px-2.5 font-sans text-black whitespace-normal break-words leading-snug border-r border-black">
                             {sale.items.map((i) => `${i.product?.name || 'สินค้า'} x${i.quantity}`).join(', ')}
                           </td>
-                          <td className="py-1 px-2.5 text-right font-bold text-black">
+                          <td className="py-1 px-2.5 text-right font-bold text-black whitespace-nowrap">
                             {Number(sale.totalAmount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
