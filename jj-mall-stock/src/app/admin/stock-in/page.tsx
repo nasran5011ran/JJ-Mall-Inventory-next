@@ -1130,18 +1130,9 @@ export default function AdminStockInPage() {
                           </span>
                         </div>
 
-                        {/* Cost Per Unit */}
-                        <div className="w-full sm:w-28 flex items-center gap-1 shrink-0">
-                          <span className="text-slate-400 text-[11px]">฿</span>
-                          <input
-                            type="number"
-                            min="0"
-                            step="any"
-                            placeholder="ต้นทุน"
-                            value={item.costPerUnit}
-                            readOnly tabIndex={-1} title="ราคาต้นทุนตามข้อมูลวัตถุดิบในระบบ (แก้ไขไม่ได้)"
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed font-mono text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
+                        {/* Cost Per Unit (Plain number text, no input box) */}
+                        <div className="w-full sm:w-28 text-right font-mono font-bold text-slate-700 shrink-0 px-2">
+                          ฿{(parseFloat(item.costPerUnit) || 0).toFixed(2)}
                         </div>
 
                         {/* Subtotal Preview */}
