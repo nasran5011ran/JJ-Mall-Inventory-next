@@ -200,6 +200,16 @@ export default function AdminStockInPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // Lock background page scroll while modal is open
+  React.useEffect(() => {
+    if (!modalOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [modalOpen]);
+
   // Check URL params on mount (?storeId=...&code=...)
   React.useEffect(() => {
     if (typeof window !== 'undefined' && ingredients.length > 0 && staffStores.length > 0) {
@@ -846,8 +856,8 @@ export default function AdminStockInPage() {
 
       {/* Modal: Record New Stock In */}
       {modalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
-          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] h-[92vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -874,7 +884,7 @@ export default function AdminStockInPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmitStockIn} className="mt-2.5 flex-1 min-h-0 flex flex-col overflow-hidden">
+            <form onSubmit={handleSubmitStockIn} className="mt-2.5 flex flex-col">
               {/* Top Compact Settings: Store, PO Number & Supplier (Always visible, No scrolling needed!) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-amber-50/70 border border-amber-200/80 shrink-0 mb-3">
                 {/* Store Selection */}
@@ -967,7 +977,7 @@ export default function AdminStockInPage() {
               )}
 
               {/* Scrollable Items Container (NO horizontal scrollbar, overflow-x-hidden!) */}
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1 space-y-2 scrollbar-thin">
+              <div className="space-y-2">
                 {formItems.map((item, idx) => {
                   const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                   const storeStock = selectedIng ? (currentStoreStockMap.get(selectedIng.id) ?? 0) : 0;
@@ -1112,8 +1122,8 @@ export default function AdminStockInPage() {
                             required
                             placeholder="จำนวน"
                             value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold"
+                            onWheel={(e) => e.currentTarget.blur()} onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                           <span className="text-[11px] text-slate-500 font-mono w-10 truncate text-right">
                             {selectedIng?.unit || 'หน่วย'}
@@ -1129,8 +1139,8 @@ export default function AdminStockInPage() {
                             step="any"
                             placeholder="ต้นทุน"
                             value={item.costPerUnit}
-                            onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                            onWheel={(e) => e.currentTarget.blur()} onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
 
