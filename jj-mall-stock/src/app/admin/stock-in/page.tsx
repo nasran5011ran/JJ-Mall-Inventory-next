@@ -1139,8 +1139,8 @@ export default function AdminStockInPage() {
                             step="any"
                             placeholder="ต้นทุน"
                             value={item.costPerUnit}
-                            onWheel={(e) => e.currentTarget.blur()} onChange={(e) => handleItemChange(idx, 'costPerUnit', e.target.value)}
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            readOnly tabIndex={-1} title="ราคาต้นทุนตามข้อมูลวัตถุดิบในระบบ (แก้ไขไม่ได้)"
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-100 text-slate-600 cursor-not-allowed font-mono text-right focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                           />
                         </div>
 
