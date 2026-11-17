@@ -386,6 +386,25 @@ export default function ProductsPage() {
         }
       }
 
+      // ตรวจสอบห้ามระบุปริมาณเกินคงเหลือในสต็อก
+      for (const entry of combinedMap.values()) {
+        const matchedIng = entry.ingredientId
+          ? allIngredients.find((i: any) => Number(i.id) === Number(entry.ingredientId))
+          : entry.name
+          ? allIngredients.find((i: any) => i.name.trim().toLowerCase() === entry.name!.trim().toLowerCase())
+          : null;
+        if (matchedIng) {
+          const availStock = getRecipeIngredientStock(matchedIng);
+          if (entry.quantity > availStock) {
+            setRecipeError(
+              `วัตถุดิบ "${matchedIng.name}" ระบุปริมาณ (${entry.quantity.toLocaleString()} ${matchedIng.unit}) มากกว่าคงเหลือในสต็อก (${availStock.toLocaleString()} ${matchedIng.unit}) ไม่สามารถบันทึกได้`
+            );
+            setRecipeSubmitting(false);
+            return;
+          }
+        }
+      }
+
       const payload = {
         productId: editRecipeProduct.id,
         description: recipeDescription,
@@ -1643,19 +1662,23 @@ export default function ProductsPage() {
                     const currentQty = Number(item.quantity || 0);
                     const combinedQty = Number((earlierQty + currentQty).toFixed(4));
                     const inStoreStock = selectedIng ? getRecipeIngredientStock(selectedIng) : 0;
+                    const effectiveQty = isDuplicateOfEarlier ? combinedQty : currentQty;
+                    const isOverStock = Boolean(selectedIng && effectiveQty > inStoreStock);
 
                     return (
                       <div
                         key={idx}
                         id={'product-recipe-row-' + idx}
-                        className={`p-3 rounded-2xl bg-white border transition-all text-xs shadow-2xs space-y-2.5 relative ${
+                        className={`p-3 rounded-2xl border transition-all text-xs shadow-2xs space-y-2.5 relative ${
                           activeRecipeSearchIdx === idx ? 'z-50 ring-2 ring-emerald-500/30' : 'z-0'
                         } ${
-                          highlightRowIdx === idx
+                          isOverStock
+                            ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50/30'
+                            : highlightRowIdx === idx
                             ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20'
                             : isDuplicateOfEarlier
                             ? 'border-amber-300 bg-amber-50/20 hover:border-amber-400'
-                            : 'border-slate-200 hover:border-emerald-300'
+                            : 'bg-white border-slate-200 hover:border-emerald-300'
                         }`}
                       >
                         <div className="flex flex-col sm:grid sm:grid-cols-12 gap-2.5 sm:items-center">
@@ -1908,13 +1931,19 @@ export default function ProductsPage() {
                                 value={item.quantity}
                                 onWheel={(e) => e.currentTarget.blur()}
                                 onChange={(e) => updateRecipeRow(idx, 'quantity', e.target.value)}
-                                className={`w-full px-3 py-2 pr-14 text-xs text-right font-mono font-bold rounded-xl border bg-white focus:outline-none focus:ring-2 text-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                  isDuplicateOfEarlier
-                                    ? 'border-amber-400 bg-amber-50/30 focus:ring-amber-500/30'
-                                    : 'border-slate-300 focus:ring-emerald-500/20 focus:border-emerald-600'
+                                className={`w-full px-3 py-2 pr-14 text-xs text-right font-mono font-bold rounded-xl border focus:outline-none focus:ring-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                  isOverStock
+                                    ? 'border-red-500 bg-red-50 text-red-700 focus:ring-red-500/30 focus:border-red-600'
+                                    : isDuplicateOfEarlier
+                                    ? 'border-amber-400 bg-amber-50/30 text-slate-800 focus:ring-amber-500/30'
+                                    : 'border-slate-300 bg-white text-slate-800 focus:ring-emerald-500/20 focus:border-emerald-600'
                                 }`}
                               />
-                              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none truncate max-w-[45px]">
+                              <span
+                                className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold pointer-events-none truncate max-w-[45px] ${
+                                  isOverStock ? 'text-red-600' : 'text-slate-400'
+                                }`}
+                              >
                                 {item.unit || selectedIng?.unit || '-'}
                               </span>
                             </div>
@@ -1954,9 +1983,20 @@ export default function ProductsPage() {
                               <span>หมวด: <span className="font-semibold text-slate-600">{selectedIng.category || 'ทั่วไป'}</span></span>
                               <span>•</span>
                               <span>คงเหลือในสต็อก:</span>
-                              <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                              <span
+                                className={`font-mono font-bold px-2 py-0.5 rounded-md border ${
+                                  isOverStock
+                                    ? 'text-red-700 bg-red-100 border-red-300'
+                                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                }`}
+                              >
                                 {inStoreStock.toLocaleString()} {selectedIng.unit}
                               </span>
+                              {isOverStock && (
+                                <span className="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
+                                  ⚠️ ระบุเกินสต็อกที่มี ({effectiveQty.toLocaleString()} &gt; {inStoreStock.toLocaleString()} {selectedIng.unit}) ไม่สามารถบันทึกได้
+                                </span>
+                              )}
                               <span>•</span>
                               <span className="text-slate-400 font-mono text-[10px]">
                                 ต้นทุนเฉลี่ย: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
@@ -2045,13 +2085,43 @@ export default function ProductsPage() {
                 >
                   ยกเลิก
                 </button>
-                <button
-                  type="submit"
-                  disabled={recipeSubmitting}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-60 cursor-pointer"
-                >
-                  {recipeSubmitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
-                </button>
+                {(() => {
+                  const hasAnyOverStock = recipeItems.some((it) => {
+                    const matchedIng = allIngredients.find(
+                      (i: any) =>
+                        (it.ingredientId && i.id.toString() === it.ingredientId) ||
+                        (it.customName && i.name.trim().toLowerCase() === it.customName.trim().toLowerCase())
+                    );
+                    if (!matchedIng) return false;
+                    const totalForThisIng = recipeItems
+                      .filter(
+                        (r) =>
+                          (r.ingredientId && r.ingredientId === matchedIng.id.toString()) ||
+                          (r.customName && r.customName.trim().toLowerCase() === matchedIng.name.trim().toLowerCase())
+                      )
+                      .reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+                    return totalForThisIng > getRecipeIngredientStock(matchedIng);
+                  });
+
+                  return (
+                    <button
+                      type="submit"
+                      disabled={recipeSubmitting || hasAnyOverStock}
+                      title={hasAnyOverStock ? 'ไม่สามารถบันทึกได้เนื่องจากมีวัตถุดิบระบุปริมาณเกินสต็อกคงเหลือ' : ''}
+                      className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                        hasAnyOverStock
+                          ? 'bg-red-600 text-white shadow-red-600/20'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                      }`}
+                    >
+                      {recipeSubmitting
+                        ? 'กำลังบันทึก...'
+                        : hasAnyOverStock
+                        ? '⚠️ ปริมาณเกินสต็อก (บันทึกไม่ได้)'
+                        : 'บันทึกสูตรการผลิต'}
+                    </button>
+                  );
+                })()}
               </div>
             </form>
           </div>

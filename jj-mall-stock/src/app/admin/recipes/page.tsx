@@ -473,6 +473,24 @@ function RecipesContent() {
         throw new Error('กรุณาระบุวัตถุดิบและปริมาณที่ใช้อย่างน้อย 1 รายการ');
       }
 
+      // ตรวจสอบห้ามระบุปริมาณเกินคงเหลือในสต็อก
+      for (const it of filledItems) {
+        const matchedIng = allIngredients.find((ing: any) => ing.id.toString() === it.ingredientId);
+        if (matchedIng) {
+          const totalQty = filledItems
+            .filter((r) => r.ingredientId === it.ingredientId)
+            .reduce((s, r) => s + Number(r.quantity || 0), 0);
+          const availStock = getEffectiveStock(matchedIng);
+          if (totalQty > availStock) {
+            const errorMsg = `วัตถุดิบ "${matchedIng.name}" ระบุปริมาณ (${totalQty.toLocaleString()} ${matchedIng.unit}) มากกว่าคงเหลือในสต็อก (${availStock.toLocaleString()} ${matchedIng.unit}) ไม่สามารถบันทึกได้`;
+            setFormError(errorMsg);
+            await showErrorAlert('ไม่สามารถบันทึกได้', errorMsg);
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
+
       const payload = {
         productId: Number(selectedProductId),
         description,
@@ -1401,16 +1419,34 @@ function RecipesContent() {
 
                               {/* Quantity */}
                               <td className="py-2.5 px-3 w-28 align-middle">
-                                <input
-                                  type="number"
-                                  step="0.001"
-                                  min="0.001"
-                                  required
-                                  placeholder="0"
-                                  value={item.quantity}
-                                  onChange={(e) => updateIngredientRow(idx, 'quantity', e.target.value)}
-                                  className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-mono font-bold text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                                />
+                                {(() => {
+                                  const availStock = selectedIng ? getEffectiveStock(selectedIng) : 0;
+                                  const isOverStock = Boolean(selectedIng && Number(item.quantity || 0) > availStock);
+                                  return (
+                                    <div>
+                                      <input
+                                        type="number"
+                                        step="0.001"
+                                        min="0.001"
+                                        required
+                                        placeholder="0"
+                                        value={item.quantity}
+                                        onWheel={(e) => e.currentTarget.blur()}
+                                        onChange={(e) => updateIngredientRow(idx, 'quantity', e.target.value)}
+                                        className={`w-full px-2 py-1.5 text-xs rounded-xl border font-mono font-bold text-center focus:outline-none focus:ring-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                          isOverStock
+                                            ? 'border-red-500 bg-red-50 text-red-700 focus:ring-red-500/30'
+                                            : 'border-slate-300 bg-white text-slate-800 focus:ring-emerald-500/30'
+                                        }`}
+                                      />
+                                      {isOverStock && (
+                                        <div className="mt-1 text-[10px] font-bold text-red-600 text-center">
+                                          เกินสต็อก ({availStock.toLocaleString()} {selectedIng.unit})
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </td>
 
                               {/* Unit */}
@@ -1477,6 +1513,15 @@ function RecipesContent() {
                 const hasInvalidIngredient = recipeFormItems.some(
                   (it) => it.customName && (!it.ingredientId || !allIngredients.some((ing: any) => ing.id.toString() === it.ingredientId))
                 );
+                const hasOverStock = recipeFormItems.some((it) => {
+                  if (!it.ingredientId) return false;
+                  const ing = allIngredients.find((i: any) => i.id.toString() === it.ingredientId);
+                  if (!ing) return false;
+                  const totalQty = recipeFormItems
+                    .filter((r) => r.ingredientId === it.ingredientId)
+                    .reduce((s, r) => s + Number(r.quantity || 0), 0);
+                  return totalQty > getEffectiveStock(ing);
+                });
 
                 return (
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
@@ -1489,9 +1534,19 @@ function RecipesContent() {
                     </button>
                     <button
                       type="submit"
-                      disabled={submitting || hasInvalidIngredient}
-                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      title={hasInvalidIngredient ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้' : undefined}
+                      disabled={submitting || hasInvalidIngredient || hasOverStock}
+                      className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
+                        hasOverStock
+                          ? 'bg-red-600 text-white shadow-red-600/20'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
+                      }`}
+                      title={
+                        hasInvalidIngredient
+                          ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้'
+                          : hasOverStock
+                          ? 'มีวัตถุดิบที่ระบุปริมาณเกินคงเหลือในสต็อก ไม่สามารถบันทึกได้'
+                          : undefined
+                      }
                     >
                       {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
                     </button>
