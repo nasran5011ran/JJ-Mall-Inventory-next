@@ -575,29 +575,29 @@ export default function AdminSalesReportPage() {
       {/* Visual Analytics Grid: Hourly Sales + Payment/Store Share */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Hourly Distribution Chart */}
-        <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-2xs space-y-4 min-w-0 overflow-hidden">
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
                 <BarChart3 className="w-4 h-4" />
               </div>
-              <div>
-                <h3 className="text-xs font-bold text-slate-800">ช่วงเวลายอดขายสูงสุด (Hourly Sales)</h3>
-                <p className="text-[10px] text-slate-400">การกระจายตัวของรายได้ตามช่วงเวลา 08:00 - 21:00 น.</p>
+              <div className="min-w-0">
+                <h3 className="text-xs font-bold text-slate-800 truncate">ช่วงเวลายอดขายสูงสุด (Hourly Sales)</h3>
+                <p className="text-[10px] text-slate-400 truncate">การกระจายตัวของรายได้ตามช่วงเวลา 08:00 - 21:00 น.</p>
               </div>
             </div>
           </div>
 
-          <div className="pt-2">
-            <div className="h-44 flex items-end gap-1.5 sm:gap-2 justify-between">
+          <div className="pt-4 min-w-0">
+            <div className="h-44 pt-4 flex items-end gap-1 sm:gap-2 justify-between w-full min-w-0">
               {hourlySales.map((h) => {
-                const heightPercent = maxHourlyRevenue > 0 ? (h.revenue / maxHourlyRevenue) * 100 : 0;
+                const heightPercent = maxHourlyRevenue > 0 ? Math.min(100, (h.revenue / maxHourlyRevenue) * 100) : 0;
                 const hasSales = h.revenue > 0;
 
                 return (
-                  <div key={h.hour} className="flex-1 flex flex-col items-center gap-1 group relative">
+                  <div key={h.hour} className="flex-1 min-w-0 flex flex-col items-center gap-1 group relative">
                     {/* Tooltip on hover */}
-                    <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] font-mono px-2 py-1 rounded-lg pointer-events-none whitespace-nowrap z-20 shadow-md">
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] font-mono px-2 py-1 rounded-lg pointer-events-none whitespace-nowrap z-20 shadow-md">
                       {h.label}: ฿{h.revenue} ({h.cups} แก้ว)
                     </div>
 
@@ -611,7 +611,7 @@ export default function AdminSalesReportPage() {
                         }`}
                       />
                     </div>
-                    <span className="text-[9px] font-mono text-slate-400 truncate">
+                    <span className="text-[9px] font-mono text-slate-400 truncate w-full text-center">
                       {String(h.hour).padStart(2, '0')}
                     </span>
                   </div>

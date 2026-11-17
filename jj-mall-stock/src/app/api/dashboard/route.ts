@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 export async function GET() {
   try {
@@ -15,29 +16,41 @@ export async function GET() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    // 1. Basic Counts
-    const [totalProducts, totalIngredients, ingredients] = await Promise.all([
+    // 1. Basic Counts & Store Stock Reconciliation
+    const [totalProducts, totalIngredients, stores] = await Promise.all([
       prisma.product.count({ where: { status: 'ACTIVE' } }),
       prisma.ingredient.count({ where: { status: 'ACTIVE' } }),
-      prisma.ingredient.findMany({
-        where: { status: 'ACTIVE' },
-        select: { id: true, code: true, name: true, unit: true, currentStock: true, minStock: true },
+      prisma.user.findMany({
+        where: { role: 'STAFF', status: 'ACTIVE' },
+        select: { id: true, name: true, username: true },
+        orderBy: { id: 'asc' },
       }),
     ]);
 
-    let lowStockCount = 0;
+    const primaryStore = stores[0] || null;
+    const storeBalances = primaryStore
+      ? await calculateStoreReconciliation(primaryStore.id)
+      : [];
+
+    let inStockCount = 0;
     let outOfStockCount = 0;
     const lowStockList: any[] = [];
 
-    ingredients.forEach((ing) => {
-      const stock = Number(ing.currentStock);
-      const min = Number(ing.minStock);
+    storeBalances.forEach((b) => {
+      const stock = Number(b.expectedStock || 0);
       if (stock <= 0) {
         outOfStockCount++;
-        lowStockList.push({ ...ing, currentStock: stock, minStock: min, isOutOfStock: true });
-      } else if (stock <= min) {
-        lowStockCount++;
-        lowStockList.push({ ...ing, currentStock: stock, minStock: min, isOutOfStock: false });
+        lowStockList.push({
+          id: b.ingredientId,
+          code: b.code,
+          name: b.name,
+          unit: b.unit,
+          currentStock: stock,
+          storeName: primaryStore?.name || 'หน้าร้าน',
+          isOutOfStock: true,
+        });
+      } else {
+        inStockCount++;
       }
     });
 
@@ -168,7 +181,8 @@ export async function GET() {
         kpis: {
           totalProducts,
           totalIngredients,
-          lowStockIngredients: lowStockCount,
+          inStockIngredients: inStockCount,
+          lowStockIngredients: 0,
           outOfStockIngredients: outOfStockCount,
           todaySalesAmount,
           todayCupsSold,
