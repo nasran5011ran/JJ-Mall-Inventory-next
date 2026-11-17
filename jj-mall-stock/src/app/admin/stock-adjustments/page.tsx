@@ -195,14 +195,12 @@ export default function AdminStockAdjustmentsPage() {
     return ingredients;
   };
 
-  // Open Create Modal
-  const openCreateModal = async () => {
-    const firstStoreId = staffStores[0] ? String(staffStores[0].id) : '';
-    const initialStore = storeFilter !== 'ALL' ? storeFilter : firstStoreId;
-    const initStoreObj = staffStores.find((s: any) => String(s.id) === String(initialStore));
-    setFormStoreId(initialStore);
-    setStoreQuery(initStoreObj ? `${initStoreObj.name} (@${initStoreObj.username})` : '');
+  // Open Create Modal (Leave store empty by default)
+  const openCreateModal = () => {
+    setFormStoreId('');
+    setStoreQuery('');
     setStoreDropdownOpen(false);
+    setFormIngredients([]);
     setFormReason('');
     setAutoApprove(true);
     setFormError(null);
@@ -215,10 +213,6 @@ export default function AdminStockAdjustmentsPage() {
       },
     ]);
     setCreateModalOpen(true);
-
-    if (initialStore) {
-      await fetchLocationStock(initialStore);
-    }
   };
 
   const handleFormStoreChange = async (newStoreId: string) => {
@@ -285,6 +279,11 @@ export default function AdminStockAdjustmentsPage() {
   const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (!formStoreId) {
+      setFormError('กรุณาเลือกร้านค้าที่ต้องการปรับสต็อก');
+      return;
+    }
 
     // NOTE: item.actualQuantity holds the WASTE amount typed by the user (e.g. 20 g).
     // The new stock level sent to the API = current system stock - waste.
@@ -973,7 +972,7 @@ export default function AdminStockAdjustmentsPage() {
       {/* Modal 1: Create New Stock Adjustment */}
       {createModalOpen && (
         <div className="print:hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
@@ -1048,6 +1047,8 @@ export default function AdminStockAdjustmentsPage() {
                       type="button"
                       onClick={() => {
                         setStoreQuery('');
+                        setFormStoreId('');
+                        setFormIngredients([]);
                         setStoreDropdownOpen(true);
                       }}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
@@ -1259,13 +1260,13 @@ export default function AdminStockAdjustmentsPage() {
                                         : ''
                                     }`}
                                   >
-                                    <div className="min-w-0">
-                                      <div className="font-bold text-xs text-slate-800 truncate">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-bold text-xs text-slate-800 break-words">
                                         {ing.name}{' '}
                                         <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
                                       </div>
                                       {ing.category && (
-                                        <div className="text-[10px] text-slate-400 truncate">
+                                        <div className="text-[10px] text-slate-400">
                                           หมวด: {ing.category}
                                         </div>
                                       )}
@@ -1281,13 +1282,13 @@ export default function AdminStockAdjustmentsPage() {
                         </div>
 
                         {/* System Stock preview */}
-                        <div className="w-24 text-right font-mono text-slate-500 hidden sm:block">
-                          ระบบ: {systemQty.toLocaleString()}
+                        <div className="w-28 text-right font-mono text-slate-600 font-semibold hidden sm:block shrink-0 whitespace-nowrap">
+                          ระบบ: {systemQty.toLocaleString()} {selectedIng?.unit || ''}
                         </div>
 
                         {/* Waste Input */}
-                        <div className="w-full sm:w-40 flex items-center gap-1">
-                          <span className="text-slate-600 text-[10px] font-bold whitespace-nowrap">จำนวนเสีย:</span>
+                        <div className="w-full sm:w-52 flex items-center gap-1.5 shrink-0">
+                          <span className="text-slate-700 text-xs font-bold whitespace-nowrap">จำนวนเสีย:</span>
                           <input
                             type="number"
                             min="0"
@@ -1296,23 +1297,25 @@ export default function AdminStockAdjustmentsPage() {
                             value={item.actualQuantity}
                             onChange={(e) => handleItemChange(idx, 'actualQuantity', e.target.value)}
                             placeholder="เช่น 20"
-                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono font-bold text-right focus:outline-none"
+                            className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono font-bold text-right focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                           />
-                          <span className="text-[10px] text-slate-500 w-8 truncate">
+                          <span className="px-2 py-1 rounded-lg bg-slate-200/80 text-slate-800 text-xs font-bold whitespace-nowrap shrink-0">
                             {selectedIng?.unit || 'หน่วย'}
                           </span>
                         </div>
 
                         {/* Diff Preview + remaining */}
-                        <div className="w-28 text-right font-mono font-bold leading-tight">
+                        <div className="w-32 text-right font-mono font-bold leading-tight shrink-0 whitespace-nowrap">
                           {diff === 0 ? (
                             <span className="text-slate-400">0</span>
                           ) : (
-                            <span className="text-red-600">{diff.toLocaleString()}</span>
+                            <span className="text-red-600">
+                              {diff.toLocaleString()} {selectedIng?.unit || ''}
+                            </span>
                           )}
                           {diff !== 0 && (
                             <div className="text-[10px] font-semibold text-slate-500">
-                              คงเหลือ {remainQty.toLocaleString()}
+                              คงเหลือ {remainQty.toLocaleString()} {selectedIng?.unit || ''}
                             </div>
                           )}
                         </div>
