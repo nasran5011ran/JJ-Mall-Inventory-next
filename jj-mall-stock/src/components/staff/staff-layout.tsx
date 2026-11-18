@@ -15,7 +15,6 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
   const { user, loading } = useAuth();
 
   const isWidePage =
-    pathname?.includes('/staff/stock-requests') ||
     pathname?.includes('/staff/stock-count') ||
     pathname?.includes('/staff/stock-adjustments');
 
