@@ -139,9 +139,48 @@ export default function StaffStockAdjustmentsPage() {
 
   const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
   const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
+  const [popoverPos, setPopoverPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const itemsContainerRef = useRef<HTMLDivElement>(null);
   const itemsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto calculate fixed popover position relative to viewport
+  useEffect(() => {
+    if (activeRowSearchIdx === null) {
+      setPopoverPos(null);
+      return;
+    }
+
+    const updatePos = () => {
+      const el = document.getElementById(`search-input-${activeRowSearchIdx}`);
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const popoverHeight = 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < popoverHeight && rect.top > popoverHeight;
+
+      setPopoverPos({
+        top: openUpwards ? rect.top - popoverHeight - 4 : rect.bottom + 4,
+        left: Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 360) - 8)),
+        width: Math.min(window.innerWidth - 16, Math.max(rect.width, 360)),
+      });
+    };
+
+    updatePos();
+    const t = setTimeout(updatePos, 40);
+    window.addEventListener('scroll', updatePos, true);
+    window.addEventListener('resize', updatePos);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('scroll', updatePos, true);
+      window.removeEventListener('resize', updatePos);
+    };
+  }, [activeRowSearchIdx]);
 
   const getRowFilteredIngredients = (rowIdx: number) => {
     const q = (rowSearchTexts[rowIdx] || '').toLowerCase().trim();
@@ -648,9 +687,72 @@ export default function StaffStockAdjustmentsPage() {
             {/* Click-away backdrop overlay for active row search popover */}
             {activeRowSearchIdx !== null && (
               <div
-                className="fixed inset-0 z-[55] bg-transparent cursor-default"
+                className="fixed inset-0 z-[9990] bg-transparent cursor-default"
                 onClick={() => setActiveRowSearchIdx(null)}
               />
+            )}
+
+            {/* Floating Fixed Dropdown Popover (Never clipped by any scrollbox) */}
+            {activeRowSearchIdx !== null && popoverPos && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: `${popoverPos.top}px`,
+                  left: `${popoverPos.left}px`,
+                  width: `${popoverPos.width}px`,
+                  zIndex: 9999,
+                }}
+                className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-75"
+              >
+                {(() => {
+                  const filtered = getRowFilteredIngredients(activeRowSearchIdx);
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[activeRowSearchIdx] || ''}&rdquo;
+                      </div>
+                    );
+                  }
+                  return filtered.map((ing) => (
+                    <button
+                      key={ing.id}
+                      type="button"
+                      onClick={() => {
+                        handleItemChange(activeRowSearchIdx, 'ingredientId', String(ing.id));
+                        setActiveRowSearchIdx(null);
+                        setRowSearchTexts((prev) => ({ ...prev, [activeRowSearchIdx]: '' }));
+                      }}
+                      className={`w-full text-left p-3 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                        ing.id === Number(formItems[activeRowSearchIdx]?.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-sky-700">
+                            {ing.name}
+                          </span>
+                          {ing.category && (
+                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                              {ing.category}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          รหัส: {ing.code}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                          คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                        </span>
+                        <div className="text-[10px] text-sky-600 font-bold mt-0.5 group-hover:underline">
+                          + เลือกรายการนี้
+                        </div>
+                      </div>
+                    </button>
+                  ));
+                })()}
+              </div>
             )}
 
             {/* Modal Header */}
@@ -759,7 +861,7 @@ export default function StaffStockAdjustmentsPage() {
                         id={`adjustment-row-${idx}`}
                         className={`p-3 sm:p-3.5 rounded-2xl border transition-colors space-y-2.5 ${
                           isSearchingThisRow
-                            ? 'border-slate-300 shadow-md relative z-[60] bg-white'
+                            ? 'border-slate-300 shadow-md relative z-[9995] bg-white'
                             : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
                         }`}
                       >
@@ -814,7 +916,7 @@ export default function StaffStockAdjustmentsPage() {
                             </label>
 
                             {isSearchingThisRow ? (
-                              <div className="relative">
+                              <div className="relative" id={`search-input-${idx}`}>
                                 <div className="relative">
                                   <Search className="w-3.5 h-3.5 text-sky-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                   <input
@@ -839,54 +941,6 @@ export default function StaffStockAdjustmentsPage() {
                                     <span>ปิด</span>
                                     <X className="w-3.5 h-3.5" />
                                   </button>
-                                </div>
-
-                                {/* Search Dropdown Popover */}
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[80] max-h-60 overflow-y-auto divide-y divide-slate-100">
-                                  {filteredRowIngs.length === 0 ? (
-                                    <div className="p-3.5 text-center text-xs text-slate-400">
-                                      ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
-                                    </div>
-                                  ) : (
-                                    filteredRowIngs.map((ing) => (
-                                      <button
-                                        key={ing.id}
-                                        type="button"
-                                        onClick={() => {
-                                          handleItemChange(idx, 'ingredientId', String(ing.id));
-                                          setActiveRowSearchIdx(null);
-                                          setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
-                                        }}
-                                        className={`w-full text-left p-3 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
-                                          ing.id === Number(item.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
-                                        }`}
-                                      >
-                                        <div className="min-w-0">
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-sky-700">
-                                              {ing.name}
-                                            </span>
-                                            {ing.category && (
-                                              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
-                                                {ing.category}
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                            รหัส: {ing.code}
-                                          </div>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                                            คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
-                                          </span>
-                                          <div className="text-[10px] text-sky-600 font-bold mt-0.5 group-hover:underline">
-                                            + เลือกรายการนี้
-                                          </div>
-                                        </div>
-                                      </button>
-                                    ))
-                                  )}
                                 </div>
                               </div>
                             ) : (
