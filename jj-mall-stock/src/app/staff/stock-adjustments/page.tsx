@@ -714,7 +714,7 @@ export default function StaffStockAdjustmentsPage() {
               </div>
 
               {/* Items Section */}
-              <div className={`space-y-3 transition-all duration-150 ${activeRowSearchIdx !== null ? 'pb-48 sm:pb-56' : ''}`}>
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-slate-500" />
@@ -723,7 +723,7 @@ export default function StaffStockAdjustmentsPage() {
                   <button
                     type="button"
                     onClick={handleAddItemRow}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>เพิ่มแถววัตถุดิบ</span>
@@ -741,9 +741,9 @@ export default function StaffStockAdjustmentsPage() {
                     return (
                       <div
                         key={idx}
-                        className={`p-3 sm:p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                        className={`p-3 sm:p-3.5 rounded-2xl border transition-colors space-y-2.5 ${
                           isSearchingThisRow
-                            ? 'border-sky-400 ring-2 ring-sky-500/20 shadow-md relative z-[60] bg-white'
+                            ? 'border-slate-300 shadow-md relative z-[60] bg-white'
                             : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
                         }`}
                       >
@@ -825,7 +825,7 @@ export default function StaffStockAdjustmentsPage() {
                                 </div>
 
                                 {/* Search Dropdown Popover */}
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border-2 border-sky-400 z-[80] max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 ring-4 ring-sky-500/10">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[80] max-h-60 overflow-y-auto divide-y divide-slate-100">
                                   {filteredRowIngs.length === 0 ? (
                                     <div className="p-3.5 text-center text-xs text-slate-400">
                                       ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
