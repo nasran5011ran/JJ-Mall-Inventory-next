@@ -353,14 +353,17 @@ export default function StaffStockCountPage() {
         </div>
 
         {/* History Table Card */}
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           {/* Header & Search */}
-          <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-sky-700" />
               <h2 className="font-bold text-sm text-slate-800">
-                ประวัติการตรวจนับสต็อกของร้าน ({filteredCounts.length} รอบ)
+                ประวัติการตรวจนับสต็อกของร้าน
               </h2>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-200/60 text-slate-600">
+                {filteredCounts.length} รอบ
+              </span>
             </div>
 
             <div className="relative w-full sm:w-64">
@@ -392,14 +395,14 @@ export default function StaffStockCountPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                    <th className="py-2.5 px-3 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">ผู้ตรวจนับ</th>
-                    <th className="py-2.5 px-3 text-center whitespace-nowrap">จำนวนรายการ</th>
-                    <th className="py-2.5 px-3 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
-                    <th className="py-2.5 px-3">หมายเหตุ</th>
-                    <th className="py-2.5 px-3 text-right whitespace-nowrap">การจัดการ</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold tracking-wider text-[11px] uppercase">
+                    <th className="py-3 px-4 w-44 whitespace-nowrap">เลขที่ใบนับสต็อก</th>
+                    <th className="py-3 px-3 w-40 whitespace-nowrap">วันที่ & เวลาตรวจนับ</th>
+                    <th className="py-3 px-3 w-36 whitespace-nowrap">ผู้ตรวจนับ</th>
+                    <th className="py-3 px-3 w-28 text-center whitespace-nowrap">จำนวนรายการ</th>
+                    <th className="py-3 px-3 w-56 whitespace-nowrap">สรุปผลต่าง (Variance)</th>
+                    <th className="py-3 px-3 min-w-[140px]">หมายเหตุ</th>
+                    <th className="py-3 px-4 w-44 text-right whitespace-nowrap">การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
@@ -412,84 +415,89 @@ export default function StaffStockCountPage() {
                       <tr
                         key={sc.id}
                         onClick={() => setSelectedCount(sc)}
-                        className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                        className="hover:bg-sky-50/40 transition-colors cursor-pointer group"
                       >
                         {/* Count Number */}
-                        <td className="py-2.5 px-3 font-mono font-bold text-sky-700 whitespace-nowrap">
+                        <td className="py-3 px-4 font-mono font-bold text-sky-700 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 group-hover:underline">
-                            <FileText className="w-3.5 h-3.5 text-sky-600" />
+                            <FileText className="w-3.5 h-3.5 text-sky-600 shrink-0" />
                             <span>{sc.countNumber}</span>
                           </div>
                         </td>
 
                         {/* Date & Time */}
-                        <td className="py-2.5 px-3 text-slate-600 whitespace-nowrap">
-                          <div className="font-bold text-slate-700">
+                        <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                          <div className="font-semibold text-slate-700">
                             {new Date(sc.countDate || sc.createdAt).toLocaleDateString('th-TH')}
                           </div>
-                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {new Date(sc.countDate || sc.createdAt).toLocaleTimeString('th-TH')} น.
+                          <div className="text-[11px] text-slate-400 font-mono flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{new Date(sc.countDate || sc.createdAt).toLocaleTimeString('th-TH')} น.</span>
                           </div>
                         </td>
 
                         {/* Created By */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="font-bold text-slate-800 flex items-center gap-1.5">
-                            <User className="w-3.5 h-3.5 text-slate-400" />
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="font-medium text-slate-800 flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{sc.createdBy?.name || 'Staff'}</span>
                           </div>
                         </td>
 
                         {/* Total Items */}
-                        <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
-                          {sc.items.length} รายการ
+                        <td className="py-3 px-3 text-center font-mono font-bold text-slate-700 whitespace-nowrap">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                            {sc.items.length} รายการ
+                          </span>
                         </td>
 
                         {/* Variance Badges */}
-                        <td className="py-2.5 px-3 whitespace-nowrap">
+                        <td className="py-3 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {matchCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <Check className="w-3 h-3" /> ตรง {matchCount}
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <Check className="w-3 h-3 text-emerald-600" /> ตรง {matchCount}
                               </span>
                             )}
                             {shortageCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
-                                <TrendingDown className="w-3 h-3" /> ขาด {shortageCount}
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                                <TrendingDown className="w-3 h-3 text-red-600" /> ขาด {shortageCount}
                               </span>
                             )}
                             {surplusCount > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                <TrendingUp className="w-3 h-3" /> เกิน {surplusCount}
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                <TrendingUp className="w-3 h-3 text-blue-600" /> เกิน {surplusCount}
                               </span>
+                            )}
+                            {matchCount === 0 && shortageCount === 0 && surplusCount === 0 && (
+                              <span className="text-slate-400 text-xs">-</span>
                             )}
                           </div>
                         </td>
 
                         {/* Note */}
-                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                          {sc.note || '-'}
+                        <td className="py-3 px-3 text-slate-500 max-w-xs truncate">
+                          {sc.note || <span className="text-slate-300">-</span>}
                         </td>
 
                         {/* Action */}
-                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               onClick={() => handleOpenPrintReport(sc)}
-                              className="px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold text-xs transition-colors cursor-pointer border border-sky-200 flex items-center gap-1"
+                              className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 font-semibold text-xs transition-colors cursor-pointer border border-sky-200/80 flex items-center gap-1 shadow-2xs"
                               title="พิมพ์รายงานผลต่างตามแบบฟอร์มทางการ"
                             >
                               <Printer className="w-3.5 h-3.5 text-sky-600" />
-                              <span>พิมพ์รายงาน</span>
+                              <span>พิมพ์</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => setSelectedCount(sc)}
-                              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
                             >
-                              ดูรายละเอียด
+                              รายละเอียด
                             </button>
                           </div>
                         </td>
