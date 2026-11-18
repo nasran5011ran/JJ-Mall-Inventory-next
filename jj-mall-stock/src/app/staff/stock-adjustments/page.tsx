@@ -88,11 +88,12 @@ interface NewItemForm {
 }
 
 const PRESET_REASONS = [
-  'วัตถุดิบเสียหาย / หก / บรรจุภัณฑ์แตกชำรุด',
+  'วัตถุดิบเสียหาย / ชำรุด',
   'วัตถุดิบหมดอายุ / เสื่อมสภาพ',
-  'ผลต่างจากการตรวจนับสต็อกหน้าร้าน',
-  'วัตถุดิบผิดสเปก / ส่งคืนคลัง',
-  'อื่นๆ (ระบุเหตุผลเอง)',
+  'นำไปใช้ทดลองสูตร / ฝึกอบรม',
+  'ปรับปรุงจากการตรวจนับสต็อกจริง',
+  'ได้รับแถมจากซัพพลายเออร์',
+  'สินค้าสูญหายไม่ทราบสาเหตุ',
 ];
 
 export default function StaffStockAdjustmentsPage() {
@@ -131,11 +132,24 @@ export default function StaffStockAdjustmentsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [formPresetReason, setFormPresetReason] = useState(PRESET_REASONS[0]);
-  const [formCustomReason, setFormCustomReason] = useState('');
+  const [formReason, setFormReason] = useState('');
   const [formItems, setFormItems] = useState<NewItemForm[]>([
     { ingredientId: '', inputMode: 'WASTE', inputValue: '' },
   ]);
+
+  const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
+  const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
+
+  const getRowFilteredIngredients = (rowIdx: number) => {
+    const q = (rowSearchTexts[rowIdx] || '').toLowerCase().trim();
+    if (!q) return ingredients;
+    return ingredients.filter(
+      (ing) =>
+        ing.name.toLowerCase().includes(q) ||
+        ing.code.toLowerCase().includes(q) ||
+        (ing.category && ing.category.toLowerCase().includes(q))
+    );
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -144,27 +158,26 @@ export default function StaffStockAdjustmentsPage() {
 
   // Helper to open create modal
   const openCreateModal = () => {
-    const firstIng = ingredients[0];
-    setFormPresetReason(PRESET_REASONS[0]);
-    setFormCustomReason('');
+    setFormReason('');
     setFormItems([
       {
-        ingredientId: firstIng ? String(firstIng.id) : '',
+        ingredientId: '',
         inputMode: 'WASTE',
         inputValue: '',
       },
     ]);
+    setActiveRowSearchIdx(null);
+    setRowSearchTexts({});
     setFormError(null);
     setCreateModalOpen(true);
   };
 
   // Add Item Row
   const handleAddItemRow = () => {
-    const firstIng = ingredients[0];
     setFormItems((prev) => [
       ...prev,
       {
-        ingredientId: firstIng ? String(firstIng.id) : '',
+        ingredientId: '',
         inputMode: 'WASTE',
         inputValue: '',
       },
@@ -175,6 +188,14 @@ export default function StaffStockAdjustmentsPage() {
   const handleRemoveItemRow = (idx: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, i) => i !== idx));
+    setRowSearchTexts((prev) => {
+      const next = { ...prev };
+      delete next[idx];
+      return next;
+    });
+    if (activeRowSearchIdx === idx) {
+      setActiveRowSearchIdx(null);
+    }
   };
 
   // Update Item Row
@@ -211,14 +232,7 @@ export default function StaffStockAdjustmentsPage() {
     e.preventDefault();
     setFormError(null);
 
-    // Final reason
-    const finalReason =
-      formPresetReason === 'อื่นๆ (ระบุเหตุผลเอง)'
-        ? formCustomReason.trim()
-        : formCustomReason.trim()
-        ? `${formPresetReason}: ${formCustomReason.trim()}`
-        : formPresetReason;
-
+    const finalReason = formReason.trim();
     if (!finalReason) {
       setFormError('กรุณาระบุเหตุผลในการขอปรับสต็อก');
       return;
@@ -235,7 +249,7 @@ export default function StaffStockAdjustmentsPage() {
       });
 
     if (payloadItems.length === 0) {
-      setFormError('กรุณาระบุวัตถุดิบและจำนวนอย่างน้อย 1 รายการ');
+      setFormError('กรุณาเลือกวัตถุดิบและระบุจำนวนอย่างน้อย 1 รายการ');
       return;
     }
 
@@ -618,16 +632,26 @@ export default function StaffStockAdjustmentsPage() {
 
       {/* CREATE MODAL */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          {/* Backdrop overlay for active row search popover */}
+          {activeRowSearchIdx !== null && (
+            <div
+              className="fixed inset-0 z-[55] bg-transparent"
+              onClick={() => setActiveRowSearchIdx(null)}
+            />
+          )}
+
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto">
             {/* Modal Header */}
-            <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-sky-50 to-teal-50">
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-sky-50 to-teal-50 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-md">
                   <FileEdit className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900">สร้างใบขอปรับสต็อก / แจ้งของเสีย</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900">
+                    สร้างใบขอปรับสต็อก / แจ้งของเสีย
+                  </h2>
                   <p className="text-xs text-slate-500">
                     สต็อกหน้าร้าน: <span className="font-bold text-emerald-700">{user?.name}</span> (ส่งให้ Admin พิจารณาอนุมัติ)
                   </p>
@@ -635,54 +659,57 @@ export default function StaffStockAdjustmentsPage() {
               </div>
               <button
                 onClick={() => setCreateModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitCreate} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+            <form onSubmit={handleSubmitCreate} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
               {/* Error Alert */}
               {formError && (
-                <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-3 text-rose-800 text-xs sm:text-sm">
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 text-xs sm:text-sm">
                   <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                   <p className="font-medium">{formError}</p>
                 </div>
               )}
 
-              {/* Preset Reason Selector */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  เหตุผลในการขอปรับสต็อก / ตัดของเสีย <span className="text-rose-500">*</span>
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {PRESET_REASONS.map((reason) => (
+              {/* Reason Selector (Match Admin design) */}
+              <div className="space-y-1.5 p-3.5 rounded-2xl bg-sky-50/60 border border-sky-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-sky-950">
+                    เหตุผลในการขอปรับสต็อก / แจ้งของเสีย <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[11px] text-sky-700 font-medium hidden sm:inline">
+                    พิมพ์เองได้อิสระ หรือกดปุ่มตัวเลือกด้านล่าง
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={formReason}
+                  onChange={(e) => setFormReason(e.target.value)}
+                  placeholder="พิมพ์เหตุผลได้เลย หรือกดเลือกจากตัวเลือกด้านล่าง..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-sky-300 bg-white font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                />
+
+                {/* Quick-pick reason chips (Admin style) */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {PRESET_REASONS.map((r) => (
                     <button
-                      key={reason}
+                      key={r}
                       type="button"
-                      onClick={() => setFormPresetReason(reason)}
-                      className={`text-left p-3 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between ${
-                        formPresetReason === reason
-                          ? 'border-sky-500 bg-sky-50/70 text-sky-900 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
+                      onClick={() => setFormReason(r)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                        formReason === r
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-2xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}
                     >
-                      <span className="truncate">{reason}</span>
-                      {formPresetReason === reason && <Check className="w-4 h-4 text-sky-600 shrink-0 ml-2" />}
+                      {r}
                     </button>
                   ))}
-                </div>
-
-                {/* Additional / Custom Detail */}
-                <div className="pt-2">
-                  <input
-                    type="text"
-                    placeholder="ระบุรายละเอียดเพิ่มเติม (เช่น แก้วชาไทยหก 2 แก้ว, ขวดไซรัปแตกตอนจัดร้าน, นมหมดอายุวันที่...)"
-                    value={formCustomReason}
-                    onChange={(e) => setFormCustomReason(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white"
-                  />
                 </div>
               </div>
 
@@ -691,15 +718,15 @@ export default function StaffStockAdjustmentsPage() {
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-slate-500" />
-                    รายการวัตถุดิบที่ขอปรับ ({formItems.length} รายการ)
+                    รายการวัตถุดิบที่ขอปรับ ({formItems.length} รายการ) <span className="text-red-500">*</span>
                   </label>
                   <button
                     type="button"
                     onClick={handleAddItemRow}
-                    className="flex items-center gap-1 px-3 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg text-xs font-semibold transition-all"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    เพิ่มวัตถุดิบ
+                    <span>เพิ่มแถววัตถุดิบ</span>
                   </button>
                 </div>
 
@@ -708,15 +735,28 @@ export default function StaffStockAdjustmentsPage() {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                     const sysStock = selectedIng ? Number(selectedIng.currentStock) : 0;
                     const { actualQty, diff } = resolveActualQuantity(item);
+                    const isSearchingThisRow = activeRowSearchIdx === idx;
+                    const filteredRowIngs = getRowFilteredIngredients(idx);
 
                     return (
                       <div
                         key={idx}
-                        className="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/50 space-y-3 hover:border-sky-200 transition-all"
+                        className={`p-3 sm:p-3.5 rounded-2xl border transition-all space-y-2.5 ${
+                          isSearchingThisRow
+                            ? 'border-sky-400 ring-2 ring-sky-500/20 shadow-md relative z-[60] bg-white'
+                            : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
+                        }`}
                       >
+                        {/* Row Top Header */}
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-slate-500">ลำดับที่ {idx + 1}</span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-700 font-mono font-bold text-xs flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-bold text-slate-700">รายการที่ {idx + 1}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
                             {/* Mode Toggle Button */}
                             <button
                               type="button"
@@ -727,10 +767,10 @@ export default function StaffStockAdjustmentsPage() {
                                   item.inputMode === 'WASTE' ? 'ACTUAL' : 'WASTE'
                                 )
                               }
-                              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all ${
+                              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
                                 item.inputMode === 'WASTE'
-                                  ? 'bg-rose-50 border-rose-200 text-rose-700'
-                                  : 'bg-sky-50 border-sky-200 text-sky-700'
+                                  ? 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                                  : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
                               }`}
                             >
                               โหมด: {item.inputMode === 'WASTE' ? '🔥 หักของเสีย/ชำรุด' : '⚖️ ระบุสต็อกคงเหลือจริง'}
@@ -740,7 +780,7 @@ export default function StaffStockAdjustmentsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItemRow(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
                                 title="ลบรายการนี้"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -749,42 +789,159 @@ export default function StaffStockAdjustmentsPage() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                          {/* Ingredient Select */}
-                          <div className="sm:col-span-6">
-                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                              เลือกวัตถุดิบ
+                        {/* Row Inputs: Searchable Ingredient + Stock + Input value + Diff */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                          {/* Searchable Combobox (col-span-6) */}
+                          <div className="sm:col-span-6 relative">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                              วัตถุดิบ (คลิกเพื่อค้นหาและเลือก) <span className="text-red-500">*</span>
                             </label>
-                            <select
-                              value={item.ingredientId}
-                              onChange={(e) => handleItemChange(idx, 'ingredientId', e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500"
-                            >
-                              <option value="" disabled>
-                                -- กรุณาเลือกวัตถุดิบ --
-                              </option>
-                              {ingredients.map((ing) => (
-                                <option key={ing.id} value={ing.id}>
-                                  {ing.name} ({ing.code}) — คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
-                                </option>
-                              ))}
-                            </select>
+
+                            {isSearchingThisRow ? (
+                              <div className="relative">
+                                <div className="relative">
+                                  <Search className="w-3.5 h-3.5 text-sky-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                  <input
+                                    type="text"
+                                    autoFocus
+                                    placeholder="พิมพ์ชื่อ หรือรหัสวัตถุดิบเพื่อค้นหา..."
+                                    value={rowSearchTexts[idx] || ''}
+                                    onChange={(e) =>
+                                      setRowSearchTexts((prev) => ({ ...prev, [idx]: e.target.value }))
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Escape') setActiveRowSearchIdx(null);
+                                    }}
+                                    className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border-2 border-sky-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveRowSearchIdx(null)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                    title="ปิดการค้นหา"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                {/* Search Dropdown Popover */}
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                  {filteredRowIngs.length === 0 ? (
+                                    <div className="p-3.5 text-center text-xs text-slate-400">
+                                      ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
+                                    </div>
+                                  ) : (
+                                    filteredRowIngs.map((ing) => (
+                                      <button
+                                        key={ing.id}
+                                        type="button"
+                                        onClick={() => {
+                                          handleItemChange(idx, 'ingredientId', String(ing.id));
+                                          setActiveRowSearchIdx(null);
+                                          setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
+                                        }}
+                                        className={`w-full text-left p-2.5 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                                          ing.id === Number(item.ingredientId) ? 'bg-sky-50/70 font-bold' : ''
+                                        }`}
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-bold text-slate-800 group-hover:text-sky-700">
+                                              {ing.name}
+                                            </span>
+                                            {ing.category && (
+                                              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                                                {ing.category}
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                            รหัส: {ing.code}
+                                          </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                                            คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                                          </span>
+                                        </div>
+                                      </button>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                onClick={() => {
+                                  setActiveRowSearchIdx(idx);
+                                  setRowSearchTexts((prev) => ({
+                                    ...prev,
+                                    [idx]: selectedIng ? selectedIng.name : '',
+                                  }));
+                                }}
+                                className={`w-full p-2 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-2 ${
+                                  selectedIng
+                                    ? 'bg-white border-slate-300 hover:border-sky-400 hover:bg-sky-50/30'
+                                    : 'bg-white border-dashed border-sky-300 hover:border-sky-500 hover:bg-sky-50/40'
+                                }`}
+                              >
+                                {selectedIng ? (
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-slate-900">{selectedIng.name}</span>
+                                      {selectedIng.category && (
+                                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                                          {selectedIng.category}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                      รหัส: {selectedIng.code}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1.5 text-slate-400 py-1">
+                                    <Search className="w-3.5 h-3.5 text-sky-500" />
+                                    <span className="text-xs font-medium text-sky-700">คลิกเพื่อพิมพ์ค้นหา หรือเลือกวัตถุดิบ...</span>
+                                  </div>
+                                )}
+
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {selectedIng && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleItemChange(idx, 'ingredientId', '');
+                                        handleItemChange(idx, 'inputValue', '');
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                      title="ล้างรายการนี้"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2 py-1 rounded-lg border border-sky-200">
+                                    {selectedIng ? 'เปลี่ยน' : 'เลือก'}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
-                          {/* Current System Stock */}
+                          {/* Current Stock (col-span-2) */}
                           <div className="sm:col-span-2">
-                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
                               สต็อกในร้าน
                             </label>
-                            <div className="px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs sm:text-sm font-bold text-emerald-800 text-center">
+                            <div className="px-2 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
                               {sysStock} {selectedIng?.unit || ''}
                             </div>
                           </div>
 
-                          {/* Input Value */}
+                          {/* Input Value (col-span-2) */}
                           <div className="sm:col-span-2">
-                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                              {item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'}
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                              {item.inputMode === 'WASTE' ? 'จำนวนที่เสีย *' : 'ยอดนับจริง *'}
                             </label>
                             <input
                               type="number"
@@ -793,17 +950,17 @@ export default function StaffStockAdjustmentsPage() {
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
                               placeholder="ระบุจำนวน..."
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              className="w-full px-2 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
 
-                          {/* Calculated Diff */}
+                          {/* Calculated Diff (col-span-2) */}
                           <div className="sm:col-span-2 text-center">
-                            <label className="block text-[11px] font-semibold text-slate-500 mb-1">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
                               ผลต่างสต็อก
                             </label>
                             <div
-                              className={`px-2 py-2 rounded-xl text-xs font-bold ${
+                              className={`px-2 py-2 rounded-xl text-xs font-bold truncate ${
                                 item.inputValue.trim() === ''
                                   ? 'bg-slate-100 text-slate-400'
                                   : diff < 0
@@ -825,7 +982,7 @@ export default function StaffStockAdjustmentsPage() {
 
                         {/* Calculated Target Preview */}
                         {selectedIng && (
-                          <div className="text-[11px] text-slate-500 flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-100">
+                          <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100">
                             {item.inputValue.trim() === '' ? (
                               <span className="text-slate-400 italic">
                                 สต็อกหน้าร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (รอระบุ{item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'})
@@ -864,14 +1021,14 @@ export default function StaffStockAdjustmentsPage() {
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
                   disabled={submitting}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all"
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all cursor-pointer"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-sky-600 to-teal-600 hover:from-sky-700 hover:to-teal-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? (
                     <>
