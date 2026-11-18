@@ -1438,18 +1438,18 @@ export default function AdminStockCountPage() {
             <div className="overflow-x-auto print:overflow-visible">
               <table className="w-full table-fixed text-left border-collapse text-[10px] leading-tight text-black border border-black">
                 <colgroup>
-                  <col style={{ width: '4%' }} />
-                  <col style={{ width: '9%' }} />
-                  <col style={{ width: '27%' }} />
-                  <col style={{ width: '6%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
-                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '3.5%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '22.5%' }} />
                   <col style={{ width: '5%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '6%' }} />
                 </colgroup>
                 <thead>
                   {/* Super Header Groups */}
@@ -1508,13 +1508,13 @@ export default function AdminStockCountPage() {
                         </td>
 
                         {/* Product Code */}
-                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold align-middle">
-                          {item.ingredient?.code}
+                        <td className="py-0.5 px-1 border-r border-black font-mono font-bold text-black text-[9px] text-center break-all leading-tight align-middle">
+                          {item.ingredient?.code || '-'}
                         </td>
 
                         {/* Product Name (Wrap onto next line if long) */}
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black whitespace-normal break-words align-middle">
-                          {item.ingredient?.name}
+                        <td className="py-0.5 px-1.5 border-r border-black font-sans font-medium text-black text-[9.5px] whitespace-normal break-words leading-tight align-middle">
+                          {item.ingredient?.name || '-'}
                         </td>
 
                         {/* Unit */}

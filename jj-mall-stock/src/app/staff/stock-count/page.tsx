@@ -1089,14 +1089,28 @@ export default function StaffStockCountPage() {
 
             {/* Official Report Table */}
             <div className="overflow-x-auto print:overflow-visible">
-              <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
+              <table className="w-full table-fixed text-left border-collapse text-[10px] leading-tight text-black border border-black">
+                <colgroup>
+                  <col style={{ width: '3.5%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '22.5%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '6%' }} />
+                </colgroup>
                 <thead>
                   <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
-                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-24 bg-white">รหัสสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white">ชื่อสินค้า</th>
-                    <th rowSpan={2} className="py-1 px-1 border-r border-black w-12 text-center bg-white">หน่วยนับ</th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black w-14 text-right bg-white">ยกมา</th>
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-center bg-white align-middle">ลำดับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black bg-white align-middle">รหัสสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white align-middle">ชื่อสินค้า</th>
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-center bg-white align-middle">หน่วยนับ</th>
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right bg-white align-middle">ยกมา</th>
                     <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
                       &lt;------------ รายการรับ ------------&gt;
                     </th>
@@ -1142,11 +1156,11 @@ export default function StaffStockCountPage() {
                         <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
                           {idx + 1}
                         </td>
-                        <td className="py-0.5 px-1.5 border-r border-black whitespace-nowrap text-black font-mono font-bold">
-                          {item.ingredient?.code}
+                        <td className="py-0.5 px-1 border-r border-black font-mono font-bold text-black text-[9px] text-center break-all leading-tight align-middle">
+                          {item.ingredient?.code || '-'}
                         </td>
-                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black truncate max-w-[180px]">
-                          {item.ingredient?.name}
+                        <td className="py-0.5 px-1.5 border-r border-black font-sans font-medium text-black text-[9.5px] whitespace-normal break-words leading-tight align-middle">
+                          {item.ingredient?.name || '-'}
                         </td>
                         <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
                           {item.ingredient?.unit}
