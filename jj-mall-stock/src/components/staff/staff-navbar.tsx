@@ -35,35 +35,35 @@ export default function StaffNavbar() {
   }, []);
 
   const navLinks = [
-    { href: '/staff/sales', label: 'ขายหน้าร้าน (POS)', shortLabel: 'ขาย POS', icon: ShoppingCart },
-    { href: '/staff/history', label: 'ประวัติการขาย', shortLabel: 'ประวัติ', icon: ShoppingBag },
-    { href: '/staff/products', label: 'สินค้าและเมนู', shortLabel: 'สินค้า', icon: Package },
-    { href: '/staff/stock-requests', label: 'ขอเบิกสต็อก', shortLabel: 'ขอเบิก', icon: ArrowUpFromLine },
-    { href: '/staff/stock-count', label: 'ตรวจนับสต็อก', shortLabel: 'นับสต็อก', icon: ClipboardCheck },
-    { href: '/staff/stock-adjustments', label: 'ขอปรับสต็อก', shortLabel: 'ปรับสต็อก', icon: FileEdit },
+    { href: '/staff/sales', label: 'ขาย (POS)', shortLabel: 'ขาย POS', icon: ShoppingCart },
+    { href: '/staff/history', label: 'ประวัติขาย', shortLabel: 'ประวัติ', icon: ShoppingBag },
+    { href: '/staff/products', label: 'สินค้า/เมนู', shortLabel: 'สินค้า', icon: Package },
+    { href: '/staff/stock-requests', label: 'ขอเบิก', shortLabel: 'ขอเบิก', icon: ArrowUpFromLine },
+    { href: '/staff/stock-count', label: 'นับสต็อก', shortLabel: 'นับสต็อก', icon: ClipboardCheck },
+    { href: '/staff/stock-adjustments', label: 'ปรับสต็อก', shortLabel: 'ปรับสต็อก', icon: FileEdit },
   ];
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-      {/* Top Banner (ธีมสีเดิม ฟ้า-ฟ้าอมเขียว) */}
-      <div className="px-4 sm:px-6 py-1.5 bg-gradient-to-r from-sky-600 via-teal-600 to-sky-700 text-white flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-bold">ระบบขายหน้าร้าน JJ Mall POS</span>
-          <span className="hidden sm:inline text-sky-200">• โหมดเจ้าหน้าที่ขาย (Staff Terminal)</span>
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs w-full overflow-hidden">
+      {/* Top Banner (ธีมสีฟ้าเดิม ป้องกันล้นจอ) */}
+      <div className="px-3 sm:px-6 py-1.5 bg-gradient-to-r from-sky-600 via-teal-600 to-sky-700 text-white flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="font-bold truncate">ระบบขายหน้าร้าน JJ Mall POS</span>
+          <span className="hidden sm:inline text-sky-200 truncate">• โหมดเจ้าหน้าที่ขาย (Staff Terminal)</span>
         </div>
-        <div className="flex items-center gap-1.5 font-mono font-bold text-sky-100 text-[11px]">
+        <div className="flex items-center gap-1.5 font-mono font-bold text-sky-100 text-[11px] shrink-0 pl-2">
           <Clock className="w-3.5 h-3.5" />
           <span>{currentTime}</span>
         </div>
       </div>
 
-      {/* Main Bar (ไม่เลื่อน พอดีจอทุกขนาด) */}
-      <div className="px-3 sm:px-6 h-15 flex items-center justify-between gap-2 sm:gap-3">
-        {/* Brand */}
+      {/* Main Bar: จัดเต็มความกว้าง ไม่หลุดขอบ ไม่ดันปุ่มออกจากจอ */}
+      <div className="px-3 sm:px-4 lg:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 max-w-full">
+        {/* Brand Logo */}
         <div className="flex items-center gap-2 shrink-0">
           <Link href="/staff/sales" className="flex items-center gap-2">
-            <div className="relative w-28 h-9 sm:w-32 sm:h-10">
+            <div className="relative w-24 h-8 sm:w-28 sm:h-9 lg:w-32 lg:h-10">
               <Image
                 src="/images/logo.png"
                 alt="JJ Mall"
@@ -75,8 +75,8 @@ export default function StaffNavbar() {
           </Link>
         </div>
 
-        {/* Staff Quick Nav Tabs (ไม่มี overflow-x-auto ไม่ต้องเลื่อน) */}
-        <nav className="hidden md:flex items-center gap-1 shrink-0">
+        {/* Staff Quick Nav Tabs (เฉพาะจอใหญ่ >= 1024px พอดีในแถวเดียว) */}
+        <nav className="hidden lg:flex items-center gap-1 shrink">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href || (link.href !== '/staff' && pathname.startsWith(link.href + '/'));
@@ -86,7 +86,7 @@ export default function StaffNavbar() {
                 key={link.href}
                 href={link.href}
                 prefetch={true}
-                className={`px-2.5 lg:px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'bg-sky-600 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -99,19 +99,22 @@ export default function StaffNavbar() {
           })}
         </nav>
 
-        {/* Staff Cashier Info & Logout (สีฟ้าเดิม สวยงาม กะทัดรัด ไม่ดันเมนู) */}
+        {/* Staff Cashier Info & Logout (มี max-width กำกับ ไม่หลุดขอบขวาแน่นอน) */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <div className="flex items-center gap-2 pl-2.5 pr-1.5 py-1.5 rounded-2xl bg-sky-50 border border-sky-200 shadow-2xs">
+          <div className="flex items-center gap-2 pl-2 sm:pl-2.5 pr-1 py-1 rounded-2xl bg-sky-50 border border-sky-200 shadow-2xs">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
-              <Coffee className="w-4 h-4" />
+              <Coffee className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div className="text-left leading-tight pr-1">
-              <div className="text-xs font-bold text-slate-800 max-w-[100px] sm:max-w-[140px] lg:max-w-[180px] truncate" title={user?.name}>
-                {user?.name || 'คอฟฟี่-เจเจ มอลล์(จตุจักร)'}
+              <div
+                className="text-xs font-bold text-slate-800 max-w-[100px] sm:max-w-[130px] lg:max-w-[160px] truncate"
+                title={user?.name || 'คอฟฟี่-เจเจ มอลล์(จตุจักร)'}
+              >
+                {user?.name || 'ร้านค้าหน้าร้าน'}
               </div>
-              <div className="text-[10px] font-semibold text-sky-700 flex items-center gap-1 mt-0.5">
+              <div className="text-[9.5px] font-semibold text-sky-700 flex items-center gap-1 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span>พนักงานขาย (Staff)</span>
+                <span>พนักงาน (Staff)</span>
               </div>
             </div>
 
@@ -128,11 +131,11 @@ export default function StaffNavbar() {
         </div>
       </div>
 
-      {/* Mobile Nav Tabs (จัด 6 คอลัมน์พอดีหน้าจอ 100% ไม่ต้องเลื่อนสไลด์) */}
-      <div className="grid grid-cols-6 md:hidden border-t border-slate-100 px-1 py-1.5 gap-1 bg-white">
+      {/* Sub Nav Tabs (สำหรับจอ < 1024px เช่น จอแท็บเล็ต หรือเปิดหน้าต่างคู่กับ DevTools) */}
+      <div className="grid grid-cols-6 lg:hidden border-t border-slate-100 px-1 py-1.5 gap-1 bg-white">
         {navLinks.map((link) => {
           const Icon = link.icon;
-          const isActive = pathname === link.href;
+          const isActive = pathname === link.href || (link.href !== '/staff' && pathname.startsWith(link.href + '/'));
 
           return (
             <Link
