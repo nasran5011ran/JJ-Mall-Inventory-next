@@ -11,8 +11,14 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = parseInt(searchParams.get('limit') || '500', 10);
     const myOnly = searchParams.get('myOnly') === 'true';
+    const dateParam = searchParams.get('date');
+    const monthParam = searchParams.get('month');
+    const yearParam = searchParams.get('year');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+    const searchParam = searchParams.get('search');
 
     const [activeStores, inactiveStores] = await Promise.all([
       prisma.user.findMany({
@@ -35,6 +41,39 @@ export async function GET(req: NextRequest) {
       if (myOnly) where.createdById = session.id;
     } else if (inactiveIds.length > 0) {
       where.createdById = { notIn: inactiveIds };
+    }
+
+    // Filter by Date, Month, Year, or Custom Date Range (Thailand UTC+7)
+    if (dateParam) {
+      const s = new Date(`${dateParam}T00:00:00+07:00`);
+      const e = new Date(`${dateParam}T23:59:59.999+07:00`);
+      where.createdAt = { gte: s, lte: e };
+    } else if (monthParam) {
+      const [y, m] = monthParam.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const s = new Date(`${monthParam}-01T00:00:00+07:00`);
+      const e = new Date(`${monthParam}-${String(lastDay).padStart(2, '0')}T23:59:59.999+07:00`);
+      where.createdAt = { gte: s, lte: e };
+    } else if (yearParam) {
+      const y = parseInt(yearParam, 10);
+      const s = new Date(`${y}-01-01T00:00:00+07:00`);
+      const e = new Date(`${y}-12-31T23:59:59.999+07:00`);
+      where.createdAt = { gte: s, lte: e };
+    } else if (startDateParam && endDateParam) {
+      const s = new Date(`${startDateParam}T00:00:00+07:00`);
+      const e = new Date(`${endDateParam}T23:59:59.999+07:00`);
+      where.createdAt = { gte: s, lte: e };
+    }
+
+    // Optional Search query
+    if (searchParam) {
+      const q = searchParam.trim();
+      where.OR = [
+        { saleNumber: { contains: q, mode: 'insensitive' } },
+        { note: { contains: q, mode: 'insensitive' } },
+        { paymentMethod: { contains: q, mode: 'insensitive' } },
+        { items: { some: { product: { name: { contains: q, mode: 'insensitive' } } } } },
+      ];
     }
 
     const sales = await prisma.sale.findMany({
