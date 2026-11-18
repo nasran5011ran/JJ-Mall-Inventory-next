@@ -632,7 +632,7 @@ export default function StaffStockAdjustmentsPage() {
 
       {/* CREATE MODAL */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           {/* Backdrop overlay for active row search popover */}
           {activeRowSearchIdx !== null && (
             <div
@@ -641,9 +641,9 @@ export default function StaffStockAdjustmentsPage() {
             />
           )}
 
-          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden my-auto">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col relative">
             {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-sky-50 to-teal-50 shrink-0">
+            <div className="pb-3 sm:pb-4 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-sky-600 text-white flex items-center justify-center shadow-md">
                   <FileEdit className="w-5 h-5" />
@@ -659,14 +659,14 @@ export default function StaffStockAdjustmentsPage() {
               </div>
               <button
                 onClick={() => setCreateModalOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-xl transition-all cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSubmitCreate} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+            <form onSubmit={handleSubmitCreate} className="mt-3.5 space-y-4 flex flex-col">
               {/* Error Alert */}
               {formError && (
                 <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl flex items-start gap-2.5 text-rose-800 text-xs sm:text-sm">
@@ -714,7 +714,7 @@ export default function StaffStockAdjustmentsPage() {
               </div>
 
               {/* Items Section */}
-              <div className="space-y-3">
+              <div className={`space-y-3 transition-all duration-150 ${activeRowSearchIdx !== null ? 'pb-48 sm:pb-56' : ''}`}>
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Package className="w-4 h-4 text-slate-500" />
@@ -825,7 +825,7 @@ export default function StaffStockAdjustmentsPage() {
                                 </div>
 
                                 {/* Search Dropdown Popover */}
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border-2 border-sky-400 z-[80] max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 ring-4 ring-sky-500/10">
                                   {filteredRowIngs.length === 0 ? (
                                     <div className="p-3.5 text-center text-xs text-slate-400">
                                       ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
@@ -840,13 +840,13 @@ export default function StaffStockAdjustmentsPage() {
                                           setActiveRowSearchIdx(null);
                                           setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
                                         }}
-                                        className={`w-full text-left p-2.5 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
-                                          ing.id === Number(item.ingredientId) ? 'bg-sky-50/70 font-bold' : ''
+                                        className={`w-full text-left p-3 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                                          ing.id === Number(item.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
                                         }`}
                                       >
                                         <div className="min-w-0">
                                           <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="font-bold text-slate-800 group-hover:text-sky-700">
+                                            <span className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-sky-700">
                                               {ing.name}
                                             </span>
                                             {ing.category && (
@@ -860,9 +860,12 @@ export default function StaffStockAdjustmentsPage() {
                                           </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                                            คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                            คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
                                           </span>
+                                          <div className="text-[10px] text-sky-600 font-bold mt-0.5 group-hover:underline">
+                                            + เลือกรายการนี้
+                                          </div>
                                         </div>
                                       </button>
                                     ))
