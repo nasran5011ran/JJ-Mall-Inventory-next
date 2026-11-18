@@ -1111,32 +1111,32 @@ export default function StaffStockCountPage() {
                     <th rowSpan={2} className="py-1 px-2 border-r border-black text-left bg-white align-middle">ชื่อสินค้า</th>
                     <th rowSpan={2} className="py-1 px-1 border-r border-black text-center bg-white align-middle">หน่วยนับ</th>
                     <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right bg-white align-middle">ยกมา</th>
-                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
-                      &lt;------------ รายการรับ ------------&gt;
+                    <th colSpan={1} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap align-middle">
+                      &lt;- รายการรับ -&gt;
                     </th>
-                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap">
-                      &lt;------------ รายการจ่าย ------------&gt;
+                    <th colSpan={2} className="py-0.5 px-1 border-r border-black bg-white text-center whitespace-nowrap align-middle">
+                      &lt;---- รายการจ่าย ----&gt;
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-right bg-white align-middle">
                       คงเหลือจาก<br />การคำนวณ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 border-r border-black text-right bg-white align-middle">
                       คงเหลือจาก<br />การตรวจนับ
                     </th>
-                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right w-16 bg-white">
+                    <th rowSpan={2} className="py-1 px-1.5 border-r border-black text-right bg-white align-middle">
                       ผลต่าง
                     </th>
-                    <th rowSpan={2} className="py-1 px-1 text-right w-14 bg-white">
+                    <th rowSpan={2} className="py-1 px-1 text-right bg-white align-middle">
                       DOH<br />(Day)
                     </th>
                   </tr>
 
                   <tr className="border-b border-black text-black font-bold text-center bg-white">
-                    <th className="py-0.5 px-1 border-r border-black text-right w-18 bg-white">
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">
                       ปรับปรุงเพิ่ม
                     </th>
-                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">ขาย</th>
-                    <th className="py-0.5 px-1 border-r border-black text-right w-14 bg-white">จ่ายทำลาย</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">ขาย</th>
+                    <th className="py-0.5 px-1 border-r border-black text-right bg-white align-middle">จ่ายทำลาย</th>
                   </tr>
                 </thead>
 
@@ -1153,7 +1153,7 @@ export default function StaffStockCountPage() {
 
                     return (
                       <tr key={item.id} className="border-b border-black">
-                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black align-middle">
                           {idx + 1}
                         </td>
                         <td className="py-0.5 px-1 border-r border-black font-mono font-bold text-black text-[9px] text-center break-all leading-tight align-middle">
@@ -1162,31 +1162,31 @@ export default function StaffStockCountPage() {
                         <td className="py-0.5 px-1.5 border-r border-black font-sans font-medium text-black text-[9.5px] whitespace-normal break-words leading-tight align-middle">
                           {item.ingredient?.name || '-'}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-center font-sans text-black align-middle">
                           {item.ingredient?.unit}
                         </td>
-                        <td className="py-0.5 px-1.5 text-right border-r border-black text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black text-black align-middle">
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {inQty > 0 ? inQty.toFixed(2) : ''}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {saleQty > 0 ? `(${saleQty.toFixed(2)})` : ''}
                         </td>
-                        <td className="py-0.5 px-1 border-r border-black text-right text-black">
+                        <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
                           {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : ''}
                         </td>
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {sysQty.toFixed(2)}
                         </td>
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {actQty.toFixed(2)}
                         </td>
-                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black">
+                        <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {diff === 0 ? '0.00' : diff < 0 ? `(${Math.abs(diff).toFixed(2)})` : `+${diff.toFixed(2)}`}
                         </td>
-                        <td className="py-0.5 px-1 text-right text-black font-bold">
+                        <td className="py-0.5 px-1 text-right text-black font-bold align-middle">
                           {dohVal > 0 ? dohVal.toFixed(1) : '0'}
                         </td>
                       </tr>
