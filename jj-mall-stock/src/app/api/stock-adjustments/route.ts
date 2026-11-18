@@ -278,7 +278,8 @@ export async function POST(req: NextRequest) {
           actualQty = parseFloat(item.actualQuantity);
           if (isNaN(actualQty) || actualQty < 0) continue;
         }
-        const diffQty = actualQty - systemQty;
+        actualQty = Math.round((actualQty + Number.EPSILON) * 10000) / 10000;
+        const diffQty = Math.round((actualQty - systemQty + Number.EPSILON) * 10000) / 10000;
 
         adjustmentItemsData.push({
           ingredientId: ingId,

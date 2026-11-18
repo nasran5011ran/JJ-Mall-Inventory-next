@@ -159,14 +159,18 @@ export default function StaffStockAdjustmentsPage() {
       const el = document.getElementById(`search-input-${activeRowSearchIdx}`);
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const popoverHeight = 200;
+      const popoverHeight = 220;
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUpwards = spaceBelow < popoverHeight && rect.top > popoverHeight;
 
+      // Expand popover to at least 460px (or screen width - margin) so long names are never truncated
+      const popoverWidth = Math.min(window.innerWidth - 16, Math.max(rect.width, 460));
+      const popoverLeft = Math.max(8, Math.min(rect.left, window.innerWidth - popoverWidth - 8));
+
       setPopoverPos({
         top: openUpwards ? rect.top - popoverHeight - 4 : rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
+        left: popoverLeft,
+        width: popoverWidth,
       });
     };
 
@@ -257,7 +261,7 @@ export default function StaffStockAdjustmentsPage() {
     });
   };
 
-  // Calculate actual quantity to send to API based on input mode
+  // Calculate actual quantity to send to API based on input mode (with floating-point precision fix)
   const resolveActualQuantity = (item: NewItemForm): { actualQty: number; diff: number; sysQty: number } => {
     const ing = ingredients.find((i) => i.id === Number(item.ingredientId));
     const sysQty = ing ? Number(ing.currentStock) : 0;
@@ -268,12 +272,17 @@ export default function StaffStockAdjustmentsPage() {
     if (item.inputMode === 'WASTE') {
       // Waste Mode: actualQty = max(0, sysQty - val)
       const waste = Math.max(0, val);
-      const actualQty = Math.max(0, sysQty - waste);
-      return { actualQty, diff: actualQty - sysQty, sysQty };
+      const rawActual = Math.max(0, sysQty - waste);
+      const actualQty = Math.round((rawActual + Number.EPSILON) * 10000) / 10000;
+      const rawDiff = actualQty - sysQty;
+      const diff = Math.round((rawDiff + Number.EPSILON) * 10000) / 10000;
+      return { actualQty, diff, sysQty };
     } else {
       // Actual Stock Mode: val is actual quantity
-      const actualQty = Math.max(0, val);
-      return { actualQty, diff: actualQty - sysQty, sysQty };
+      const actualQty = Math.max(0, Math.round((val + Number.EPSILON) * 10000) / 10000);
+      const rawDiff = actualQty - sysQty;
+      const diff = Math.round((rawDiff + Number.EPSILON) * 10000) / 10000;
+      return { actualQty, diff, sysQty };
     }
   };
 
@@ -584,7 +593,7 @@ export default function StaffStockAdjustmentsPage() {
                   const isApproved = adj.status === 'APPROVED';
                   const isRejected = adj.status === 'REJECTED';
 
-                  const netDiffQty = adj.items.reduce((acc, it) => acc + Number(it.diffQuantity), 0);
+                  const netDiffQty = Math.round((adj.items.reduce((acc, it) => acc + Number(it.diffQuantity), 0) + Number.EPSILON) * 10000) / 10000;
 
                   return (
                     <tr
@@ -692,7 +701,7 @@ export default function StaffStockAdjustmentsPage() {
               />
             )}
 
-            {/* Floating Fixed Dropdown Popover (Compact, sized to input) */}
+            {/* Floating Fixed Dropdown Popover (Wide & clear, shows full name without truncation) */}
             {activeRowSearchIdx !== null && popoverPos && (
               <div
                 style={{
@@ -702,7 +711,7 @@ export default function StaffStockAdjustmentsPage() {
                   width: `${popoverPos.width}px`,
                   zIndex: 9999,
                 }}
-                className="bg-white rounded-xl shadow-xl border border-slate-200 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-75 text-xs"
+                className="bg-white rounded-xl shadow-2xl border border-slate-200 max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-75 text-xs"
               >
                 {(() => {
                   const filtered = getRowFilteredIngredients(activeRowSearchIdx);
@@ -722,25 +731,27 @@ export default function StaffStockAdjustmentsPage() {
                         setActiveRowSearchIdx(null);
                         setRowSearchTexts((prev) => ({ ...prev, [activeRowSearchIdx]: '' }));
                       }}
-                      className={`w-full text-left px-3 py-2 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                      className={`w-full text-left px-3.5 py-2.5 hover:bg-sky-50 transition-colors flex items-center justify-between gap-3 group cursor-pointer ${
                         ing.id === Number(formItems[activeRowSearchIdx]?.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-xs text-slate-800 group-hover:text-sky-700 flex items-center gap-1.5 truncate">
+                        <div className="font-bold text-xs text-slate-800 group-hover:text-sky-700 flex items-center gap-1.5 flex-wrap">
                           <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 shrink-0" />
-                          <span className="truncate">{ing.name}</span>
-                          <span className="font-mono text-[10px] text-slate-400 font-normal shrink-0">({ing.code})</span>
+                          <span className="font-bold text-slate-900">{ing.name}</span>
                           {ing.category && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 shrink-0">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 shrink-0">
                               {ing.category}
                             </span>
                           )}
                         </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          รหัส: {ing.code}
+                        </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                          เหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 whitespace-nowrap">
+                          คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
                         </span>
                       </div>
                     </button>
@@ -853,7 +864,7 @@ export default function StaffStockAdjustmentsPage() {
                       <div
                         key={idx}
                         id={`adjustment-row-${idx}`}
-                        className={`p-3 sm:p-3.5 rounded-2xl border transition-colors space-y-2.5 ${
+                        className={`p-2.5 sm:p-3 rounded-2xl border transition-colors space-y-2 ${
                           isSearchingThisRow
                             ? 'border-slate-300 shadow-md relative z-[9995] bg-white'
                             : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
@@ -862,7 +873,7 @@ export default function StaffStockAdjustmentsPage() {
                         {/* Row Top Header */}
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-700 font-mono font-bold text-xs flex items-center justify-center">
+                            <span className="w-5 h-5 rounded-md bg-slate-200 text-slate-700 font-mono font-bold text-xs flex items-center justify-center">
                               {idx + 1}
                             </span>
                             <span className="text-xs font-bold text-slate-700">รายการที่ {idx + 1}</span>
@@ -873,10 +884,10 @@ export default function StaffStockAdjustmentsPage() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItemRow(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs"
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs"
                                 title="ลบรายการนี้"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3.5 h-3.5" />
                                 <span className="text-[11px] font-medium hidden sm:inline">ลบแถว</span>
                               </button>
                             )}
@@ -884,7 +895,7 @@ export default function StaffStockAdjustmentsPage() {
                         </div>
 
                         {/* Row Inputs: Searchable Ingredient + Stock + Input value + Diff */}
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
                           {/* Searchable Combobox (col-span-6) */}
                           <div className="sm:col-span-6 relative">
                             <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
@@ -928,28 +939,26 @@ export default function StaffStockAdjustmentsPage() {
                                     [idx]: selectedIng ? selectedIng.name : '',
                                   }));
                                 }}
-                                className={`w-full p-2 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-2 ${
+                                className={`w-full px-2.5 py-1.5 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-2 min-h-[36px] ${
                                   selectedIng
                                     ? 'bg-white border-slate-300 hover:border-sky-400 hover:bg-sky-50/30'
                                     : 'bg-white border-dashed border-sky-300 hover:border-sky-500 hover:bg-sky-50/40'
                                 }`}
                               >
                                 {selectedIng ? (
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-bold text-slate-900">{selectedIng.name}</span>
-                                      {selectedIng.category && (
-                                        <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
-                                          {selectedIng.category}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                                      รหัส: {selectedIng.code}
-                                    </div>
+                                  <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-xs text-slate-900">{selectedIng.name}</span>
+                                    {selectedIng.category && (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                        {selectedIng.category}
+                                      </span>
+                                    )}
+                                    <span className="text-[10px] text-slate-400 font-mono">
+                                      ({selectedIng.code})
+                                    </span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1.5 text-slate-400 py-1">
+                                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
                                     <Search className="w-3.5 h-3.5 text-sky-500" />
                                     <span className="text-xs font-medium text-sky-700">คลิกเพื่อพิมพ์ค้นหา หรือเลือกวัตถุดิบ...</span>
                                   </div>
@@ -967,10 +976,10 @@ export default function StaffStockAdjustmentsPage() {
                                       className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
                                       title="ล้างรายการนี้"
                                     >
-                                      <X className="w-3.5 h-3.5" />
+                                      <X className="w-3 h-3" />
                                     </button>
                                   )}
-                                  <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2 py-1 rounded-lg border border-sky-200">
+                                  <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-200">
                                     {selectedIng ? 'เปลี่ยน' : 'เลือก'}
                                   </span>
                                 </div>
@@ -983,7 +992,7 @@ export default function StaffStockAdjustmentsPage() {
                             <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
                               สต็อกในร้าน
                             </label>
-                            <div className="px-2 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
+                            <div className="px-2 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
                               {sysStock} {selectedIng?.unit || ''}
                             </div>
                           </div>
@@ -1000,7 +1009,7 @@ export default function StaffStockAdjustmentsPage() {
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
                               placeholder="เช่น 5"
-                              className="w-full px-2 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
 
@@ -1010,7 +1019,7 @@ export default function StaffStockAdjustmentsPage() {
                               คงเหลือหลังหัก
                             </label>
                             <div
-                              className={`px-2 py-2 rounded-xl text-xs font-bold truncate ${
+                              className={`px-2 py-1.5 rounded-xl text-xs font-bold truncate ${
                                 item.inputValue.trim() === ''
                                   ? 'bg-slate-100 text-slate-400'
                                   : diff < 0
@@ -1032,7 +1041,7 @@ export default function StaffStockAdjustmentsPage() {
 
                         {/* Calculated Target Preview */}
                         {selectedIng && (
-                          <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100">
+                          <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-100">
                             {item.inputValue.trim() === '' ? (
                               <span className="text-slate-400 italic">
                                 สต็อกในร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียหาย/ชำรุดเพื่อคำนวณยอดคงเหลือ)
@@ -1045,7 +1054,7 @@ export default function StaffStockAdjustmentsPage() {
                               </span>
                             )}
                             <span className="font-medium text-slate-600">
-                              มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.abs(diff) * Number(selectedIng.costPerUnit || 0)).toLocaleString()} ฿
+                              มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.round((Math.abs(diff) * Number(selectedIng.costPerUnit || 0) + Number.EPSILON) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ฿
                             </span>
                           </div>
                         )}
@@ -1206,7 +1215,7 @@ export default function StaffStockAdjustmentsPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {selectedAdjustment.items.map((item) => {
-                        const diff = Number(item.diffQuantity);
+                        const diff = Math.round((Number(item.diffQuantity) + Number.EPSILON) * 10000) / 10000;
                         return (
                           <tr key={item.id} className="hover:bg-slate-50/50">
                             <td className="py-2.5 px-3">
@@ -1328,7 +1337,10 @@ export default function StaffStockAdjustmentsPage() {
                       <td className="p-2 border-r border-slate-200 text-right">{Number(it.systemQuantity)}</td>
                       <td className="p-2 border-r border-slate-200 text-right font-bold">{Number(it.actualQuantity)}</td>
                       <td className="p-2 border-r border-slate-200 text-right font-bold">
-                        {Number(it.diffQuantity) > 0 ? `+${it.diffQuantity}` : it.diffQuantity}
+                        {(() => {
+                          const diff = Math.round((Number(it.diffQuantity) + Number.EPSILON) * 10000) / 10000;
+                          return diff > 0 ? `+${diff}` : diff;
+                        })()}
                       </td>
                       <td className="p-2 text-right text-slate-600">{it.ingredient.unit}</td>
                     </tr>
