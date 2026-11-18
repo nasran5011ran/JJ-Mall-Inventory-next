@@ -10,7 +10,6 @@ import {
   Package,
   ClipboardCheck,
   FileEdit,
-  ArrowDownToLine,
   ArrowUpFromLine,
   Clock,
   LogOut,
@@ -43,7 +42,6 @@ export default function StaffNavbar() {
     { href: '/staff/history', label: 'ประวัติการขายของฉัน', icon: ShoppingBag },
     { href: '/staff/products', label: 'เช็คราคาสินค้า', icon: Package },
     { href: '/staff/stock-requests', label: 'ขอเบิกซื้อวัตถุดิบ', icon: ArrowUpFromLine },
-    { href: '/staff/stock-in', label: 'รับสินค้าเข้าสต็อก', icon: ArrowDownToLine },
     { href: '/staff/stock-count', label: 'บันทึกตรวจนับสต็อก', icon: ClipboardCheck },
     { href: '/staff/stock-adjustments', label: 'สร้างใบขอปรับสต็อก', icon: FileEdit },
   ];
