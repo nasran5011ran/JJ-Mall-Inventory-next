@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import Pagination from '@/components/Pagination';
+import { confirmDeleteAlert, showSuccessAlert, showErrorAlert } from '@/lib/sweetalert';
 
 interface Ingredient {
   id: number;
@@ -328,17 +329,26 @@ export default function StaffStockRequestsPage() {
     }
   };
 
-  // Cancel Pending Request
-  const handleCancelRequisition = async (id: number) => {
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการยกเลิกใบขอเบิกสต็อกนี้?')) return;
+  // Delete / Cancel Pending Request (Using SweetAlert2 like admin)
+  const handleDeleteRequisition = async (req: RequisitionRecord) => {
+    const isConfirmed = await confirmDeleteAlert({
+      title: 'ลบรายการนี้หรือไม่?',
+      text: 'เมื่อรายการนี้ถูกลบ คุณไม่สามารถกู้คืนได้!!',
+      itemName: `ใบขอเบิก #${req.requisitionNumber}`,
+      confirmButtonText: 'ตกลง',
+      cancelButtonText: 'ยกเลิก',
+    });
+    if (!isConfirmed) return;
+
     try {
-      const res = await fetch(`/api/stock-requests/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/stock-requests/${req.id}`, { method: 'DELETE' });
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || 'ยกเลิกไม่สำเร็จ');
-      showToast('ยกเลิกใบขอเบิกสต็อกเรียบร้อยแล้ว');
+      if (!res.ok || !json.success) throw new Error(json.message || 'ลบใบขอเบิกไม่สำเร็จ');
+
+      await showSuccessAlert('ลบสำเร็จ!', `ลบใบขอเบิก #${req.requisitionNumber} เรียบร้อยแล้ว`);
       mutate();
     } catch (e: any) {
-      alert(e.message || 'เกิดข้อผิดพลาด');
+      await showErrorAlert('เกิดข้อผิดพลาด', e.message || 'เกิดข้อผิดพลาดในการลบ');
     }
   };
 
@@ -834,9 +844,10 @@ export default function StaffStockRequestsPage() {
 
                             {req.status === 'PENDING' && (
                               <button
-                                onClick={() => handleCancelRequisition(req.id)}
-                                className="p-1 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer"
-                                title="ยกเลิกคำขอเบิกนี้"
+                                type="button"
+                                onClick={() => handleDeleteRequisition(req)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-700 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="ลบใบขอเบิกนี้"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -1327,11 +1338,26 @@ export default function StaffStockRequestsPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+              {selectedRequisition.status === 'PENDING' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDetailModalOpen(false);
+                    handleDeleteRequisition(selectedRequisition);
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>ลบใบขอเบิกนี้</span>
+                </button>
+              ) : (
+                <div />
+              )}
               <button
                 type="button"
                 onClick={() => setIsDetailModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 ปิด
               </button>
