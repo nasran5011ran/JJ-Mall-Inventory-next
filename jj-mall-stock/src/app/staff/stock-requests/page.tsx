@@ -902,7 +902,7 @@ export default function StaffStockRequestsPage() {
       {/* ========================================================================= */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-auto overflow-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
@@ -978,168 +978,97 @@ export default function StaffStockRequestsPage() {
                       ? Number(storeBal.expectedStock)
                       : Number(selectedIng?.storeStock || 0);
 
-                    // Check if current searchText is already the full formatted name of selected item
-                    const isSelectedFormatted =
-                      selectedIng && item.searchText.trim() === `${selectedIng.code} - ${selectedIng.name}`.trim();
-
-                    // Filter matching suggestions: if user hasn't typed a custom query, show all ingredients
-                    const q = (!isSelectedFormatted && item.searchText) ? item.searchText.trim().toLowerCase() : '';
+                    // Filter suggestions based on typed searchText
+                    const q = (item.searchText || '').trim().toLowerCase();
                     const filteredSuggestions = q
                       ? ingredients.filter(
                           (ing) =>
-                            ing.name.toLowerCase().includes(q) || ing.code.toLowerCase().includes(q)
+                            ing.name.toLowerCase().includes(q) ||
+                            ing.code.toLowerCase().includes(q) ||
+                            (ing.category && ing.category.toLowerCase().includes(q))
                         )
                       : ingredients;
-
-                    const isOpen = activeItemSearchIdx === idx;
 
                     return (
                       <div
                         key={idx}
-                        className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5 transition-all"
+                        className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 transition-all"
                       >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
-                          {/* Searchable / Typable Ingredient Combobox */}
-                          <div className="flex-1 w-full relative" data-request-combobox={idx}>
-                            <div className="relative flex items-center">
-                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                              <input
-                                type="text"
-                                value={item.searchText}
-                                onFocus={() => setActiveItemSearchIdx(idx)}
-                                onClick={() => setActiveItemSearchIdx(idx)}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  const exact = ingredients.find(
-                                    (ing) =>
-                                      ing.name.trim().toLowerCase() === val.trim().toLowerCase() ||
-                                      ing.code.trim().toLowerCase() === val.trim().toLowerCase()
-                                  );
-                                  setFormItems((prev) => {
-                                    const next = [...prev];
-                                    next[idx] = {
-                                      ...next[idx],
-                                      ingredientId: exact ? exact.id : 0,
-                                      searchText: val,
-                                    };
-                                    return next;
-                                  });
-                                  setActiveItemSearchIdx(idx);
-                                }}
-                                placeholder="คลิกเพื่อเลือก หรือพิมพ์ค้นหาวัตถุดิบในระบบ..."
-                                className="w-full pl-9 pr-14 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
-                              />
-
-                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                {item.searchText && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setFormItems((prev) => {
-                                        const next = [...prev];
-                                        next[idx] = {
-                                          ...next[idx],
-                                          ingredientId: 0,
-                                          searchText: '',
-                                        };
-                                        return next;
-                                      });
-                                      setActiveItemSearchIdx(idx);
-                                    }}
-                                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                    title="ล้างข้อความ"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveItemSearchIdx(isOpen ? null : idx)}
-                                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                  title="เลือกวัตถุดิบในระบบ"
-                                >
-                                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Dropdown Suggestions Popover */}
-                            {isOpen && (
-                              <div className="absolute left-0 right-0 top-full mt-1.5 z-[200] bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
-                                {/* Header showing total count in system */}
-                                <div className="sticky top-0 bg-slate-50/95 backdrop-blur-xs px-3.5 py-2 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 z-10">
-                                  <span>วัตถุดิบในระบบ ({filteredSuggestions.length} รายการ)</span>
-                                  {q && <span className="text-sky-600 font-normal">ค้นหา: "{q}"</span>}
-                                </div>
-
-                                {filteredSuggestions.length === 0 ? (
-                                  <div className="p-4 text-center text-xs text-slate-400">
-                                    {ingredients.length === 0
-                                      ? 'กำลังโหลดข้อมูลวัตถุดิบในระบบ...'
-                                      : `ไม่พบวัตถุดิบที่ตรงกับ "${item.searchText}"`}
-                                  </div>
-                                ) : (
-                                  filteredSuggestions.map((ing) => {
-                                    const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
-                                    const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
-                                    const isSelected = item.ingredientId === ing.id;
-
-                                    return (
-                                      <button
-                                        key={ing.id}
-                                        type="button"
-                                        onClick={() => {
-                                          setFormItems((prev) => {
-                                            const next = [...prev];
-                                            next[idx] = {
-                                              ...next[idx],
-                                              ingredientId: ing.id,
-                                              searchText: `${ing.code} - ${ing.name}`,
-                                            };
-                                            return next;
-                                          });
-                                          setActiveItemSearchIdx(null);
-                                        }}
-                                        className={`w-full px-3.5 py-2.5 text-left transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer group ${
-                                          isSelected ? 'bg-sky-50/90' : 'hover:bg-slate-50'
-                                        }`}
-                                      >
-                                        <div className="min-w-0 flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">
-                                              {ing.code}
-                                            </span>
-                                            <span className={`font-bold truncate ${isSelected ? 'text-sky-700' : 'text-slate-800 group-hover:text-sky-700'}`}>
-                                              {ing.name}
-                                            </span>
-                                          </div>
-                                          {ing.category && (
-                                            <div className="text-[11px] text-slate-400 mt-0.5 pl-0.5">
-                                              หมวดหมู่: {ing.category}
-                                            </div>
-                                          )}
-                                        </div>
-
-                                        <div className="text-right shrink-0">
-                                          <div className="text-xs font-bold font-mono text-slate-700">
-                                            คงเหลือในร้าน: <span className={inStoreStock <= 0 ? 'text-amber-600 font-bold' : 'text-emerald-700 font-black'}>{inStoreStock.toLocaleString()}</span> {ing.unit}
-                                          </div>
-                                          {Number(ing.costPerUnit || 0) > 0 && (
-                                            <div className="text-[10px] text-slate-400 font-mono">
-                                              ประมาณ ฿{Number(ing.costPerUnit).toFixed(2)}/{ing.unit}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </button>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            )}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                          {/* 1. ช่องพิมพ์ค้นหาวัตถุดิบ (4 cols) */}
+                          <div className="md:col-span-4 relative">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                              type="text"
+                              value={item.searchText}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const searchQ = val.trim().toLowerCase();
+                                const matches = ingredients.filter(
+                                  (ing) =>
+                                    ing.name.toLowerCase().includes(searchQ) ||
+                                    ing.code.toLowerCase().includes(searchQ) ||
+                                    (ing.category && ing.category.toLowerCase().includes(searchQ))
+                                );
+                                setFormItems((prev) => {
+                                  const next = [...prev];
+                                  next[idx] = {
+                                    ...next[idx],
+                                    searchText: val,
+                                    // If exact 1 match, auto-select it; if current selection still matches, keep it
+                                    ingredientId:
+                                      matches.length === 1
+                                        ? matches[0].id
+                                        : matches.some((m) => m.id === next[idx].ingredientId)
+                                        ? next[idx].ingredientId
+                                        : 0,
+                                  };
+                                  return next;
+                                });
+                              }}
+                              placeholder="พิมพ์ค้นหาชื่อ หรือรหัส..."
+                              className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                            />
                           </div>
 
-                          {/* Quantity Input */}
-                          <div className="flex items-center gap-2 w-full sm:w-52 shrink-0">
+                          {/* 2. กล่องเลือกวัตถุดิบในระบบ (5 cols) */}
+                          <div className="md:col-span-5">
+                            <select
+                              value={item.ingredientId}
+                              onChange={(e) => {
+                                const newId = Number(e.target.value);
+                                const chosen = ingredients.find((i) => i.id === newId);
+                                setFormItems((prev) => {
+                                  const next = [...prev];
+                                  next[idx] = {
+                                    ...next[idx],
+                                    ingredientId: newId,
+                                    searchText: chosen ? chosen.name : next[idx].searchText,
+                                  };
+                                  return next;
+                                });
+                              }}
+                              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
+                            >
+                              <option value={0}>
+                                {item.searchText
+                                  ? `-- ผลการค้นหา (${filteredSuggestions.length} รายการ) --`
+                                  : `-- เลือกวัตถุดิบ (ทั้งหมด ${ingredients.length} รายการ) --`}
+                              </option>
+                              {filteredSuggestions.map((ing) => {
+                                const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
+                                const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
+                                return (
+                                  <option key={ing.id} value={ing.id}>
+                                    {ing.code} - {ing.name} (ในร้านเหลือ: {inStoreStock.toLocaleString()} {ing.unit})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+
+                          {/* 3. ช่องกรอกจำนวนขอเบิก (3 cols) */}
+                          <div className="md:col-span-3 flex items-center gap-2">
                             <input
                               type="number"
                               step="any"
@@ -1148,7 +1077,7 @@ export default function StaffStockRequestsPage() {
                               placeholder="จำนวนขอเบิก"
                               value={item.requestedQty}
                               onChange={(e) => handleItemChange(idx, 'requestedQty', e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-right text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-right text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
                             />
                             <span className="text-xs font-semibold text-slate-500 shrink-0 min-w-10 text-left">
                               {selectedIng?.unit || 'หน่วย'}
@@ -1198,9 +1127,14 @@ export default function StaffStockRequestsPage() {
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 text-[11px] text-slate-500 px-3 py-1.5 rounded-xl bg-sky-50/60 border border-sky-100">
-                            <Package className="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                            <span>💡 คลิกที่ช่องด้านบน หรือกดลูกศรเพื่อเลือกวัตถุดิบในระบบ (ทั้งหมด {ingredients.length} รายการ)</span>
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 px-3 py-1.5 rounded-xl bg-sky-50/60 border border-sky-100">
+                            <div className="flex items-center gap-1.5">
+                              <Package className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                              <span>เลือกวัตถุดิบจากกล่องตัวเลือก หรือพิมพ์ค้นหาจากช่องด้านซ้าย (ทั้งหมด {ingredients.length} รายการ)</span>
+                            </div>
+                            {item.searchText && (
+                              <span className="font-bold text-sky-700">พบ {filteredSuggestions.length} รายการ</span>
+                            )}
                           </div>
                         )}
                       </div>
