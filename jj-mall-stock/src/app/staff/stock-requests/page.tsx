@@ -242,11 +242,10 @@ export default function StaffStockRequestsPage() {
   const handleOpenCreateModal = () => {
     setFormReason('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
     setFormNote('');
-    const firstIng = ingredients[0];
     setFormItems([
       {
-        ingredientId: firstIng?.id || 0,
-        searchText: firstIng ? `${firstIng.code} - ${firstIng.name}` : '',
+        ingredientId: 0,
+        searchText: '',
         requestedQty: '',
       },
     ]);
@@ -524,20 +523,20 @@ export default function StaffStockRequestsPage() {
                 <p className="text-[11px] text-slate-400">ลองเปลี่ยนคำค้นหา หรือรีเซ็ตตัวกรองหมวดหมู่</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <table className="w-full text-left text-xs table-auto">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3 px-3 text-center w-10 text-slate-400">#</th>
-                      <th className="py-3 px-3 whitespace-nowrap">รหัสสินค้า</th>
-                      <th className="py-3 px-4">ชื่อวัตถุดิบ</th>
-                      <th className="py-3 px-3">หมวดหมู่</th>
-                      <th className="py-3 px-3 text-right">ยอดยกมา</th>
-                      <th className="py-3 px-3 text-right">รับเข้า (+)</th>
-                      <th className="py-3 px-3 text-right">ขาย POS (-)</th>
-                      <th className="py-3 px-3.5 text-right font-black text-slate-900 bg-slate-50/60">คงเหลือในร้าน</th>
-                      <th className="py-3 px-3 text-center">หน่วยนับ</th>
-                      <th className="py-3 px-3.5 text-center">การกระทำ</th>
+                      <th className="py-2.5 px-2 text-center w-8 text-slate-400">#</th>
+                      <th className="py-2.5 px-2 whitespace-nowrap">รหัสสินค้า</th>
+                      <th className="py-2.5 px-3 min-w-[130px]">ชื่อวัตถุดิบ</th>
+                      <th className="py-2.5 px-2">หมวดหมู่</th>
+                      <th className="py-2.5 px-2 text-right whitespace-nowrap">ยอดยกมา</th>
+                      <th className="py-2.5 px-2 text-right whitespace-nowrap">รับเข้า (+)</th>
+                      <th className="py-2.5 px-2 text-right whitespace-nowrap">ขาย POS (-)</th>
+                      <th className="py-2.5 px-2.5 text-right font-black text-slate-900 bg-slate-50/60 whitespace-nowrap">คงเหลือในร้าน</th>
+                      <th className="py-2.5 px-2 text-center whitespace-nowrap">หน่วยนับ</th>
+                      <th className="py-2.5 px-2 text-center whitespace-nowrap">การกระทำ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
@@ -549,43 +548,43 @@ export default function StaffStockRequestsPage() {
                           key={item.ingredientId}
                           className="hover:bg-slate-50/70 transition-colors"
                         >
-                          <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          <td className="py-2 px-2 text-center text-slate-400 font-mono text-[11px] font-bold">
                             {rowNumber}
                           </td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
+                          <td className="py-2 px-2 font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
                             {item.code}
                           </td>
-                          <td className="py-2.5 px-4 font-bold text-slate-900 text-xs">
+                          <td className="py-2 px-3 font-bold text-slate-900 text-xs">
                             {item.name}
                           </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                          <td className="py-2 px-2 whitespace-nowrap">
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">
                               {item.category || '-'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-slate-600 text-xs whitespace-nowrap">
+                          <td className="py-2 px-2 text-right font-mono text-slate-600 text-xs whitespace-nowrap">
                             {Number(item.openingQuantity).toLocaleString()}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold text-xs whitespace-nowrap">
+                          <td className="py-2 px-2 text-right font-mono text-emerald-700 font-bold text-xs whitespace-nowrap">
                             {Number(item.inboundQuantity) > 0 ? `+${Number(item.inboundQuantity).toLocaleString()}` : '0'}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-red-700 font-bold text-xs whitespace-nowrap">
+                          <td className="py-2 px-2 text-right font-mono text-red-700 font-bold text-xs whitespace-nowrap">
                             {Number(item.salesQuantity) > 0 ? `-${Number(item.salesQuantity).toLocaleString()}` : '0'}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-2.5 px-3.5 text-right font-mono font-bold text-sm bg-slate-50/60 text-slate-900 whitespace-nowrap">
+                          <td className="py-2 px-2.5 text-right font-mono font-bold text-sm bg-slate-50/60 text-slate-900 whitespace-nowrap">
                             {Number(item.expectedStock).toLocaleString()}{' '}
                             <span className="text-[10px] font-normal text-slate-500">{item.unit}</span>
                           </td>
-                          <td className="py-2.5 px-3 text-center text-slate-600 font-sans text-xs whitespace-nowrap">
+                          <td className="py-2 px-2 text-center text-slate-600 font-sans text-xs whitespace-nowrap">
                             {item.unit}
                           </td>
-                          <td className="py-2.5 px-3.5 text-center whitespace-nowrap">
+                          <td className="py-2 px-2 text-center whitespace-nowrap">
                             <button
                               onClick={() => handleQuickRequestItem(item.ingredientId)}
-                              className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer mx-auto"
+                              className="px-2.5 py-1 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer mx-auto"
                               title={`ขอเบิก ${item.name}`}
                             >
                               <ArrowDownToLine className="w-3.5 h-3.5" />
@@ -761,7 +760,7 @@ export default function StaffStockRequestsPage() {
                 <p className="text-[11px] text-slate-400">คุณสามารถกดปุ่ม "+ สร้างใบขอเบิกใหม่" เพื่อส่งคำขอเบิกของเข้าหน้าร้านได้ทันที</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
@@ -892,36 +891,37 @@ export default function StaffStockRequestsPage() {
       {/* CREATE MODAL: Create New Stock Request */}
       {/* ========================================================================= */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-5 sm:p-7 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-black text-slate-900">ขอเบิกซื้อวัตถุดิบ</h3>
-                  <p className="text-[11px] text-slate-500">
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">ขอเบิกซื้อวัตถุดิบ</h3>
+                  <p className="text-xs text-slate-500">
                     ขอเบิกเงินซื้อวัตถุดิบเข้าสู่ร้าน <strong>{user?.name}</strong> (รอแอดมินอนุมัติ)
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmitRequisition} className="space-y-4">
+            {/* Scrollable Form Body with extra pb-44 bottom clearance so popovers never get clipped */}
+            <form id="stock-request-form" onSubmit={handleSubmitRequisition} className="flex-1 overflow-y-auto pr-1 pb-44 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">เหตุผล / วัตถุประสงค์</label>
@@ -1050,7 +1050,7 @@ export default function StaffStockRequestsPage() {
 
                             {/* Dropdown Suggestions Popover */}
                             {isOpen && (
-                              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                              <div className="absolute left-0 right-0 top-full mt-1.5 z-[100] bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
                                 {filteredSuggestions.length === 0 ? (
                                   <div className="p-4 text-center text-xs text-slate-400">
                                     ไม่พบวัตถุดิบที่ตรงกับ "{item.searchText}"
@@ -1076,24 +1076,31 @@ export default function StaffStockRequestsPage() {
                                           });
                                           setActiveItemSearchIdx(null);
                                         }}
-                                        className="w-full p-2.5 text-left hover:bg-sky-50/70 transition-colors flex items-center justify-between text-xs cursor-pointer group"
+                                        className="w-full px-3.5 py-2.5 text-left hover:bg-sky-50 transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer group"
                                       >
-                                        <div>
-                                          <div className="font-bold text-slate-800 group-hover:text-sky-700">
-                                            {ing.name}
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">
+                                              {ing.code}
+                                            </span>
+                                            <span className="font-bold text-slate-800 group-hover:text-sky-700 truncate">
+                                              {ing.name}
+                                            </span>
                                           </div>
-                                          <div className="text-[11px] font-mono text-slate-400">
-                                            {ing.code} {ing.category ? `• ${ing.category}` : ''}
-                                          </div>
+                                          {ing.category && (
+                                            <div className="text-[11px] text-slate-400 mt-0.5 pl-0.5">
+                                              หมวดหมู่: {ing.category}
+                                            </div>
+                                          )}
                                         </div>
 
-                                        <div className="text-right">
+                                        <div className="text-right shrink-0">
                                           <div className="text-xs font-bold font-mono text-slate-700">
-                                            คงเหลือในร้าน: <span className={inStoreStock <= 0 ? 'text-amber-600' : 'text-emerald-700'}>{inStoreStock.toLocaleString()}</span> {ing.unit}
+                                            คงเหลือในร้าน: <span className={inStoreStock <= 0 ? 'text-amber-600 font-bold' : 'text-emerald-700 font-black'}>{inStoreStock.toLocaleString()}</span> {ing.unit}
                                           </div>
                                           {Number(ing.costPerUnit || 0) > 0 && (
                                             <div className="text-[10px] text-slate-400 font-mono">
-                                              ฿{Number(ing.costPerUnit).toFixed(2)}/{ing.unit}
+                                              ประมาณ ฿{Number(ing.costPerUnit).toFixed(2)}/{ing.unit}
                                             </div>
                                           )}
                                         </div>
@@ -1167,17 +1174,18 @@ export default function StaffStockRequestsPage() {
                   })}
                 </div>
               </div>
+            </form>
 
-              {/* Grand Total Estimated Cost */}
-              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between">
-                <span className="text-xs font-bold text-sky-900">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
+            {/* Pinned Modal Footer */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 bg-white">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-bold text-slate-600">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
                 <span className="font-mono font-black text-base text-sky-800">
                   ฿{totalEstimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              <div className="flex items-center justify-end gap-2.5 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
@@ -1187,6 +1195,7 @@ export default function StaffStockRequestsPage() {
                 </button>
                 <button
                   type="submit"
+                  form="stock-request-form"
                   disabled={isSubmitting}
                   className="px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
@@ -1203,7 +1212,7 @@ export default function StaffStockRequestsPage() {
                   )}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
