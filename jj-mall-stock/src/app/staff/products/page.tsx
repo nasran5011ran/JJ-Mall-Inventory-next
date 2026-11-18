@@ -254,16 +254,10 @@ export default function StaffProductsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 mb-1">
-            <Store className="w-3.5 h-3.5 text-emerald-600" />
-            จัดการเมนูร้านค้า: {user?.name || 'หน้าร้าน'}
-          </div>
-          <h1 className="text-2xl font-black text-slate-800">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+            <Package className="w-3.5 h-3.5" />
             รายการสินค้าและเมนูของร้าน
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            เพิ่ม แก้ไข และจัดการรูปภาพเมนูเครื่องดื่มของร้านค้า (ข้อมูลจะอัปเดตไปยังระบบ POS และ Admin แบบ Real-time)
-          </p>
+          </div>
         </div>
 
         <button

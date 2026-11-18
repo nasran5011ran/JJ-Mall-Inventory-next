@@ -33,16 +33,10 @@ export default function StaffSalesHistoryPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 mb-1">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
             <ShoppingBag className="w-3.5 h-3.5" />
             ประวัติการขายของฉัน (My Sales Log)
           </div>
-          <h1 className="text-2xl font-black text-slate-800">
-            ประวัติบิลขายของร้าน: {user?.name}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            รายการบิลขายที่คุณเป็นผู้ทำรายการ
-          </p>
         </div>
       </div>
 
