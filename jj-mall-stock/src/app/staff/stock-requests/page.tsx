@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import useSWR from 'swr';
 import {
   ArrowDownToLine,
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Check,
   ChevronRight,
+  ChevronDown,
   Package,
   AlertTriangle,
   Info,
@@ -202,16 +203,54 @@ export default function StaffStockRequestsPage() {
   // New Request Form State
   const [formReason, setFormReason] = useState('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
   const [formNote, setFormNote] = useState('');
-  const [formItems, setFormItems] = useState<Array<{ ingredientId: number; requestedQty: string }>>([
-    { ingredientId: 0, requestedQty: '' },
-  ]);
+  const [formItems, setFormItems] = useState<
+    Array<{ ingredientId: number; searchText: string; requestedQty: string }>
+  >([{ ingredientId: 0, searchText: '', requestedQty: '' }]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [activeItemSearchIdx, setActiveItemSearchIdx] = useState<number | null>(null);
+
+  // Click outside to close combobox suggestions
+  useEffect(() => {
+    if (activeItemSearchIdx === null) return;
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const activeCombobox = document.querySelector(`[data-request-combobox="${activeItemSearchIdx}"]`);
+      if (activeCombobox && activeCombobox.contains(target)) {
+        return;
+      }
+      setActiveItemSearchIdx(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveItemSearchIdx(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeItemSearchIdx]);
 
   // Open Create Modal (Standard)
   const handleOpenCreateModal = () => {
     setFormReason('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
     setFormNote('');
-    setFormItems([{ ingredientId: ingredients[0]?.id || 0, requestedQty: '' }]);
+    const firstIng = ingredients[0];
+    setFormItems([
+      {
+        ingredientId: firstIng?.id || 0,
+        searchText: firstIng ? `${firstIng.code} - ${firstIng.name}` : '',
+        requestedQty: '',
+      },
+    ]);
+    setActiveItemSearchIdx(null);
     setFormError(null);
     setIsCreateModalOpen(true);
   };
@@ -220,19 +259,31 @@ export default function StaffStockRequestsPage() {
   const handleQuickRequestItem = (ingId: number) => {
     setFormReason('ขอเบิกวัตถุดิบเติมสต็อก');
     setFormNote('');
-    setFormItems([{ ingredientId: ingId, requestedQty: '' }]);
+    const ing = ingredients.find((i) => i.id === ingId);
+    setFormItems([
+      {
+        ingredientId: ingId,
+        searchText: ing ? `${ing.code} - ${ing.name}` : '',
+        requestedQty: '',
+      },
+    ]);
+    setActiveItemSearchIdx(null);
     setFormError(null);
     setIsCreateModalOpen(true);
   };
 
   // Form Row Handlers
   const handleAddItemRow = () => {
-    setFormItems((prev) => [...prev, { ingredientId: ingredients[0]?.id || 0, requestedQty: '' }]);
+    setFormItems((prev) => [
+      ...prev,
+      { ingredientId: 0, searchText: '', requestedQty: '' },
+    ]);
   };
 
   const handleRemoveItemRow = (index: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, idx) => idx !== index));
+    if (activeItemSearchIdx === index) setActiveItemSearchIdx(null);
   };
 
   // Estimated budget requested
@@ -245,7 +296,7 @@ export default function StaffStockRequestsPage() {
     }, 0);
   }, [formItems, ingredients]);
 
-  const handleItemChange = (index: number, field: 'ingredientId' | 'requestedQty', value: any) => {
+  const handleItemChange = (index: number, field: 'ingredientId' | 'requestedQty' | 'searchText', value: any) => {
     setFormItems((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -910,53 +961,207 @@ export default function StaffStockRequestsPage() {
                   </button>
                 </div>
 
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   {formItems.map((item, idx) => {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
+                    const storeBal = storeBalances.find((b) => b.ingredientId === Number(item.ingredientId));
+                    const remainingStock = storeBal
+                      ? Number(storeBal.expectedStock)
+                      : Number(selectedIng?.storeStock || 0);
+
+                    // Filter matching suggestions for this row
+                    const q = (item.searchText || '').trim().toLowerCase();
+                    const filteredSuggestions = q
+                      ? ingredients.filter(
+                          (ing) =>
+                            ing.name.toLowerCase().includes(q) || ing.code.toLowerCase().includes(q)
+                        )
+                      : ingredients;
+
+                    const isOpen = activeItemSearchIdx === idx;
+
                     return (
                       <div
                         key={idx}
-                        className="p-3 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center gap-2.5"
+                        className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2.5 transition-all"
                       >
-                        <div className="flex-1 w-full sm:w-auto">
-                          <select
-                            value={item.ingredientId}
-                            onChange={(e) => handleItemChange(idx, 'ingredientId', Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                          >
-                            {ingredients.map((ing) => (
-                              <option key={ing.id} value={ing.id}>
-                                {ing.code} - {ing.name} (ในร้านเหลือ: {Number(ing.storeStock || 0).toLocaleString()} {ing.unit} | ฿{Number(ing.costPerUnit || 0).toFixed(2)})
-                              </option>
-                            ))}
-                          </select>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+                          {/* Searchable / Typable Ingredient Combobox */}
+                          <div className="flex-1 w-full relative" data-request-combobox={idx}>
+                            <div className="relative flex items-center">
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <input
+                                type="text"
+                                value={item.searchText}
+                                onFocus={() => setActiveItemSearchIdx(idx)}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const exact = ingredients.find(
+                                    (ing) =>
+                                      ing.name.trim().toLowerCase() === val.trim().toLowerCase() ||
+                                      ing.code.trim().toLowerCase() === val.trim().toLowerCase()
+                                  );
+                                  setFormItems((prev) => {
+                                    const next = [...prev];
+                                    next[idx] = {
+                                      ...next[idx],
+                                      ingredientId: exact ? exact.id : 0,
+                                      searchText: val,
+                                    };
+                                    return next;
+                                  });
+                                  setActiveItemSearchIdx(idx);
+                                }}
+                                placeholder="พิมพ์ชื่อวัตถุดิบ หรือรหัสสินค้า..."
+                                className="w-full pl-9 pr-14 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                              />
+
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                {item.searchText && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormItems((prev) => {
+                                        const next = [...prev];
+                                        next[idx] = {
+                                          ...next[idx],
+                                          ingredientId: 0,
+                                          searchText: '',
+                                        };
+                                        return next;
+                                      });
+                                    }}
+                                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                    title="ล้างข้อความ"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveItemSearchIdx(isOpen ? null : idx)}
+                                  className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                  title="เลือกวัตถุดิบ"
+                                >
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Dropdown Suggestions Popover */}
+                            {isOpen && (
+                              <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white rounded-2xl shadow-xl border border-slate-200 max-h-56 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                {filteredSuggestions.length === 0 ? (
+                                  <div className="p-4 text-center text-xs text-slate-400">
+                                    ไม่พบวัตถุดิบที่ตรงกับ "{item.searchText}"
+                                  </div>
+                                ) : (
+                                  filteredSuggestions.map((ing) => {
+                                    const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
+                                    const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
+
+                                    return (
+                                      <button
+                                        key={ing.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormItems((prev) => {
+                                            const next = [...prev];
+                                            next[idx] = {
+                                              ...next[idx],
+                                              ingredientId: ing.id,
+                                              searchText: `${ing.code} - ${ing.name}`,
+                                            };
+                                            return next;
+                                          });
+                                          setActiveItemSearchIdx(null);
+                                        }}
+                                        className="w-full p-2.5 text-left hover:bg-sky-50/70 transition-colors flex items-center justify-between text-xs cursor-pointer group"
+                                      >
+                                        <div>
+                                          <div className="font-bold text-slate-800 group-hover:text-sky-700">
+                                            {ing.name}
+                                          </div>
+                                          <div className="text-[11px] font-mono text-slate-400">
+                                            {ing.code} {ing.category ? `• ${ing.category}` : ''}
+                                          </div>
+                                        </div>
+
+                                        <div className="text-right">
+                                          <div className="text-xs font-bold font-mono text-slate-700">
+                                            คงเหลือในร้าน: <span className={inStoreStock <= 0 ? 'text-amber-600' : 'text-emerald-700'}>{inStoreStock.toLocaleString()}</span> {ing.unit}
+                                          </div>
+                                          {Number(ing.costPerUnit || 0) > 0 && (
+                                            <div className="text-[10px] text-slate-400 font-mono">
+                                              ฿{Number(ing.costPerUnit).toFixed(2)}/{ing.unit}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quantity Input */}
+                          <div className="flex items-center gap-2 w-full sm:w-52 shrink-0">
+                            <input
+                              type="number"
+                              step="any"
+                              min="0.001"
+                              required
+                              placeholder="จำนวนขอเบิก"
+                              value={item.requestedQty}
+                              onChange={(e) => handleItemChange(idx, 'requestedQty', e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-right text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                            />
+                            <span className="text-xs font-semibold text-slate-500 shrink-0 min-w-10 text-left">
+                              {selectedIng?.unit || 'หน่วย'}
+                            </span>
+
+                            {formItems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItemRow(idx)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
+                                title="ลบรายการนี้"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-48">
-                          <input
-                            type="number"
-                            step="any"
-                            min="0.001"
-                            required
-                            placeholder="จำนวน"
-                            value={item.requestedQty}
-                            onChange={(e) => handleItemChange(idx, 'requestedQty', e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-right focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-                          />
-                          <span className="text-xs font-semibold text-slate-500 shrink-0 w-12 text-left">
-                            {selectedIng?.unit || 'หน่วย'}
-                          </span>
+                        {/* แสดงยอดคงเหลือในร้าน + ข้อมูลคำนวณ */}
+                        {selectedIng && (
+                          <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/80">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-semibold text-slate-500">
+                                📦 ยอดคงเหลือในร้านปัจจุบัน:
+                              </span>
+                              <span
+                                className={`font-mono font-bold text-xs ${
+                                  remainingStock <= 0 ? 'text-amber-600' : 'text-emerald-700'
+                                }`}
+                              >
+                                {remainingStock.toLocaleString()} {selectedIng.unit}
+                              </span>
+                            </div>
 
-                          {formItems.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItemRow(idx)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                            {parseFloat(item.requestedQty) > 0 && (
+                              <div className="flex items-center gap-2 font-mono text-[11px]">
+                                <span className="text-slate-400">
+                                  หลังรับเข้า:
+                                </span>
+                                <span className="font-bold text-sky-700">
+                                  {(remainingStock + (parseFloat(item.requestedQty) || 0)).toLocaleString()} {selectedIng.unit}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
