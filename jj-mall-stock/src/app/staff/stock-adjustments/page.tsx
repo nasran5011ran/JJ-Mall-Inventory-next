@@ -665,7 +665,7 @@ export default function StaffStockAdjustmentsPage() {
                       </td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         {isPending && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                             <Clock className="w-3 h-3 text-amber-600" />
                             รอ Admin อนุมัติ
                           </span>
