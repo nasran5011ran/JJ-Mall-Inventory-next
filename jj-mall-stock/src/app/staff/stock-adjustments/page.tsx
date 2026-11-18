@@ -758,7 +758,7 @@ export default function StaffStockAdjustmentsPage() {
 
       {/* CREATE MODAL */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+        <div className="print:hidden fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col relative">
             {/* Click-away backdrop overlay for active row search popover */}
             {activeRowSearchIdx !== null && (
@@ -915,10 +915,19 @@ export default function StaffStockAdjustmentsPage() {
                   </button>
                 </div>
 
+                {/* Desktop Column Header */}
+                <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 rounded-xl shrink-0">
+                  <div className="col-span-5">วัตถุดิบ (คลิกเพื่อค้นหาและเลือก) <span className="text-red-500">*</span></div>
+                  <div className="col-span-2 text-center">สต็อกในร้าน</div>
+                  <div className="col-span-2 text-center">จำนวนที่เสีย/ชำรุด <span className="text-red-500">*</span></div>
+                  <div className="col-span-2 text-center">คงเหลือหลังหัก</div>
+                  <div className="col-span-1 text-center">จัดการ</div>
+                </div>
+
                 {/* Scrollable Items Container when list grows */}
                 <div
                   ref={itemsContainerRef}
-                  className="space-y-3 max-h-[50vh] sm:max-h-[440px] overflow-y-auto pr-1.5 scrollbar-thin scroll-smooth"
+                  className="space-y-2 max-h-[50vh] sm:max-h-[440px] overflow-y-auto pr-1 scrollbar-thin scroll-smooth"
                 >
                   {formItems.map((item, idx) => {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
@@ -931,41 +940,37 @@ export default function StaffStockAdjustmentsPage() {
                       <div
                         key={idx}
                         id={`adjustment-row-${idx}`}
-                        className={`p-2.5 sm:p-3 rounded-2xl border transition-colors space-y-2 ${
+                        className={`p-2 rounded-xl border transition-colors space-y-1.5 ${
                           isSearchingThisRow
-                            ? 'border-slate-300 shadow-md relative z-[9995] bg-white'
-                            : 'border-slate-200 bg-slate-50/60 hover:border-slate-300'
+                            ? 'border-sky-400 shadow-md relative z-[9995] bg-white ring-2 ring-sky-500/20'
+                            : 'border-slate-200 bg-slate-50/70 hover:border-slate-300'
                         }`}
                       >
-                        {/* Row Top Header */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-5 h-5 rounded-md bg-slate-200 text-slate-700 font-mono font-bold text-xs flex items-center justify-center">
+                        {/* Mobile Header (Hidden on Desktop) */}
+                        <div className="sm:hidden flex items-center justify-between gap-2 pb-1 border-b border-slate-200/60">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-5 h-5 rounded-md bg-slate-200 text-slate-700 font-mono font-bold text-[10px] flex items-center justify-center">
                               {idx + 1}
                             </span>
                             <span className="text-xs font-bold text-slate-700">รายการที่ {idx + 1}</span>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            {formItems.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItemRow(idx)}
-                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs"
-                                title="ลบรายการนี้"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span className="text-[11px] font-medium hidden sm:inline">ลบแถว</span>
-                              </button>
-                            )}
-                          </div>
+                          {formItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemRow(idx)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span className="text-[10px] font-medium">ลบแถว</span>
+                            </button>
+                          )}
                         </div>
 
-                        {/* Row Inputs: Searchable Ingredient + Stock + Input value + Diff */}
+                        {/* Row Inputs: Searchable Ingredient + Stock + Input value + Diff + Action */}
                         <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-                          {/* Searchable Combobox (col-span-6) */}
-                          <div className="sm:col-span-6 relative">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                          {/* Searchable Combobox (col-span-5) */}
+                          <div className="sm:col-span-5 min-w-0 relative">
+                            <label className="sm:hidden block text-[10px] font-bold text-slate-500 mb-0.5">
                               วัตถุดิบ (คลิกเพื่อค้นหาและเลือก) <span className="text-red-500">*</span>
                             </label>
 
@@ -984,13 +989,13 @@ export default function StaffStockAdjustmentsPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Escape') setActiveRowSearchIdx(null);
                                     }}
-                                    className="w-full pl-7 pr-14 py-1.5 text-xs rounded-xl border border-sky-400 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-2xs placeholder:text-slate-400"
+                                    className="w-full pl-7 pr-14 py-1.5 h-9 text-xs rounded-xl border border-sky-400 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-2xs placeholder:text-slate-400"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => setActiveRowSearchIdx(null)}
                                     className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer flex items-center gap-0.5 transition-colors"
-                                    title="ปิดการค้นหา (หรือคลิกที่ว่างด้านนอก)"
+                                    title="ปิดการค้นหา"
                                   >
                                     <span>ปิด</span>
                                     <X className="w-3 h-3" />
@@ -1006,28 +1011,33 @@ export default function StaffStockAdjustmentsPage() {
                                     [idx]: selectedIng ? selectedIng.name : '',
                                   }));
                                 }}
-                                className={`w-full px-2.5 py-1.5 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-2 min-h-[36px] ${
+                                className={`w-full px-2.5 py-1 h-9 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-1.5 min-w-0 overflow-hidden ${
                                   selectedIng
                                     ? 'bg-white border-slate-300 hover:border-sky-400 hover:bg-sky-50/30'
                                     : 'bg-white border-dashed border-sky-300 hover:border-sky-500 hover:bg-sky-50/40'
                                 }`}
                               >
                                 {selectedIng ? (
-                                  <div className="min-w-0 flex-1 flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-xs text-slate-900">{selectedIng.name}</span>
+                                  <div className="min-w-0 flex-1 flex items-center gap-1.5 truncate">
+                                    <span className="hidden sm:flex w-4 h-4 rounded bg-slate-100 text-slate-600 font-mono font-bold text-[9px] items-center justify-center shrink-0">
+                                      {idx + 1}
+                                    </span>
+                                    <span className="font-bold text-xs text-slate-900 truncate" title={selectedIng.name}>
+                                      {selectedIng.name}
+                                    </span>
                                     {selectedIng.category && (
-                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600">
+                                      <span className="px-1.5 py-0.2 rounded text-[9.5px] font-semibold bg-slate-100 text-slate-600 shrink-0 hidden md:inline">
                                         {selectedIng.category}
                                       </span>
                                     )}
-                                    <span className="text-[10px] text-slate-400 font-mono">
+                                    <span className="text-[10px] text-slate-400 font-mono shrink-0 hidden lg:inline">
                                       ({selectedIng.code})
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="flex items-center gap-1.5 text-slate-400 py-0.5">
-                                    <Search className="w-3.5 h-3.5 text-sky-500" />
-                                    <span className="text-xs font-medium text-sky-700">คลิกเพื่อพิมพ์ค้นหา หรือเลือกวัตถุดิบ...</span>
+                                  <div className="flex items-center gap-1.5 text-slate-400 truncate">
+                                    <Search className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                                    <span className="text-xs font-medium text-sky-700 truncate">คลิกเพื่อค้นหา/เลือกวัตถุดิบ...</span>
                                   </div>
                                 )}
 
@@ -1040,13 +1050,13 @@ export default function StaffStockAdjustmentsPage() {
                                         handleItemChange(idx, 'ingredientId', '');
                                         handleItemChange(idx, 'inputValue', '');
                                       }}
-                                      className="p-1 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                                      className="p-1 text-slate-400 hover:text-rose-600 rounded-md hover:bg-rose-50 transition-colors"
                                       title="ล้างรายการนี้"
                                     >
                                       <X className="w-3 h-3" />
                                     </button>
                                   )}
-                                  <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-200">
+                                  <span className="text-[10px] font-bold text-sky-600 bg-sky-50 px-1.5 py-0.5 rounded-md border border-sky-200">
                                     {selectedIng ? 'เปลี่ยน' : 'เลือก'}
                                   </span>
                                 </div>
@@ -1055,18 +1065,18 @@ export default function StaffStockAdjustmentsPage() {
                           </div>
 
                           {/* Current Stock (col-span-2) */}
-                          <div className="sm:col-span-2">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                          <div className="sm:col-span-2 min-w-0">
+                            <label className="sm:hidden block text-[10px] font-bold text-slate-500 mb-0.5">
                               สต็อกในร้าน
                             </label>
-                            <div className="px-2 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
+                            <div className="h-9 flex items-center justify-center px-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
                               {sysStock} {selectedIng?.unit || ''}
                             </div>
                           </div>
 
                           {/* Input Value: Waste Quantity (col-span-2) */}
-                          <div className="sm:col-span-2">
-                            <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
+                          <div className="sm:col-span-2 min-w-0">
+                            <label className="sm:hidden block text-[10px] font-bold text-slate-700 mb-0.5">
                               จำนวนที่เสีย / ชำรุด <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -1075,18 +1085,18 @@ export default function StaffStockAdjustmentsPage() {
                               min="0"
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
-                              placeholder="เช่น 5"
-                              className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              placeholder="0"
+                              className="h-9 w-full px-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
 
                           {/* Calculated Diff / Remaining (col-span-2) */}
-                          <div className="sm:col-span-2 text-center">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                          <div className="sm:col-span-2 min-w-0 text-center">
+                            <label className="sm:hidden block text-[10px] font-bold text-slate-500 mb-0.5">
                               คงเหลือหลังหัก
                             </label>
                             <div
-                              className={`px-2 py-1.5 rounded-xl text-xs font-bold truncate ${
+                              className={`h-9 flex items-center justify-center px-1.5 rounded-xl text-xs font-bold truncate ${
                                 item.inputValue.trim() === ''
                                   ? 'bg-slate-100 text-slate-400'
                                   : diff < 0
@@ -1104,23 +1114,39 @@ export default function StaffStockAdjustmentsPage() {
                               )}
                             </div>
                           </div>
+
+                          {/* Row Action (col-span-1) */}
+                          <div className="hidden sm:flex sm:col-span-1 items-center justify-center">
+                            {formItems.length > 1 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItemRow(idx)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                title="ลบรายการนี้"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <div className="w-7 h-7" />
+                            )}
+                          </div>
                         </div>
 
                         {/* Calculated Target Preview */}
                         {selectedIng && (
-                          <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-100">
+                          <div className="text-[10.5px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-100">
                             {item.inputValue.trim() === '' ? (
-                              <span className="text-slate-400 italic">
-                                สต็อกในร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียหาย/ชำรุดเพื่อคำนวณยอดคงเหลือ)
+                              <span className="text-slate-400 italic truncate">
+                                สต็อกปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียเพื่อคำนวณคงเหลือ)
                               </span>
                             ) : (
-                              <span>
-                                สต็อกในร้านปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → หักของเสีย:{' '}
-                                <strong className="text-rose-600 font-bold">-{parseFloat(item.inputValue) || 0}</strong> → คงเหลือใหม่หลังอนุมัติ:{' '}
+                              <span className="truncate">
+                                สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → หักของเสีย:{' '}
+                                <strong className="text-rose-600 font-bold">-{parseFloat(item.inputValue) || 0}</strong> → คงเหลือใหม่:{' '}
                                 <strong className="text-emerald-700 font-bold">{actualQty}</strong> {selectedIng.unit}
                               </span>
                             )}
-                            <span className="font-medium text-slate-600">
+                            <span className="font-medium text-slate-600 shrink-0">
                               มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.round((Math.abs(diff) * Number(selectedIng.costPerUnit || 0) + Number.EPSILON) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ฿
                             </span>
                           </div>
@@ -1178,7 +1204,7 @@ export default function StaffStockAdjustmentsPage() {
 
       {/* DETAIL MODAL */}
       {selectedAdjustment && !printModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+        <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             {/* Header */}
             <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -1626,7 +1652,7 @@ export default function StaffStockAdjustmentsPage() {
 
           {/* Printable Report Sheet (A4 Landscape Style) */}
           <div
-            id="official-stock-adjustments-summary-report"
+            id="official-stock-adjustments-report"
             className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
           >
             {/* Document Header */}

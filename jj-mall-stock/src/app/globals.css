@@ -211,6 +211,8 @@ body {
   #official-stock-adjustment-voucher *,
   #official-stock-adjustments-report,
   #official-stock-adjustments-report *,
+  #official-stock-adjustments-summary-report,
+  #official-stock-adjustments-summary-report *,
   #official-stock-transaction-slip,
   #official-stock-transaction-slip *,
   #official-stock-out-slip,
@@ -234,6 +236,7 @@ body {
   #official-stock-inventory-report,
   #official-stock-adjustment-voucher,
   #official-stock-adjustments-report,
+  #official-stock-adjustments-summary-report,
   #official-stock-transaction-slip,
   #official-stock-out-slip,
   #official-stock-out-report,
@@ -282,6 +285,7 @@ body {
   #official-stock-print-report,
   #official-stock-transactions-report,
   #official-stock-adjustments-report,
+  #official-stock-adjustments-summary-report,
   #official-stock-inventory-report,
   #official-ingredient-print-report,
   #official-sales-print-report,
@@ -296,6 +300,7 @@ body {
   #official-stock-inventory-report table,
   #official-stock-adjustment-voucher table,
   #official-stock-adjustments-report table,
+  #official-stock-adjustments-summary-report table,
   #official-stock-transaction-slip table,
   #official-stock-out-slip table,
   #official-stock-out-report table,
@@ -315,6 +320,7 @@ body {
   #official-stock-print-report thead,
   #official-stock-inventory-report thead,
   #official-stock-adjustments-report thead,
+  #official-stock-adjustments-summary-report thead,
   #official-stock-transactions-report thead,
   #official-ingredient-print-report thead,
   #official-sales-print-report thead,
@@ -327,6 +333,7 @@ body {
   #official-stock-inventory-report tr,
   #official-stock-adjustment-voucher tr,
   #official-stock-adjustments-report tr,
+  #official-stock-adjustments-summary-report tr,
   #official-stock-transaction-slip tr,
   #official-stock-out-slip tr,
   #official-stock-out-report tr,
@@ -345,6 +352,8 @@ body {
   #official-stock-adjustment-voucher td,
   #official-stock-adjustments-report th,
   #official-stock-adjustments-report td,
+  #official-stock-adjustments-summary-report th,
+  #official-stock-adjustments-summary-report td,
   #official-stock-transaction-slip th,
   #official-stock-transaction-slip td,
   #official-stock-out-slip th,
@@ -368,7 +377,8 @@ body {
 
   /* Ensure uniform deep black font weight on stock-adjustment printouts */
   #official-stock-adjustment-voucher *,
-  #official-stock-adjustments-report * {
+  #official-stock-adjustments-report *,
+  #official-stock-adjustments-summary-report * {
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -377,7 +387,9 @@ body {
   #official-stock-adjustment-voucher th,
   #official-stock-adjustment-voucher td,
   #official-stock-adjustments-report th,
-  #official-stock-adjustments-report td {
+  #official-stock-adjustments-report td,
+  #official-stock-adjustments-summary-report th,
+  #official-stock-adjustments-summary-report td {
     font-weight: 600 !important;
   }
 
