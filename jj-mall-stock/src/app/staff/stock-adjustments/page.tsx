@@ -875,33 +875,15 @@ export default function StaffStockAdjustmentsPage() {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {/* Mode Toggle Button */}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleItemChange(
-                                  idx,
-                                  'inputMode',
-                                  item.inputMode === 'WASTE' ? 'ACTUAL' : 'WASTE'
-                                )
-                              }
-                              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                                item.inputMode === 'WASTE'
-                                  ? 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
-                                  : 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100'
-                              }`}
-                            >
-                              โหมด: {item.inputMode === 'WASTE' ? '🔥 หักของเสีย/ชำรุด' : '⚖️ ระบุสต็อกคงเหลือจริง'}
-                            </button>
-
                             {formItems.length > 1 && (
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItemRow(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer flex items-center gap-1 text-xs"
                                 title="ลบรายการนี้"
                               >
                                 <Trash2 className="w-4 h-4" />
+                                <span className="text-[11px] font-medium hidden sm:inline">ลบแถว</span>
                               </button>
                             )}
                           </div>
@@ -1012,10 +994,10 @@ export default function StaffStockAdjustmentsPage() {
                             </div>
                           </div>
 
-                          {/* Input Value (col-span-2) */}
+                          {/* Input Value: Waste Quantity (col-span-2) */}
                           <div className="sm:col-span-2">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
-                              {item.inputMode === 'WASTE' ? 'จำนวนที่เสีย *' : 'ยอดนับจริง *'}
+                            <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
+                              จำนวนที่เสีย / ชำรุด <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="number"
@@ -1023,33 +1005,33 @@ export default function StaffStockAdjustmentsPage() {
                               min="0"
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
-                              placeholder="ระบุจำนวน..."
+                              placeholder="เช่น 5"
                               className="w-full px-2 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                             />
                           </div>
 
-                          {/* Calculated Diff (col-span-2) */}
+                          {/* Calculated Diff / Remaining (col-span-2) */}
                           <div className="sm:col-span-2 text-center">
                             <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
-                              ผลต่างสต็อก
+                              คงเหลือหลังหัก
                             </label>
                             <div
                               className={`px-2 py-2 rounded-xl text-xs font-bold truncate ${
                                 item.inputValue.trim() === ''
                                   ? 'bg-slate-100 text-slate-400'
                                   : diff < 0
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : diff > 0
-                                  ? 'bg-emerald-100 text-emerald-800'
+                                  ? 'bg-rose-50 text-rose-800 border border-rose-200'
                                   : 'bg-slate-100 text-slate-700'
                               }`}
                             >
-                              {item.inputValue.trim() === ''
-                                ? '-'
-                                : diff > 0
-                                ? `+${diff}`
-                                : diff}{' '}
-                              {selectedIng?.unit || ''}
+                              {item.inputValue.trim() === '' ? (
+                                '-'
+                              ) : (
+                                <span>
+                                  {actualQty} {selectedIng?.unit || ''}{' '}
+                                  {diff < 0 && <span className="text-[10px] text-rose-600 font-semibold">({diff})</span>}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1059,16 +1041,17 @@ export default function StaffStockAdjustmentsPage() {
                           <div className="text-[11px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-3 py-1.5 rounded-lg border border-slate-100">
                             {item.inputValue.trim() === '' ? (
                               <span className="text-slate-400 italic">
-                                สต็อกหน้าร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (รอระบุ{item.inputMode === 'WASTE' ? 'จำนวนที่เสีย' : 'ยอดนับจริง'})
+                                สต็อกในร้านปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียหาย/ชำรุดเพื่อคำนวณยอดคงเหลือ)
                               </span>
                             ) : (
                               <span>
-                                สต็อกหน้าร้านปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → ยอดใหม่หลังอนุมัติ:{' '}
+                                สต็อกในร้านปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → หักของเสีย:{' '}
+                                <strong className="text-rose-600 font-bold">-{parseFloat(item.inputValue) || 0}</strong> → คงเหลือใหม่หลังอนุมัติ:{' '}
                                 <strong className="text-emerald-700 font-bold">{actualQty}</strong> {selectedIng.unit}
                               </span>
                             )}
                             <span className="font-medium text-slate-600">
-                              มูลค่ากระทบ: {item.inputValue.trim() === '' ? '0' : (diff * Number(selectedIng.costPerUnit || 0)).toLocaleString()} ฿
+                              มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.abs(diff) * Number(selectedIng.costPerUnit || 0)).toLocaleString()} ฿
                             </span>
                           </div>
                         )}
