@@ -473,23 +473,7 @@ function RecipesContent() {
         throw new Error('กรุณาระบุวัตถุดิบและปริมาณที่ใช้อย่างน้อย 1 รายการ');
       }
 
-      // ตรวจสอบห้ามระบุปริมาณเกินคงเหลือในสต็อก
-      for (const it of filledItems) {
-        const matchedIng = allIngredients.find((ing: any) => ing.id.toString() === it.ingredientId);
-        if (matchedIng) {
-          const totalQty = filledItems
-            .filter((r) => r.ingredientId === it.ingredientId)
-            .reduce((s, r) => s + Number(r.quantity || 0), 0);
-          const availStock = getEffectiveStock(matchedIng);
-          if (totalQty > availStock) {
-            const errorMsg = `วัตถุดิบ "${matchedIng.name}" ระบุปริมาณ (${totalQty.toLocaleString()} ${matchedIng.unit}) มากกว่าคงเหลือในสต็อก (${availStock.toLocaleString()} ${matchedIng.unit}) ไม่สามารถบันทึกได้`;
-            setFormError(errorMsg);
-            await showErrorAlert('ไม่สามารถบันทึกได้', errorMsg);
-            setSubmitting(false);
-            return;
-          }
-        }
-      }
+
 
       const payload = {
         productId: Number(selectedProductId),
@@ -1381,6 +1365,48 @@ function RecipesContent() {
                                   })()}
                                 </div>
 
+                                {/* Stock calculation: คงเหลือในสต็อก, จำนวนที่ใช้ไป, จำนวนคงเหลือใหม่ */}
+                                {selectedIng && (() => {
+                                  const availStock = getEffectiveStock(selectedIng);
+                                  const usedQty = Number(item.quantity || 0);
+                                  const newStock = Number((availStock - usedQty).toFixed(4));
+                                  return (
+                                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
+                                      {/* 1. คงเหลือในสต็อก */}
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-medium">
+                                        <span className="text-[10px] text-slate-500">คงเหลือในสต็อก:</span>
+                                        <span className="font-mono font-bold text-slate-800">
+                                          {availStock.toLocaleString()} {selectedIng.unit}
+                                        </span>
+                                      </span>
+
+                                      {/* 2. จำนวนที่ใช้ไป */}
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-medium">
+                                        <span className="text-[10px] text-amber-700">จำนวนที่ใช้ไป:</span>
+                                        <span className="font-mono font-bold text-amber-800">
+                                          {usedQty > 0 ? `-${usedQty.toLocaleString()}` : '0'} {selectedIng.unit}
+                                        </span>
+                                      </span>
+
+                                      <span className="text-slate-400 font-bold">→</span>
+
+                                      {/* 3. จำนวนคงเหลือใหม่ */}
+                                      <span
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border font-medium ${
+                                          newStock < 0
+                                            ? 'bg-red-50 border-red-300 text-red-700'
+                                            : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                        }`}
+                                      >
+                                        <span className="text-[10px]">จำนวนคงเหลือใหม่:</span>
+                                        <span className="font-mono font-bold">
+                                          {newStock.toLocaleString()} {selectedIng.unit}
+                                        </span>
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+
                                 {/* Warning only if not in system */}
                                 {!selectedIng && item.customName && item.customName.trim() ? (
                                   <div className="flex items-center gap-1.5 mt-1.5">
@@ -1527,19 +1553,9 @@ function RecipesContent() {
                     </button>
                     <button
                       type="submit"
-                      disabled={submitting || hasInvalidIngredient || hasOverStock}
-                      className={`px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${
-                        hasOverStock
-                          ? 'bg-red-600 text-white shadow-red-600/20'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20'
-                      }`}
-                      title={
-                        hasInvalidIngredient
-                          ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้'
-                          : hasOverStock
-                          ? 'มีวัตถุดิบที่ระบุปริมาณเกินคงเหลือในสต็อก ไม่สามารถบันทึกได้'
-                          : undefined
-                      }
+                      disabled={submitting || hasInvalidIngredient}
+                      className="px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      title={hasInvalidIngredient ? 'มีวัตถุดิบที่ไม่มีในระบบ ไม่สามารถบันทึกได้' : undefined}
                     >
                       {submitting ? 'กำลังบันทึก...' : 'บันทึกสูตรการผลิต'}
                     </button>

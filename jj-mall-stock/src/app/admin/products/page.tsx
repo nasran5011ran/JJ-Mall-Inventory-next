@@ -386,24 +386,7 @@ export default function ProductsPage() {
         }
       }
 
-      // ตรวจสอบห้ามระบุปริมาณเกินคงเหลือในสต็อก
-      for (const entry of combinedMap.values()) {
-        const matchedIng = entry.ingredientId
-          ? allIngredients.find((i: any) => Number(i.id) === Number(entry.ingredientId))
-          : entry.name
-          ? allIngredients.find((i: any) => i.name.trim().toLowerCase() === entry.name!.trim().toLowerCase())
-          : null;
-        if (matchedIng) {
-          const availStock = getRecipeIngredientStock(matchedIng);
-          if (entry.quantity > availStock) {
-            setRecipeError(
-              `วัตถุดิบ "${matchedIng.name}" ระบุปริมาณ (${entry.quantity.toLocaleString()} ${matchedIng.unit}) มากกว่าคงเหลือในสต็อก (${availStock.toLocaleString()} ${matchedIng.unit}) ไม่สามารถบันทึกได้`
-            );
-            setRecipeSubmitting(false);
-            return;
-          }
-        }
-      }
+
 
       const payload = {
         productId: editRecipeProduct.id,
@@ -1663,7 +1646,8 @@ export default function ProductsPage() {
                     const combinedQty = Number((earlierQty + currentQty).toFixed(4));
                     const inStoreStock = selectedIng ? getRecipeIngredientStock(selectedIng) : 0;
                     const effectiveQty = isDuplicateOfEarlier ? combinedQty : currentQty;
-                    const isOverStock = Boolean(selectedIng && effectiveQty > inStoreStock);
+                    const newStock = Number((inStoreStock - effectiveQty).toFixed(4));
+                    const isOverStock = Boolean(selectedIng && inStoreStock > 0 && effectiveQty > inStoreStock);
 
                     return (
                       <div
@@ -1976,30 +1960,50 @@ export default function ProductsPage() {
                           </div>
                         </div>
 
-                        {/* Card Bottom Strip: Stock info & Duplicate helper strip */}
-                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-3 -mb-3 px-3 py-1.5 rounded-b-2xl text-[11px]">
+                        {/* Card Bottom Strip: Stock calculation & info strip */}
+                        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/80 -mx-3 -mb-3 px-3 py-2 rounded-b-2xl text-[11px]">
                           {selectedIng ? (
-                            <div className="flex flex-wrap items-center gap-1.5 text-slate-500">
-                              <span>หมวด: <span className="font-semibold text-slate-600">{selectedIng.category || 'ทั่วไป'}</span></span>
-                              <span>•</span>
-                              <span>คงเหลือในสต็อก:</span>
-                              <span
-                                className={`font-mono font-bold px-2 py-0.5 rounded-md border ${
-                                  isOverStock
-                                    ? 'text-red-700 bg-red-100 border-red-300'
-                                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            <div className="flex flex-wrap items-center gap-2 text-slate-600">
+                              <span className="font-semibold text-slate-500">
+                                หมวด: {selectedIng.category || 'ทั่วไป'}
+                              </span>
+                              <span className="text-slate-300">•</span>
+
+                              {/* 1. คงเหลือในสต็อก */}
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                                <span className="text-[10px] text-slate-500 font-medium">คงเหลือในสต็อก:</span>
+                                <span className="font-mono font-bold text-slate-800">
+                                  {inStoreStock.toLocaleString()} {selectedIng.unit}
+                                </span>
+                              </div>
+
+                              {/* 2. จำนวนที่ใช้ไป */}
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-2xs">
+                                <span className="text-[10px] text-amber-700 font-medium">จำนวนที่ใช้ไป:</span>
+                                <span className="font-mono font-bold text-amber-800">
+                                  {effectiveQty > 0 ? `-${effectiveQty.toLocaleString()}` : '0'} {selectedIng.unit}
+                                </span>
+                              </div>
+
+                              <span className="text-slate-400 font-bold">→</span>
+
+                              {/* 3. จำนวนคงเหลือใหม่ */}
+                              <div
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border shadow-2xs ${
+                                  newStock < 0
+                                    ? 'bg-red-50 border-red-300 text-red-700'
+                                    : 'bg-emerald-50 border-emerald-300 text-emerald-800'
                                 }`}
                               >
-                                {inStoreStock.toLocaleString()} {selectedIng.unit}
-                              </span>
-                              {isOverStock && (
-                                <span className="text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-md border border-red-200">
-                                  ⚠️ ระบุเกินสต็อกที่มี ({effectiveQty.toLocaleString()} &gt; {inStoreStock.toLocaleString()} {selectedIng.unit}) ไม่สามารถบันทึกได้
+                                <span className="text-[10px] font-medium">จำนวนคงเหลือใหม่:</span>
+                                <span className="font-mono font-black">
+                                  {newStock.toLocaleString()} {selectedIng.unit}
                                 </span>
-                              )}
-                              <span>•</span>
+                              </div>
+
+                              <span className="text-slate-300">•</span>
                               <span className="text-slate-400 font-mono text-[10px]">
-                                ต้นทุนเฉลี่ย: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
+                                ต้นทุน: ฿{Number(selectedIng.costPerUnit || 0).toFixed(2)}/{selectedIng.unit}
                               </span>
                             </div>
                           ) : item.customName && item.customName.trim() ? (
