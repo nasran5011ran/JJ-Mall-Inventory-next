@@ -125,7 +125,8 @@ export default function StaffStockAdjustmentsPage() {
   // Modals state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedAdjustment, setSelectedAdjustment] = useState<AdjustmentRecord | null>(null);
-  const [printVoucherOpen, setPrintVoucherOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printRecord, setPrintRecord] = useState<AdjustmentRecord | null>(null);
 
   // Form State
   const [submitting, setSubmitting] = useState(false);
@@ -372,20 +373,25 @@ export default function StaffStockAdjustmentsPage() {
     setCurrentPage(1);
   }, [search, activeTab]);
 
+  const totalPages = Math.ceil(filteredAdjustments.length / pageSize) || 1;
+
   const paginatedAdjustments = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredAdjustments.slice(start, start + pageSize);
   }, [filteredAdjustments, currentPage, pageSize]);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 print:p-0 print:m-0 print:bg-white print:max-w-none">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-5 right-5 z-50 bg-slate-900/95 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 animate-in fade-in slide-in-from-top-4 print:hidden">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <p className="text-sm font-medium">{toastMessage}</p>
         </div>
       )}
+
+      {/* Screen UI */}
+      <div className="print:hidden space-y-6">
 
       {/* Top Banner / Store Context */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
@@ -688,8 +694,8 @@ export default function StaffStockAdjustmentsPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              setSelectedAdjustment(adj);
-                              setPrintVoucherOpen(true);
+                              setPrintRecord(adj);
+                              setPrintModalOpen(true);
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-semibold transition-all cursor-pointer shadow-2xs"
                             title="พิมพ์ใบขอปรับสต็อก"
@@ -713,6 +719,19 @@ export default function StaffStockAdjustmentsPage() {
             </table>
           </div>
         )}
+
+        {/* Pagination */}
+        {filteredAdjustments.length > pageSize && (
+          <div className="pt-2">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredAdjustments.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
       </div>
 
       {/* CREATE MODAL */}
@@ -1136,7 +1155,7 @@ export default function StaffStockAdjustmentsPage() {
       )}
 
       {/* DETAIL MODAL */}
-      {selectedAdjustment && (
+      {selectedAdjustment && !printModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
             {/* Header */}
@@ -1282,16 +1301,21 @@ export default function StaffStockAdjustmentsPage() {
             {/* Footer */}
             <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
               <button
-                onClick={() => setPrintVoucherOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-all"
+                type="button"
+                onClick={() => {
+                  setPrintRecord(selectedAdjustment);
+                  setPrintModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4 text-slate-600" />
                 พิมพ์ใบขอปรับสต็อก
               </button>
 
               <button
+                type="button"
                 onClick={() => setSelectedAdjustment(null)}
-                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-all"
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
               >
                 ปิดหน้าต่าง
               </button>
@@ -1300,108 +1324,195 @@ export default function StaffStockAdjustmentsPage() {
         </div>
       )}
 
-      {/* PRINT VOUCHER MODAL */}
-      {printVoucherOpen && selectedAdjustment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 space-y-6 border border-slate-200 shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between border-b pb-4">
+      {/* OFFICIAL PRINT REPORT MODAL (RTTR080 / Exact design from staff/stock-count) */}
+      {printModalOpen && printRecord && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-start p-2 sm:p-6 overflow-y-auto print:static print:inset-auto print:overflow-visible print:p-0 print:m-0 print:bg-white print:block">
+          {/* Top Control Toolbar */}
+          <div className="no-print w-full max-w-5xl bg-white/95 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-slate-200 flex items-center justify-between mb-4 sticky top-2 z-20 print:hidden">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-sky-700" />
               <div>
-                <h3 className="text-base font-bold text-slate-900">พิมพ์เอกสารขอปรับสต็อก / แจ้งของเสีย</h3>
-                <p className="text-xs text-slate-500">เอกสารสำหรับตรวจสอบและเก็บบันทึก</p>
+                <h4 className="font-bold text-xs sm:text-sm text-slate-800">
+                  ตัวอย่างก่อนพิมพ์: ใบขออนุมัติปรับปรุงยอดสต็อกสินค้า / ใบแจ้งของเสีย
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  จัดหน้ากระดาษ A4 แนวนอน (Landscape) อัตโนมัติ • พร้อมพิมพ์หรือบันทึกเป็น PDF
+                </p>
               </div>
+            </div>
+
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setPrintVoucherOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-sky-700/20 cursor-pointer transition-all"
               >
-                <X className="w-5 h-5" />
+                <Printer className="w-4 h-4" />
+                <span>🖨️ สั่งพิมพ์เอกสาร</span>
               </button>
-            </div>
-
-            {/* Printable Content */}
-            <div id="printable-voucher" className="p-6 border border-slate-300 rounded-xl space-y-4 text-xs font-sans">
-              <div className="text-center pb-4 border-b space-y-1">
-                <h2 className="text-lg font-bold text-slate-900">ใบขอปรับปรุงสต็อก / แจ้งของเสีย (Stock Adjustment)</h2>
-                <p className="text-xs text-slate-600">JJ MALL INVENTORY MANAGEMENT</p>
-                <p className="text-[11px] font-mono text-slate-500">เลขที่เอกสาร: #{selectedAdjustment.adjustmentNumber}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-slate-700">
-                <div>
-                  <strong>สาขา/ผู้ยื่น:</strong> {selectedAdjustment.requestedBy?.name}
-                </div>
-                <div>
-                  <strong>วันที่ยื่น:</strong> {new Date(selectedAdjustment.createdAt).toLocaleString('th-TH')}
-                </div>
-                <div>
-                  <strong>สถานะ:</strong> {selectedAdjustment.status}
-                </div>
-                <div>
-                  <strong>ผู้อนุมัติ:</strong> {selectedAdjustment.approvedBy?.name || 'รอการอนุมัติ'}
-                </div>
-              </div>
-
-              <div className="border-t pt-2">
-                <strong>เหตุผล:</strong> {selectedAdjustment.reason}
-              </div>
-
-              <table className="w-full border-collapse border border-slate-300 text-left mt-2">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-300 text-[11px]">
-                    <th className="p-2 border-r border-slate-300">รหัส</th>
-                    <th className="p-2 border-r border-slate-300">วัตถุดิบ</th>
-                    <th className="p-2 border-r border-slate-300 text-right">ยอดในระบบ</th>
-                    <th className="p-2 border-r border-slate-300 text-right">ยอดขอปรับ</th>
-                    <th className="p-2 border-r border-slate-300 text-right">ผลต่าง</th>
-                    <th className="p-2 text-right">หน่วย</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedAdjustment.items.map((it) => (
-                    <tr key={it.id} className="border-b border-slate-200">
-                      <td className="p-2 border-r border-slate-200 font-mono">{it.ingredient.code}</td>
-                      <td className="p-2 border-r border-slate-200 font-semibold">{it.ingredient.name}</td>
-                      <td className="p-2 border-r border-slate-200 text-right">{Number(it.systemQuantity)}</td>
-                      <td className="p-2 border-r border-slate-200 text-right font-bold">{Number(it.actualQuantity)}</td>
-                      <td className="p-2 border-r border-slate-200 text-right font-bold">
-                        {(() => {
-                          const diff = Math.round((Number(it.diffQuantity) + Number.EPSILON) * 10000) / 10000;
-                          return diff > 0 ? `+${diff}` : diff;
-                        })()}
-                      </td>
-                      <td className="p-2 text-right text-slate-600">{it.ingredient.unit}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <div className="grid grid-cols-2 gap-8 pt-8 text-center text-xs">
-                <div>
-                  <div className="border-b border-slate-400 pb-8"></div>
-                  <p className="mt-2 text-slate-700">ลงชื่อผู้ยื่นคำขอ (พนักงานสาขา)</p>
-                  <p className="text-[10px] text-slate-400">วันที่: ......./......./...........</p>
-                </div>
-                <div>
-                  <div className="border-b border-slate-400 pb-8"></div>
-                  <p className="mt-2 text-slate-700">ลงชื่อผู้อนุมัติ (ผู้ดูแลระบบ/Admin)</p>
-                  <p className="text-[10px] text-slate-400">วันที่: ......./......./...........</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
               <button
-                onClick={() => setPrintVoucherOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
+                type="button"
+                onClick={() => setPrintModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition-colors"
               >
                 ปิด
               </button>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md"
-              >
-                <Printer className="w-4 h-4" />
-                สั่งพิมพ์
-              </button>
+            </div>
+          </div>
+
+          {/* Printable Document Sheet (A4 Landscape) */}
+          <div
+            id="official-stock-adjustment-voucher"
+            className="w-full max-w-5xl bg-white text-black p-4 sm:p-6 print:p-0 shadow-2xl rounded-xl border border-black font-sans text-[10.5px] leading-tight relative my-2 print:my-0 print:border-none print:shadow-none"
+          >
+            {/* Document Header */}
+            <div className="relative pb-1 mb-2">
+              <div className="absolute top-0 right-0 text-right text-[10px] text-black font-mono leading-tight">
+                <div>หน้า: &nbsp;&nbsp;&nbsp;&nbsp;1</div>
+                <div>RTTR080ATHA.QRP</div>
+              </div>
+
+              <div className="text-center space-y-0.5">
+                <h2 className="text-sm sm:text-base font-bold text-black tracking-tight">
+                  บริษัท เชสเตอร์ ฟู้ด จำกัด สาขา คอฟฟี่-เจเจ มอลล์(จตุจักร)
+                </h2>
+                <h3 className="text-xs sm:text-sm font-bold text-black">
+                  ใบขออนุมัติปรับปรุงยอดสต็อกสินค้า / ใบแจ้งของเสีย (Stock Adjustment Request Voucher)
+                </h3>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-[11px] font-medium border-b border-black pb-1 text-black">
+                <div>
+                  <span className="font-bold">เลขที่เอกสาร </span>
+                  <span className="font-mono font-bold ml-1">#{printRecord.adjustmentNumber}</span>
+                  <span className="ml-3">
+                    (<span className="font-bold">จุดขอปรับปรุง: </span>{user?.name || printRecord.requestedBy?.name || 'หน้าร้าน'})
+                  </span>
+                </div>
+                <div>
+                  <span className="font-bold">วันที่ยื่นคำขอ </span>
+                  <span className="font-mono ml-1">
+                    {new Date(printRecord.createdAt).toLocaleDateString('th-TH')} {new Date(printRecord.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                  </span>
+                  <span className="font-bold ml-4">
+                    สถานะ: {printRecord.status === 'PENDING' ? 'รอการอนุมัติ' : printRecord.status === 'APPROVED' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-1.5 flex items-center justify-between text-[10px] text-black">
+                <div>
+                  <span className="font-bold">ผู้ยื่นคำขอ: </span>
+                  <span className="font-semibold">{printRecord.requestedBy?.name} (@{printRecord.requestedBy?.username})</span>
+                  {printRecord.approvedBy && (
+                    <span className="ml-4">
+                      <span className="font-bold">ผู้อนุมัติ/จัดการ: </span>
+                      <span className="font-semibold">{printRecord.approvedBy.name}</span>
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="font-bold">เหตุผล: </span>
+                  <span className="font-semibold">{printRecord.reason}</span>
+                  {printRecord.rejectReason && (
+                    <span className="ml-2 text-red-600 font-bold">(เหตุผลไม่อนุมัติ: {printRecord.rejectReason})</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Official Report Table */}
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-left border-collapse text-[10px] leading-tight text-black border border-black">
+                <thead>
+                  <tr className="border-t border-b border-black text-black font-bold text-center bg-white">
+                    <th className="py-1 px-1 border-r border-black w-8 text-center bg-white">ลำดับ</th>
+                    <th className="py-1 px-1.5 border-r border-black w-24 bg-white text-center">รหัสสินค้า</th>
+                    <th className="py-1 px-2 border-r border-black text-left bg-white">ชื่อสินค้า / วัตถุดิบ</th>
+                    <th className="py-1 px-1 border-r border-black text-center w-14 bg-white">หน่วยนับ</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">คงเหลือในระบบ</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">ยอดขอปรับ</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-20 bg-white">ผลต่าง</th>
+                    <th className="py-1 px-1.5 border-r border-black text-right w-24 bg-white">ต้นทุน/หน่วย (฿)</th>
+                    <th className="py-1 px-1.5 text-right w-28 bg-white">มูลค่าผลต่าง (฿)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
+                  {printRecord.items.map((it, idx) => {
+                    const diff = Math.round((Number(it.diffQuantity) + Number.EPSILON) * 10000) / 10000;
+                    const cost = Number(it.ingredient?.costPerUnit || 0);
+                    const diffVal = Math.round((diff * cost + Number.EPSILON) * 100) / 100;
+                    return (
+                      <tr key={it.id} className="border-b border-black">
+                        <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">{idx + 1}</td>
+                        <td className="py-0.5 px-1.5 border-r border-black text-center font-mono font-bold text-black">{it.ingredient?.code || '-'}</td>
+                        <td className="py-0.5 px-2 border-r border-black font-sans font-medium text-black whitespace-normal break-words">{it.ingredient?.name}</td>
+                        <td className="py-0.5 px-1 text-center font-sans text-black border-r border-black">{it.ingredient?.unit}</td>
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-mono text-black">{Number(it.systemQuantity).toLocaleString()}</td>
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">{Number(it.actualQuantity).toLocaleString()}</td>
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-bold text-black font-mono">
+                          {diff === 0 ? '0' : diff > 0 ? `+${diff.toLocaleString()}` : `(${Math.abs(diff).toLocaleString()})`}
+                        </td>
+                        <td className="py-0.5 px-1.5 border-r border-black text-right font-mono text-black">
+                          ฿{cost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-0.5 px-1.5 text-right font-bold font-mono text-black">
+                          {diffVal === 0 ? '฿0.00' : diffVal > 0 ? `+฿${diffVal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `(฿${Math.abs(diffVal).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-black font-bold text-black bg-slate-50 text-[10px]">
+                    <td colSpan={6} className="py-1 px-2 border-r border-black text-right font-sans">
+                      รวมมูลค่าผลต่างทั้งสิ้น:
+                    </td>
+                    <td colSpan={3} className="py-1 px-2 text-right font-mono">
+                      {(() => {
+                        const totalDiffVal = printRecord.items.reduce((sum, it) => {
+                          const diff = Number(it.diffQuantity || 0);
+                          const cost = Number(it.ingredient?.costPerUnit || 0);
+                          return sum + diff * cost;
+                        }, 0);
+                        const rounded = Math.round((totalDiffVal + Number.EPSILON) * 100) / 100;
+                        return rounded === 0
+                          ? '฿0.00'
+                          : rounded > 0
+                          ? `+฿${rounded.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `(฿${Math.abs(rounded).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+                      })()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Bottom 3 Signature Blocks (Exact same layout as staff/stock-count) */}
+            <div className="print-signature-section mt-6 pt-2 grid grid-cols-3 gap-6 text-center text-[10px] font-sans text-black">
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้ขออนุมัติ (ร้านค้า)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (ผู้จัดการ / Admin)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <div className="text-black font-mono text-[10px]">___________________________________</div>
+                <div className="font-bold text-black">ผู้อนุมัติ (บัญชี / ตรวจสอบ)</div>
+                <div className="text-[9.5px] text-black font-mono">
+                  วันที่: ...... / ...... / ..........
+                </div>
+              </div>
             </div>
           </div>
         </div>
