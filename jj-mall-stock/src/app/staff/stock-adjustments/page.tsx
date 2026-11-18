@@ -159,14 +159,14 @@ export default function StaffStockAdjustmentsPage() {
       const el = document.getElementById(`search-input-${activeRowSearchIdx}`);
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const popoverHeight = 240;
+      const popoverHeight = 200;
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUpwards = spaceBelow < popoverHeight && rect.top > popoverHeight;
 
       setPopoverPos({
         top: openUpwards ? rect.top - popoverHeight - 4 : rect.bottom + 4,
-        left: Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 360) - 8)),
-        width: Math.min(window.innerWidth - 16, Math.max(rect.width, 360)),
+        left: rect.left,
+        width: rect.width,
       });
     };
 
@@ -692,7 +692,7 @@ export default function StaffStockAdjustmentsPage() {
               />
             )}
 
-            {/* Floating Fixed Dropdown Popover (Never clipped by any scrollbox) */}
+            {/* Floating Fixed Dropdown Popover (Compact, sized to input) */}
             {activeRowSearchIdx !== null && popoverPos && (
               <div
                 style={{
@@ -702,13 +702,13 @@ export default function StaffStockAdjustmentsPage() {
                   width: `${popoverPos.width}px`,
                   zIndex: 9999,
                 }}
-                className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-60 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-75"
+                className="bg-white rounded-xl shadow-xl border border-slate-200 max-h-52 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-75 text-xs"
               >
                 {(() => {
                   const filtered = getRowFilteredIngredients(activeRowSearchIdx);
                   if (filtered.length === 0) {
                     return (
-                      <div className="p-4 text-center text-xs text-slate-400">
+                      <div className="p-3 text-center text-xs text-slate-400">
                         ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[activeRowSearchIdx] || ''}&rdquo;
                       </div>
                     );
@@ -722,32 +722,26 @@ export default function StaffStockAdjustmentsPage() {
                         setActiveRowSearchIdx(null);
                         setRowSearchTexts((prev) => ({ ...prev, [activeRowSearchIdx]: '' }));
                       }}
-                      className={`w-full text-left p-3 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                      className={`w-full text-left px-3 py-2 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
                         ing.id === Number(formItems[activeRowSearchIdx]?.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
                       }`}
                     >
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-bold text-xs sm:text-sm text-slate-800 group-hover:text-sky-700">
-                            {ing.name}
-                          </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-xs text-slate-800 group-hover:text-sky-700 flex items-center gap-1.5 truncate">
+                          <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 shrink-0" />
+                          <span className="truncate">{ing.name}</span>
+                          <span className="font-mono text-[10px] text-slate-400 font-normal shrink-0">({ing.code})</span>
                           {ing.category && (
-                            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 shrink-0">
                               {ing.category}
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-                          รหัส: {ing.code}
-                        </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                          คงเหลือในร้าน: {Number(ing.currentStock).toLocaleString()} {ing.unit}
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                          เหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
                         </span>
-                        <div className="text-[10px] text-sky-600 font-bold mt-0.5 group-hover:underline">
-                          + เลือกรายการนี้
-                        </div>
                       </div>
                     </button>
                   ));
@@ -900,11 +894,11 @@ export default function StaffStockAdjustmentsPage() {
                             {isSearchingThisRow ? (
                               <div className="relative" id={`search-input-${idx}`}>
                                 <div className="relative">
-                                  <Search className="w-3.5 h-3.5 text-sky-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                  <Search className="w-3.5 h-3.5 text-sky-600 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                   <input
                                     type="text"
                                     autoFocus
-                                    placeholder="พิมพ์ชื่อ หรือรหัสวัตถุดิบเพื่อค้นหา (หรือกด Esc เพื่อปิด)..."
+                                    placeholder="พิมพ์ชื่อ หรือรหัสเพื่อค้นหา..."
                                     value={rowSearchTexts[idx] || ''}
                                     onChange={(e) =>
                                       setRowSearchTexts((prev) => ({ ...prev, [idx]: e.target.value }))
@@ -912,16 +906,16 @@ export default function StaffStockAdjustmentsPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Escape') setActiveRowSearchIdx(null);
                                     }}
-                                    className="w-full pl-8 pr-16 py-2 text-xs rounded-xl border-2 border-sky-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
+                                    className="w-full pl-7 pr-14 py-1.5 text-xs rounded-xl border border-sky-400 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 shadow-2xs placeholder:text-slate-400"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => setActiveRowSearchIdx(null)}
-                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer flex items-center gap-0.5 transition-colors"
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer flex items-center gap-0.5 transition-colors"
                                     title="ปิดการค้นหา (หรือคลิกที่ว่างด้านนอก)"
                                   >
                                     <span>ปิด</span>
-                                    <X className="w-3.5 h-3.5" />
+                                    <X className="w-3 h-3" />
                                   </button>
                                 </div>
                               </div>
