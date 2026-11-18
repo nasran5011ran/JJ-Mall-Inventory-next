@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import {
   FileEdit,
@@ -140,6 +140,9 @@ export default function StaffStockAdjustmentsPage() {
   const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
   const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
 
+  const itemsContainerRef = useRef<HTMLDivElement>(null);
+  const itemsEndRef = useRef<HTMLDivElement>(null);
+
   const getRowFilteredIngredients = (rowIdx: number) => {
     const q = (rowSearchTexts[rowIdx] || '').toLowerCase().trim();
     if (!q) return ingredients;
@@ -172,8 +175,9 @@ export default function StaffStockAdjustmentsPage() {
     setCreateModalOpen(true);
   };
 
-  // Add Item Row
+  // Add Item Row (Auto scrolls and focuses the new row)
   const handleAddItemRow = () => {
+    const nextIdx = formItems.length;
     setFormItems((prev) => [
       ...prev,
       {
@@ -182,6 +186,13 @@ export default function StaffStockAdjustmentsPage() {
         inputValue: '',
       },
     ]);
+    setActiveRowSearchIdx(nextIdx);
+
+    setTimeout(() => {
+      if (itemsEndRef.current) {
+        itemsEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 60);
   };
 
   // Remove Item Row
@@ -633,15 +644,15 @@ export default function StaffStockAdjustmentsPage() {
       {/* CREATE MODAL */}
       {createModalOpen && (
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
-          {/* Backdrop overlay for active row search popover */}
-          {activeRowSearchIdx !== null && (
-            <div
-              className="fixed inset-0 z-[55] bg-transparent"
-              onClick={() => setActiveRowSearchIdx(null)}
-            />
-          )}
-
           <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col relative">
+            {/* Click-away backdrop overlay for active row search popover */}
+            {activeRowSearchIdx !== null && (
+              <div
+                className="fixed inset-0 z-[55] bg-transparent cursor-default"
+                onClick={() => setActiveRowSearchIdx(null)}
+              />
+            )}
+
             {/* Modal Header */}
             <div className="pb-3 sm:pb-4 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
@@ -730,7 +741,11 @@ export default function StaffStockAdjustmentsPage() {
                   </button>
                 </div>
 
-                <div className="space-y-3">
+                {/* Scrollable Items Container when list grows */}
+                <div
+                  ref={itemsContainerRef}
+                  className="space-y-3 max-h-[50vh] sm:max-h-[440px] overflow-y-auto pr-1.5 scrollbar-thin scroll-smooth"
+                >
                   {formItems.map((item, idx) => {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                     const sysStock = selectedIng ? Number(selectedIng.currentStock) : 0;
@@ -741,6 +756,7 @@ export default function StaffStockAdjustmentsPage() {
                     return (
                       <div
                         key={idx}
+                        id={`adjustment-row-${idx}`}
                         className={`p-3 sm:p-3.5 rounded-2xl border transition-colors space-y-2.5 ${
                           isSearchingThisRow
                             ? 'border-slate-300 shadow-md relative z-[60] bg-white'
@@ -804,7 +820,7 @@ export default function StaffStockAdjustmentsPage() {
                                   <input
                                     type="text"
                                     autoFocus
-                                    placeholder="พิมพ์ชื่อ หรือรหัสวัตถุดิบเพื่อค้นหา..."
+                                    placeholder="พิมพ์ชื่อ หรือรหัสวัตถุดิบเพื่อค้นหา (หรือกด Esc เพื่อปิด)..."
                                     value={rowSearchTexts[idx] || ''}
                                     onChange={(e) =>
                                       setRowSearchTexts((prev) => ({ ...prev, [idx]: e.target.value }))
@@ -812,14 +828,15 @@ export default function StaffStockAdjustmentsPage() {
                                     onKeyDown={(e) => {
                                       if (e.key === 'Escape') setActiveRowSearchIdx(null);
                                     }}
-                                    className="w-full pl-8 pr-8 py-2 text-xs rounded-xl border-2 border-sky-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
+                                    className="w-full pl-8 pr-16 py-2 text-xs rounded-xl border-2 border-sky-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => setActiveRowSearchIdx(null)}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                                    title="ปิดการค้นหา"
+                                    className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer flex items-center gap-0.5 transition-colors"
+                                    title="ปิดการค้นหา (หรือคลิกที่ว่างด้านนอก)"
                                   >
+                                    <span>ปิด</span>
                                     <X className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
@@ -1004,6 +1021,7 @@ export default function StaffStockAdjustmentsPage() {
                       </div>
                     );
                   })}
+                  <div ref={itemsEndRef} className="h-1" />
                 </div>
               </div>
 
