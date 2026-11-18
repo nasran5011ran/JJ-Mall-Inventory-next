@@ -447,18 +447,13 @@ export default function SalesPage() {
         <div className="w-full lg:w-96 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-2xs overflow-hidden">
           {/* Cart Header */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                <ShoppingCart className="w-4 h-4" />
-              </div>
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-5 h-5 text-emerald-600" />
               <div>
                 <h2 className="text-sm font-bold text-slate-800">ตะกร้าการขาย</h2>
-                <div className="text-[10px] font-semibold text-slate-500 flex items-center gap-1 mt-0.5">
-                  <Coffee className="w-3 h-3 text-amber-600 shrink-0" />
-                  <span className="truncate max-w-[160px]" title={user?.name}>
-                    {user?.name || 'คอฟฟี่-เจเจ มอลล์'}
-                  </span>
-                </div>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  ร้านค้า: <strong className="text-slate-700">{user?.name}</strong>
+                </span>
               </div>
             </div>
 
