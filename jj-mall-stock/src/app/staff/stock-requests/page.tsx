@@ -212,7 +212,7 @@ export default function StaffStockRequestsPage() {
   // Click outside to close combobox suggestions
   useEffect(() => {
     if (activeItemSearchIdx === null) return;
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+    const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
       const activeCombobox = document.querySelector(`[data-request-combobox="${activeItemSearchIdx}"]`);
@@ -228,12 +228,10 @@ export default function StaffStockRequestsPage() {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [activeItemSearchIdx]);
@@ -891,9 +889,9 @@ export default function StaffStockRequestsPage() {
       {/* CREATE MODAL: Create New Stock Request */}
       {/* ========================================================================= */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-5 sm:p-7 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
                   <ArrowDownToLine className="w-5 h-5" />
@@ -914,14 +912,13 @@ export default function StaffStockRequestsPage() {
             </div>
 
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2 shrink-0">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            {/* Scrollable Form Body with extra pb-44 bottom clearance so popovers never get clipped */}
-            <form id="stock-request-form" onSubmit={handleSubmitRequisition} className="flex-1 overflow-y-auto pr-1 pb-44 space-y-4">
+            <form onSubmit={handleSubmitRequisition} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">เหตุผล / วัตถุประสงค์</label>
@@ -969,8 +966,12 @@ export default function StaffStockRequestsPage() {
                       ? Number(storeBal.expectedStock)
                       : Number(selectedIng?.storeStock || 0);
 
-                    // Filter matching suggestions for this row
-                    const q = (item.searchText || '').trim().toLowerCase();
+                    // Check if current searchText is already the full formatted name of selected item
+                    const isSelectedFormatted =
+                      selectedIng && item.searchText.trim() === `${selectedIng.code} - ${selectedIng.name}`.trim();
+
+                    // Filter matching suggestions: if user hasn't typed a custom query, show all ingredients
+                    const q = (!isSelectedFormatted && item.searchText) ? item.searchText.trim().toLowerCase() : '';
                     const filteredSuggestions = q
                       ? ingredients.filter(
                           (ing) =>
@@ -994,6 +995,7 @@ export default function StaffStockRequestsPage() {
                                 type="text"
                                 value={item.searchText}
                                 onFocus={() => setActiveItemSearchIdx(idx)}
+                                onClick={() => setActiveItemSearchIdx(idx)}
                                 onChange={(e) => {
                                   const val = e.target.value;
                                   const exact = ingredients.find(
@@ -1012,8 +1014,8 @@ export default function StaffStockRequestsPage() {
                                   });
                                   setActiveItemSearchIdx(idx);
                                 }}
-                                placeholder="พิมพ์ชื่อวัตถุดิบ หรือรหัสสินค้า..."
-                                className="w-full pl-9 pr-14 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                                placeholder="คลิกเพื่อเลือก หรือพิมพ์ค้นหาวัตถุดิบในระบบ..."
+                                className="w-full pl-9 pr-14 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
                               />
 
                               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1030,6 +1032,7 @@ export default function StaffStockRequestsPage() {
                                         };
                                         return next;
                                       });
+                                      setActiveItemSearchIdx(idx);
                                     }}
                                     className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
                                     title="ล้างข้อความ"
@@ -1041,24 +1044,33 @@ export default function StaffStockRequestsPage() {
                                   type="button"
                                   onClick={() => setActiveItemSearchIdx(isOpen ? null : idx)}
                                   className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                  title="เลือกวัตถุดิบ"
+                                  title="เลือกวัตถุดิบในระบบ"
                                 >
-                                  <ChevronDown className="w-3.5 h-3.5" />
+                                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                                 </button>
                               </div>
                             </div>
 
                             {/* Dropdown Suggestions Popover */}
                             {isOpen && (
-                              <div className="absolute left-0 right-0 top-full mt-1.5 z-[100] bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                              <div className="absolute left-0 right-0 top-full mt-1.5 z-[200] bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-72 overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                                {/* Header showing total count in system */}
+                                <div className="sticky top-0 bg-slate-50/95 backdrop-blur-xs px-3.5 py-2 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 z-10">
+                                  <span>วัตถุดิบในระบบ ({filteredSuggestions.length} รายการ)</span>
+                                  {q && <span className="text-sky-600 font-normal">ค้นหา: "{q}"</span>}
+                                </div>
+
                                 {filteredSuggestions.length === 0 ? (
                                   <div className="p-4 text-center text-xs text-slate-400">
-                                    ไม่พบวัตถุดิบที่ตรงกับ "{item.searchText}"
+                                    {ingredients.length === 0
+                                      ? 'กำลังโหลดข้อมูลวัตถุดิบในระบบ...'
+                                      : `ไม่พบวัตถุดิบที่ตรงกับ "${item.searchText}"`}
                                   </div>
                                 ) : (
                                   filteredSuggestions.map((ing) => {
                                     const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
                                     const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
+                                    const isSelected = item.ingredientId === ing.id;
 
                                     return (
                                       <button
@@ -1076,14 +1088,16 @@ export default function StaffStockRequestsPage() {
                                           });
                                           setActiveItemSearchIdx(null);
                                         }}
-                                        className="w-full px-3.5 py-2.5 text-left hover:bg-sky-50 transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer group"
+                                        className={`w-full px-3.5 py-2.5 text-left transition-colors flex items-center justify-between gap-3 text-xs cursor-pointer group ${
+                                          isSelected ? 'bg-sky-50/90' : 'hover:bg-slate-50'
+                                        }`}
                                       >
                                         <div className="min-w-0 flex-1">
                                           <div className="flex items-center gap-2">
                                             <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">
                                               {ing.code}
                                             </span>
-                                            <span className="font-bold text-slate-800 group-hover:text-sky-700 truncate">
+                                            <span className={`font-bold truncate ${isSelected ? 'text-sky-700' : 'text-slate-800 group-hover:text-sky-700'}`}>
                                               {ing.name}
                                             </span>
                                           </div>
@@ -1141,16 +1155,21 @@ export default function StaffStockRequestsPage() {
                           </div>
                         </div>
 
-                        {/* แสดงยอดคงเหลือในร้าน + ข้อมูลคำนวณ */}
-                        {selectedIng && (
-                          <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/80">
-                            <div className="flex items-center gap-2">
+                        {/* กล่องแสดงข้อมูลวัตถุดิบในระบบ + ยอดคงเหลือในร้าน */}
+                        {selectedIng ? (
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs px-3 py-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs gap-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[11px] font-semibold text-slate-500">
-                                📦 ยอดคงเหลือในร้านปัจจุบัน:
+                                📦 วัตถุดิบในระบบ:
+                              </span>
+                              <span className="font-bold text-slate-800">{selectedIng.name}</span>
+                              <span className="text-[11px] text-slate-400 font-mono">({selectedIng.code})</span>
+                              <span className="text-[11px] font-semibold text-slate-500 sm:ml-2">
+                                คงเหลือในร้าน:
                               </span>
                               <span
                                 className={`font-mono font-bold text-xs ${
-                                  remainingStock <= 0 ? 'text-amber-600' : 'text-emerald-700'
+                                  remainingStock <= 0 ? 'text-amber-600' : 'text-emerald-700 font-black'
                                 }`}
                               >
                                 {remainingStock.toLocaleString()} {selectedIng.unit}
@@ -1158,15 +1177,18 @@ export default function StaffStockRequestsPage() {
                             </div>
 
                             {parseFloat(item.requestedQty) > 0 && (
-                              <div className="flex items-center gap-2 font-mono text-[11px]">
-                                <span className="text-slate-400">
-                                  หลังรับเข้า:
-                                </span>
+                              <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
+                                <span className="text-slate-400">หลังรับเข้า:</span>
                                 <span className="font-bold text-sky-700">
                                   {(remainingStock + (parseFloat(item.requestedQty) || 0)).toLocaleString()} {selectedIng.unit}
                                 </span>
                               </div>
                             )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500 px-3 py-1.5 rounded-xl bg-sky-50/60 border border-sky-100">
+                            <Package className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                            <span>💡 คลิกที่ช่องด้านบน หรือกดลูกศรเพื่อเลือกวัตถุดิบในระบบ (ทั้งหมด {ingredients.length} รายการ)</span>
                           </div>
                         )}
                       </div>
@@ -1174,18 +1196,17 @@ export default function StaffStockRequestsPage() {
                   })}
                 </div>
               </div>
-            </form>
 
-            {/* Pinned Modal Footer */}
-            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 bg-white">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-bold text-slate-600">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
+              {/* Grand Total Estimated Cost */}
+              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between">
+                <span className="text-xs font-bold text-sky-900">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
                 <span className="font-mono font-black text-base text-sky-800">
                   ฿{totalEstimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 w-full sm:w-auto">
+              {/* Submit Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
@@ -1195,7 +1216,6 @@ export default function StaffStockRequestsPage() {
                 </button>
                 <button
                   type="submit"
-                  form="stock-request-form"
                   disabled={isSubmitting}
                   className="px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
                 >
@@ -1212,7 +1232,7 @@ export default function StaffStockRequestsPage() {
                   )}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
