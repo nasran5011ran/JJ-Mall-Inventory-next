@@ -134,7 +134,6 @@ export default function StaffStockRequestsPage() {
 
   // --- TAB 1: STORE STOCK FILTERS & STATE ---
   const [stockSearch, setStockSearch] = useState('');
-  const [stockStatusFilter, setStockStatusFilter] = useState<'ALL' | 'SAFE' | 'LOW' | 'UNSTOCKED'>('ALL');
   const [stockCategoryFilter, setStockCategoryFilter] = useState('ALL');
   const [stockPage, setStockPage] = useState(1);
   const stockPageSize = 10;
@@ -146,30 +145,6 @@ export default function StaffStockRequestsPage() {
       if (b.category) set.add(b.category);
     });
     return Array.from(set);
-  }, [storeBalances]);
-
-  // Stock Metrics
-  const stockMetrics = useMemo(() => {
-    let safe = 0;
-    let low = 0;
-    let unstocked = 0;
-
-    storeBalances.forEach((b) => {
-      if (!b.hasStockHistory) {
-        unstocked++;
-      } else if (Number(b.expectedStock) <= Number(b.minStock)) {
-        low++;
-      } else {
-        safe++;
-      }
-    });
-
-    return {
-      total: storeBalances.length,
-      safe,
-      low,
-      unstocked,
-    };
   }, [storeBalances]);
 
   // Filtered Store Balances
@@ -184,18 +159,9 @@ export default function StaffStockRequestsPage() {
 
       const matchCategory = stockCategoryFilter === 'ALL' || b.category === stockCategoryFilter;
 
-      let matchStatus = true;
-      if (stockStatusFilter === 'SAFE') {
-        matchStatus = b.hasStockHistory && Number(b.expectedStock) > Number(b.minStock);
-      } else if (stockStatusFilter === 'LOW') {
-        matchStatus = b.hasStockHistory && Number(b.expectedStock) <= Number(b.minStock);
-      } else if (stockStatusFilter === 'UNSTOCKED') {
-        matchStatus = !b.hasStockHistory;
-      }
-
-      return matchSearch && matchCategory && matchStatus;
+      return matchSearch && matchCategory;
     });
-  }, [storeBalances, stockSearch, stockCategoryFilter, stockStatusFilter]);
+  }, [storeBalances, stockSearch, stockCategoryFilter]);
 
   const paginatedStoreBalances = useMemo(() => {
     const start = (stockPage - 1) * stockPageSize;
@@ -402,11 +368,6 @@ export default function StaffStockRequestsPage() {
         >
           <Package className="w-4 h-4 text-sky-600" />
           <span>📦 สต็อกคงเหลือในร้านของคุณ</span>
-          {stockMetrics.low > 0 && (
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-amber-950 shadow-2xs ring-1 ring-amber-500/40">
-              {stockMetrics.low} ใกล้หมด
-            </span>
-          )}
         </button>
 
         <button
@@ -432,85 +393,35 @@ export default function StaffStockRequestsPage() {
       {/* ========================================================================= */}
       {activeMainTab === 'STORE_STOCK' && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          {/* 4 Summary KPI Cards for Store Stock */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <div
-              onClick={() => {
-                setStockStatusFilter('ALL');
-                setStockPage(1);
-              }}
-              className={`p-4 rounded-3xl border transition-all cursor-pointer bg-white shadow-2xs ${
-                stockStatusFilter === 'ALL'
-                  ? 'border-sky-500 ring-2 ring-sky-500/20'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
+          {/* Summary KPI Cards for Store Stock */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <div className="p-4 rounded-3xl border border-slate-200 bg-white shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">วัตถุดิบทั้งหมดในระบบ</span>
-                <Layers className="w-4 h-4 text-slate-400" />
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">วัตถุดิบทั้งหมดในร้าน</span>
+                <Layers className="w-4 h-4 text-sky-600" />
               </div>
               <div className="text-2xl font-black text-slate-900 mt-1">
-                {stockMetrics.total} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+                {storeBalances.length} <span className="text-xs font-semibold text-slate-500">รายการ</span>
               </div>
             </div>
 
-            <div
-              onClick={() => {
-                setStockStatusFilter('SAFE');
-                setStockPage(1);
-              }}
-              className={`p-4 rounded-3xl border transition-all cursor-pointer bg-white shadow-2xs ${
-                stockStatusFilter === 'SAFE'
-                  ? 'border-emerald-500 ring-2 ring-emerald-500/20'
-                  : 'border-slate-200 hover:border-emerald-300'
-              }`}
-            >
+            <div className="p-4 rounded-3xl border border-slate-200 bg-white shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">สต็อกพร้อมขาย</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">ใบขอเบิกทั้งหมด</span>
+                <FileText className="w-4 h-4 text-emerald-600" />
               </div>
-              <div className="text-2xl font-black text-emerald-700 mt-1">
-                {stockMetrics.safe} <span className="text-xs font-semibold text-slate-500">รายการ</span>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                {metrics.totalCount} <span className="text-xs font-semibold text-slate-500">ฉบับ</span>
               </div>
             </div>
 
-            <div
-              onClick={() => {
-                setStockStatusFilter('LOW');
-                setStockPage(1);
-              }}
-              className={`p-4 rounded-3xl border transition-all cursor-pointer bg-white shadow-2xs ${
-                stockStatusFilter === 'LOW'
-                  ? 'border-amber-500 ring-2 ring-amber-500/20'
-                  : 'border-slate-200 hover:border-amber-300'
-              }`}
-            >
+            <div className="p-4 rounded-3xl border border-slate-200 bg-white shadow-2xs">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">ใกล้หมด (ต้องรีบเบิก)</span>
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">รอแอดมินอนุมัติ</span>
+                <Clock className="w-4 h-4 text-amber-600" />
               </div>
               <div className="text-2xl font-black text-amber-600 mt-1">
-                {stockMetrics.low} <span className="text-xs font-semibold text-slate-500">รายการ</span>
-              </div>
-            </div>
-
-            <div
-              onClick={() => {
-                setStockStatusFilter('UNSTOCKED');
-                setStockPage(1);
-              }}
-              className={`p-4 rounded-3xl border transition-all cursor-pointer bg-white shadow-2xs ${
-                stockStatusFilter === 'UNSTOCKED'
-                  ? 'border-slate-400 ring-2 ring-slate-400/20'
-                  : 'border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">ยังไม่เคยเบิก</span>
-                <Info className="w-4 h-4 text-slate-400" />
-              </div>
-              <div className="text-2xl font-black text-slate-600 mt-1">
-                {stockMetrics.unstocked} <span className="text-xs font-semibold text-slate-400">รายการ</span>
+                {metrics.pendingCount} <span className="text-xs font-semibold text-slate-500">ฉบับ</span>
               </div>
             </div>
           </div>
@@ -539,7 +450,7 @@ export default function StaffStockRequestsPage() {
                   setStockCategoryFilter(e.target.value);
                   setStockPage(1);
                 }}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 cursor-pointer"
               >
                 <option value="ALL">📁 ทุกหมวดหมู่</option>
                 {categories.map((cat) => (
@@ -548,33 +459,6 @@ export default function StaffStockRequestsPage() {
                   </option>
                 ))}
               </select>
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto">
-              {(['ALL', 'SAFE', 'LOW', 'UNSTOCKED'] as const).map((st) => {
-                const labels = {
-                  ALL: 'ทั้งหมด',
-                  SAFE: 'พร้อมขาย',
-                  LOW: 'ใกล้หมด',
-                  UNSTOCKED: 'ยังไม่เคยเบิก',
-                };
-                return (
-                  <button
-                    key={st}
-                    onClick={() => {
-                      setStockStatusFilter(st);
-                      setStockPage(1);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                      stockStatusFilter === st
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                  >
-                    {labels[st]}
-                  </button>
-                );
-              })}
             </div>
           </div>
 
@@ -592,103 +476,70 @@ export default function StaffStockRequestsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3 px-3 text-center w-12 text-slate-400">#</th>
-                      <th className="py-3 px-4">รหัส/ชื่อวัตถุดิบ</th>
-                      <th className="py-3 px-3">หมวดหมู่</th>
-                      <th className="py-3 px-3 text-right">ยอดยกมา</th>
-                      <th className="py-3 px-3 text-right">รับเข้า (+)</th>
-                      <th className="py-3 px-3 text-right">ขาย POS (-)</th>
-                      <th className="py-3 px-3.5 text-right font-black text-slate-900">คงเหลือในร้าน</th>
-                      <th className="py-3 px-3 text-right">คลังกลางมี</th>
-                      <th className="py-3 px-3 text-right">ขั้นต่ำ (Min)</th>
-                      <th className="py-3 px-3 text-center">สถานะ</th>
-                      <th className="py-3 px-4 text-center">การกระทำ</th>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
+                      <th className="py-3.5 px-3 whitespace-nowrap">รหัสสินค้า</th>
+                      <th className="py-3.5 px-4">ชื่อวัตถุดิบ</th>
+                      <th className="py-3.5 px-3">หมวดหมู่</th>
+                      <th className="py-3.5 px-3 text-right">ยอดยกมา</th>
+                      <th className="py-3.5 px-3 text-right">รับเข้า (+)</th>
+                      <th className="py-3.5 px-3 text-right">ขาย POS (-)</th>
+                      <th className="py-3.5 px-3.5 text-right font-black text-slate-900">คงเหลือในร้าน</th>
+                      <th className="py-3.5 px-3 text-right">คลังกลางมี</th>
+                      <th className="py-3.5 px-3 text-center">หน่วยนับ</th>
+                      <th className="py-3.5 px-4 text-center">การกระทำ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
                     {paginatedStoreBalances.map((item, idx) => {
                       const rowNumber = (stockPage - 1) * stockPageSize + idx + 1;
-                      const isLow = item.hasStockHistory && Number(item.expectedStock) <= Number(item.minStock);
-                      const isUnstocked = !item.hasStockHistory;
 
                       return (
                         <tr
                           key={item.ingredientId}
-                          className={`transition-colors ${
-                            isLow ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-slate-50/60'
-                          }`}
+                          className="hover:bg-slate-50/70 transition-colors"
                         >
                           <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
                             {rowNumber}
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900">{item.name}</div>
-                            <div className="text-[11px] font-mono text-slate-400">{item.code}</div>
+                          <td className="py-3 px-3 font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
+                            {item.code}
                           </td>
-                          <td className="py-3 px-3">
+                          <td className="py-3 px-4 font-bold text-slate-900">
+                            {item.name}
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
                             <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
                               {item.category || '-'}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-600">
+                          <td className="py-3 px-3 text-right font-mono text-slate-600 whitespace-nowrap">
                             {Number(item.openingQuantity).toLocaleString()}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-emerald-700 font-bold">
+                          <td className="py-3 px-3 text-right font-mono text-emerald-700 font-bold whitespace-nowrap">
                             {Number(item.inboundQuantity) > 0 ? `+${Number(item.inboundQuantity).toLocaleString()}` : '0'}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-red-700 font-bold">
+                          <td className="py-3 px-3 text-right font-mono text-red-700 font-bold whitespace-nowrap">
                             {Number(item.salesQuantity) > 0 ? `-${Number(item.salesQuantity).toLocaleString()}` : '0'}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3.5 text-right font-mono font-bold text-sm bg-slate-50/50">
-                            <span
-                              className={
-                                isUnstocked
-                                  ? 'text-slate-400 font-normal'
-                                  : isLow
-                                  ? 'text-amber-600 font-black'
-                                  : 'text-slate-900'
-                              }
-                            >
-                              {Number(item.expectedStock).toLocaleString()}
-                            </span>{' '}
+                          <td className="py-3 px-3.5 text-right font-mono font-bold text-sm bg-slate-50/50 text-slate-900 whitespace-nowrap">
+                            {Number(item.expectedStock).toLocaleString()}{' '}
                             <span className="text-[11px] font-normal text-slate-500">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-600">
+                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-600 whitespace-nowrap">
                             {Number(item.warehouseStock).toLocaleString()}{' '}
                             <span className="text-[10px] text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-600">
-                            {Number(item.minStock).toLocaleString()} {item.unit}
+                          <td className="py-3 px-3 text-center text-slate-600 font-sans whitespace-nowrap">
+                            {item.unit}
                           </td>
-                          <td className="py-3 px-3 text-center">
-                            {isUnstocked ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
-                                ยังไม่เคยเบิก
-                              </span>
-                            ) : isLow ? (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-2xs">
-                                <AlertTriangle className="w-3 h-3 text-amber-600" />
-                                ใกล้หมด
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-2xs">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                พร้อมขาย
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
                             <button
                               onClick={() => handleQuickRequestItem(item.ingredientId)}
-                              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer ${
-                                isLow
-                                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                  : 'bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200'
-                              }`}
+                              className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer mx-auto"
                               title={`ขอเบิก ${item.name}`}
                             >
                               <ArrowDownToLine className="w-3.5 h-3.5" />
