@@ -399,7 +399,7 @@ export default function StaffStockRequestsPage() {
           }`}
         >
           <Package className="w-4 h-4 text-sky-600" />
-          <span>📦 สต็อกคงเหลือในร้านของคุณ</span>
+          <span>สต็อกคงเหลือในร้านของคุณ</span>
         </button>
 
         <button
@@ -411,7 +411,7 @@ export default function StaffStockRequestsPage() {
           }`}
         >
           <FileText className="w-4 h-4 text-emerald-600" />
-          <span>📋 ประวัติใบขอเบิกสต็อก</span>
+          <span>ประวัติใบขอเบิกสต็อก</span>
           {metrics.pendingCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white shadow-2xs">
               {metrics.pendingCount} รออนุมัติ
