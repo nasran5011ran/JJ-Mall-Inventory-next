@@ -200,41 +200,27 @@ export default function StaffStockRequestsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New Request Form State
+  // New Request Form State (Admin-style design)
   const [formReason, setFormReason] = useState('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
   const [formNote, setFormNote] = useState('');
   const [formItems, setFormItems] = useState<
-    Array<{ ingredientId: number; searchText: string; requestedQty: string }>
-  >([{ ingredientId: 0, searchText: '', requestedQty: '' }]);
+    Array<{ ingredientId: number; requestedQty: string }>
+  >([{ ingredientId: 0, requestedQty: '' }]);
   const [formError, setFormError] = useState<string | null>(null);
-  const [activeItemSearchIdx, setActiveItemSearchIdx] = useState<number | null>(null);
+  const [activeRowSearchIdx, setActiveRowSearchIdx] = useState<number | null>(null);
+  const [rowSearchTexts, setRowSearchTexts] = useState<Record<number, string>>({});
 
-  // Click outside to close combobox suggestions
-  useEffect(() => {
-    if (activeItemSearchIdx === null) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const activeCombobox = document.querySelector(`[data-request-combobox="${activeItemSearchIdx}"]`);
-      if (activeCombobox && activeCombobox.contains(target)) {
-        return;
-      }
-      setActiveItemSearchIdx(null);
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setActiveItemSearchIdx(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [activeItemSearchIdx]);
+  // Helper to filter ingredients for each row independently (like Admin)
+  const getRowFilteredIngredients = (idx: number) => {
+    const q = (rowSearchTexts[idx] || '').toLowerCase().trim();
+    if (!q) return ingredients;
+    return ingredients.filter(
+      (ing) =>
+        ing.name.toLowerCase().includes(q) ||
+        ing.code.toLowerCase().includes(q) ||
+        (ing.category && ing.category.toLowerCase().includes(q))
+    );
+  };
 
   // Lock body scroll and remove right scrollbar when modal is open
   useEffect(() => {
@@ -252,14 +238,9 @@ export default function StaffStockRequestsPage() {
   const handleOpenCreateModal = () => {
     setFormReason('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
     setFormNote('');
-    setFormItems([
-      {
-        ingredientId: 0,
-        searchText: '',
-        requestedQty: '',
-      },
-    ]);
-    setActiveItemSearchIdx(null);
+    setFormItems([{ ingredientId: 0, requestedQty: '' }]);
+    setActiveRowSearchIdx(null);
+    setRowSearchTexts({});
     setFormError(null);
     setIsCreateModalOpen(true);
   };
@@ -268,31 +249,22 @@ export default function StaffStockRequestsPage() {
   const handleQuickRequestItem = (ingId: number) => {
     setFormReason('ขอเบิกวัตถุดิบเติมสต็อก');
     setFormNote('');
-    const ing = ingredients.find((i) => i.id === ingId);
-    setFormItems([
-      {
-        ingredientId: ingId,
-        searchText: ing ? `${ing.code} - ${ing.name}` : '',
-        requestedQty: '',
-      },
-    ]);
-    setActiveItemSearchIdx(null);
+    setFormItems([{ ingredientId: ingId, requestedQty: '' }]);
+    setActiveRowSearchIdx(null);
+    setRowSearchTexts({});
     setFormError(null);
     setIsCreateModalOpen(true);
   };
 
   // Form Row Handlers
   const handleAddItemRow = () => {
-    setFormItems((prev) => [
-      ...prev,
-      { ingredientId: 0, searchText: '', requestedQty: '' },
-    ]);
+    setFormItems((prev) => [...prev, { ingredientId: 0, requestedQty: '' }]);
   };
 
   const handleRemoveItemRow = (index: number) => {
     if (formItems.length === 1) return;
     setFormItems((prev) => prev.filter((_, idx) => idx !== index));
-    if (activeItemSearchIdx === index) setActiveItemSearchIdx(null);
+    setActiveRowSearchIdx(null);
   };
 
   // Estimated budget requested
@@ -305,7 +277,7 @@ export default function StaffStockRequestsPage() {
     }, 0);
   }, [formItems, ingredients]);
 
-  const handleItemChange = (index: number, field: 'ingredientId' | 'requestedQty' | 'searchText', value: any) => {
+  const handleItemChange = (index: number, field: 'ingredientId' | 'requestedQty', value: any) => {
     setFormItems((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -898,18 +870,19 @@ export default function StaffStockRequestsPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* CREATE MODAL: Create New Stock Request */}
+      {/* CREATE MODAL: Create New Stock Request (Designed exactly like Admin) */}
       {/* ========================================================================= */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 sm:p-7 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 my-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl lg:max-w-5xl w-full p-4 sm:p-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-auto flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold">
                   <ArrowDownToLine className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900">ขอเบิกซื้อวัตถุดิบ</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-800">📥 ขอเบิกซื้อวัตถุดิบเข้าหน้าร้าน</h3>
                   <p className="text-xs text-slate-500">
                     ขอเบิกเงินซื้อวัตถุดิบเข้าสู่ร้าน <strong>{user?.name}</strong> (รอแอดมินอนุมัติ)
                   </p>
@@ -917,253 +890,319 @@ export default function StaffStockRequestsPage() {
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 font-semibold flex items-center gap-2">
+              <div className="mt-2.5 p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmitRequisition} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <form onSubmit={handleSubmitRequisition} className="mt-2.5 flex flex-col">
+              {/* Top Compact Settings: Reason & Note */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-2xl bg-sky-50/70 border border-sky-200/80 shrink-0 mb-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">เหตุผล / วัตถุประสงค์</label>
+                  <label className="block text-[11px] font-bold text-sky-950 mb-1">
+                    เหตุผล / วัตถุประสงค์ <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="เช่น ขอเบิกซื้อวัตถุดิบเติมสต็อกประจำวัน"
                     value={formReason}
                     onChange={(e) => setFormReason(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    placeholder="เช่น ขอเบิกซื้อวัตถุดิบเติมสต็อกประจำวัน"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-sky-300 bg-white font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+                  <label className="block text-[11px] font-bold text-sky-950 mb-1">
+                    หมายเหตุเพิ่มเติม (ถ้ามี)
+                  </label>
                   <input
                     type="text"
-                    placeholder="ระบุเพิ่มเติม เช่น ขอด่วนก่อนเที่ยง, ซื้อที่แม็คโคร"
                     value={formNote}
                     onChange={(e) => setFormNote(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                    placeholder="ระบุเพิ่มเติม เช่น ขอด่วนก่อนเที่ยง, ซื้อที่แม็คโคร"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-sky-300 bg-white font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
                   />
                 </div>
               </div>
 
-              {/* Items List */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700">รายการวัตถุดิบที่ต้องการขอเบิกซื้อ</label>
-                  <button
-                    type="button"
-                    onClick={handleAddItemRow}
-                    className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ เพิ่มรายการ</span>
-                  </button>
+              {/* Items List Section Header */}
+              <div className="flex items-center justify-between pb-1.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800">
+                    รายการวัตถุดิบ ({formItems.length})
+                  </span>
+                  <span className="text-[10px] text-slate-400 hidden sm:inline">
+                    (ค้นหาแยกอิสระต่อกันแต่ละแถว)
+                  </span>
                 </div>
-
-                <div className="space-y-3">
-                  {formItems.map((item, idx) => {
-                    const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
-                    const storeBal = storeBalances.find((b) => b.ingredientId === Number(item.ingredientId));
-                    const remainingStock = storeBal
-                      ? Number(storeBal.expectedStock)
-                      : Number(selectedIng?.storeStock || 0);
-
-                    // Filter suggestions based on typed searchText
-                    const q = (item.searchText || '').trim().toLowerCase();
-                    const filteredSuggestions = q
-                      ? ingredients.filter(
-                          (ing) =>
-                            ing.name.toLowerCase().includes(q) ||
-                            ing.code.toLowerCase().includes(q) ||
-                            (ing.category && ing.category.toLowerCase().includes(q))
-                        )
-                      : ingredients;
-
-                    return (
-                      <div
-                        key={idx}
-                        className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 transition-all"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                          {/* 1. ช่องพิมพ์ค้นหาวัตถุดิบ (4 cols) */}
-                          <div className="md:col-span-4 relative">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            <input
-                              type="text"
-                              value={item.searchText}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                const searchQ = val.trim().toLowerCase();
-                                const matches = ingredients.filter(
-                                  (ing) =>
-                                    ing.name.toLowerCase().includes(searchQ) ||
-                                    ing.code.toLowerCase().includes(searchQ) ||
-                                    (ing.category && ing.category.toLowerCase().includes(searchQ))
-                                );
-                                setFormItems((prev) => {
-                                  const next = [...prev];
-                                  next[idx] = {
-                                    ...next[idx],
-                                    searchText: val,
-                                    // If exact 1 match, auto-select it; if current selection still matches, keep it
-                                    ingredientId:
-                                      matches.length === 1
-                                        ? matches[0].id
-                                        : matches.some((m) => m.id === next[idx].ingredientId)
-                                        ? next[idx].ingredientId
-                                        : 0,
-                                  };
-                                  return next;
-                                });
-                              }}
-                              placeholder="พิมพ์ค้นหาชื่อ หรือรหัส..."
-                              className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                            />
-                          </div>
-
-                          {/* 2. กล่องเลือกวัตถุดิบในระบบ (5 cols) */}
-                          <div className="md:col-span-5">
-                            <select
-                              value={item.ingredientId}
-                              onChange={(e) => {
-                                const newId = Number(e.target.value);
-                                const chosen = ingredients.find((i) => i.id === newId);
-                                setFormItems((prev) => {
-                                  const next = [...prev];
-                                  next[idx] = {
-                                    ...next[idx],
-                                    ingredientId: newId,
-                                    searchText: chosen ? chosen.name : next[idx].searchText,
-                                  };
-                                  return next;
-                                });
-                              }}
-                              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 cursor-pointer"
-                            >
-                              <option value={0}>
-                                {item.searchText
-                                  ? `-- ผลการค้นหา (${filteredSuggestions.length} รายการ) --`
-                                  : `-- เลือกวัตถุดิบ (ทั้งหมด ${ingredients.length} รายการ) --`}
-                              </option>
-                              {filteredSuggestions.map((ing) => {
-                                const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
-                                const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
-                                return (
-                                  <option key={ing.id} value={ing.id}>
-                                    {ing.code} - {ing.name} (ในร้านเหลือ: {inStoreStock.toLocaleString()} {ing.unit})
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
-
-                          {/* 3. ช่องกรอกจำนวนขอเบิก (3 cols) */}
-                          <div className="md:col-span-3 flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="any"
-                              min="0.001"
-                              required
-                              placeholder="จำนวนขอเบิก"
-                              value={item.requestedQty}
-                              onChange={(e) => handleItemChange(idx, 'requestedQty', e.target.value)}
-                              className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-right text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
-                            />
-                            <span className="text-xs font-semibold text-slate-500 shrink-0 min-w-10 text-left">
-                              {selectedIng?.unit || 'หน่วย'}
-                            </span>
-
-                            {formItems.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItemRow(idx)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors shrink-0 cursor-pointer"
-                                title="ลบรายการนี้"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* กล่องแสดงข้อมูลวัตถุดิบในระบบ + ยอดคงเหลือในร้าน */}
-                        {selectedIng ? (
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs px-3 py-2 rounded-xl bg-white border border-slate-200/90 shadow-2xs gap-1.5">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-[11px] font-semibold text-slate-500">
-                                📦 วัตถุดิบในระบบ:
-                              </span>
-                              <span className="font-bold text-slate-800">{selectedIng.name}</span>
-                              <span className="text-[11px] text-slate-400 font-mono">({selectedIng.code})</span>
-                              <span className="text-[11px] font-semibold text-slate-500 sm:ml-2">
-                                คงเหลือในร้าน:
-                              </span>
-                              <span
-                                className={`font-mono font-bold text-xs ${
-                                  remainingStock <= 0 ? 'text-amber-600' : 'text-emerald-700 font-black'
-                                }`}
-                              >
-                                {remainingStock.toLocaleString()} {selectedIng.unit}
-                              </span>
-                            </div>
-
-                            {parseFloat(item.requestedQty) > 0 && (
-                              <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
-                                <span className="text-slate-400">หลังรับเข้า:</span>
-                                <span className="font-bold text-sky-700">
-                                  {(remainingStock + (parseFloat(item.requestedQty) || 0)).toLocaleString()} {selectedIng.unit}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 px-3 py-1.5 rounded-xl bg-sky-50/60 border border-sky-100">
-                            <div className="flex items-center gap-1.5">
-                              <Package className="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                              <span>เลือกวัตถุดิบจากกล่องตัวเลือก หรือพิมพ์ค้นหาจากช่องด้านซ้าย (ทั้งหมด {ingredients.length} รายการ)</span>
-                            </div>
-                            {item.searchText && (
-                              <span className="font-bold text-sky-700">พบ {filteredSuggestions.length} รายการ</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={handleAddItemRow}
+                  className="px-2.5 py-1 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold text-xs flex items-center gap-1 cursor-pointer border border-sky-200 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>เพิ่มแถว</span>
+                </button>
               </div>
 
-              {/* Grand Total Estimated Cost */}
-              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between">
+              {/* Desktop Column Header */}
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100/90 rounded-xl shrink-0 mb-1.5">
+                <div className="col-span-1 text-center">#</div>
+                <div className="col-span-6">วัตถุดิบ (คลิกเพื่อค้นหาและเลือก)</div>
+                <div className="col-span-3 text-right">จำนวนที่ขอเบิก</div>
+                <div className="col-span-2 text-right">ต้นทุนประมาณ (฿)</div>
+              </div>
+
+              {/* Backdrop Overlay when row search popover is open */}
+              {activeRowSearchIdx !== null && (
+                <div
+                  className="fixed inset-0 z-[55] bg-transparent"
+                  onClick={() => setActiveRowSearchIdx(null)}
+                />
+              )}
+
+              {/* Scrollable Items Container (Exact Admin Design) */}
+              <div className="space-y-2">
+                {formItems.map((item, idx) => {
+                  const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
+                  const storeBal = storeBalances.find((b) => b.ingredientId === Number(item.ingredientId));
+                  const storeStock = storeBal ? Number(storeBal.expectedStock) : Number(selectedIng?.storeStock || 0);
+                  const reqQty = parseFloat(item.requestedQty) || 0;
+                  const newBalance = storeStock + reqQty;
+                  const isSearchingThisRow = activeRowSearchIdx === idx;
+                  const filteredRowIngs = getRowFilteredIngredients(idx);
+                  const rowCost = reqQty * Number(selectedIng?.costPerUnit || 0);
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2.5 sm:p-3 rounded-2xl bg-slate-50 border text-xs space-y-1.5 transition-all ${
+                        isSearchingThisRow
+                          ? 'border-sky-400 ring-2 ring-sky-500/20 shadow-md relative z-[60] bg-white'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row items-center gap-2 min-w-0">
+                        {/* Sequence number */}
+                        <div className="hidden sm:flex w-6 h-6 rounded-lg bg-slate-200/80 text-slate-700 font-mono font-bold text-xs items-center justify-center shrink-0">
+                          {idx + 1}
+                        </div>
+
+                        {/* Searchable Combobox Button/Input */}
+                        <div className="flex-1 w-full min-w-0 relative">
+                          {isSearchingThisRow ? (
+                            <div className="relative">
+                              <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-sky-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  placeholder="พิมพ์ค้นหาชื่อ หรือรหัสแถวนี้..."
+                                  value={rowSearchTexts[idx] || ''}
+                                  onChange={(e) =>
+                                    setRowSearchTexts((prev) => ({ ...prev, [idx]: e.target.value }))
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') setActiveRowSearchIdx(null);
+                                  }}
+                                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border-2 border-sky-500 bg-white font-medium focus:outline-none shadow-sm placeholder:text-slate-400"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveRowSearchIdx(null)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                  title="ปิดการค้นหา"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Search Dropdown Popover */}
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[70] max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                {filteredRowIngs.length === 0 ? (
+                                  <div className="p-3.5 text-center text-xs text-slate-400">
+                                    ไม่พบวัตถุดิบที่ตรงกับ &ldquo;{rowSearchTexts[idx]}&rdquo;
+                                  </div>
+                                ) : (
+                                  filteredRowIngs.map((ing) => {
+                                    const ingBal = storeBalances.find((b) => b.ingredientId === ing.id);
+                                    const inStoreStock = ingBal ? Number(ingBal.expectedStock) : Number(ing.storeStock || 0);
+
+                                    return (
+                                      <button
+                                        key={ing.id}
+                                        type="button"
+                                        onClick={() => {
+                                          handleItemChange(idx, 'ingredientId', ing.id);
+                                          setActiveRowSearchIdx(null);
+                                          setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
+                                        }}
+                                        className={`w-full text-left p-2.5 hover:bg-sky-50 transition-colors flex items-center justify-between gap-2 group cursor-pointer ${
+                                          ing.id === Number(item.ingredientId) ? 'bg-sky-50/70 font-bold' : ''
+                                        }`}
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="font-bold text-xs text-slate-800 group-hover:text-sky-700 flex items-center gap-1.5 truncate">
+                                            <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 shrink-0" />
+                                            <span className="truncate">{ing.name}</span>
+                                            <span className="font-mono text-[10px] text-slate-400 shrink-0">({ing.code})</span>
+                                          </div>
+                                          <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                                            หมวด: {ing.category || 'ทั่วไป'} • ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}
+                                          </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 group-hover:bg-sky-100 group-hover:text-sky-800">
+                                            ในร้านเหลือ: {Number(inStoreStock).toLocaleString()} {ing.unit}
+                                          </span>
+                                          <div className="text-[10px] text-sky-600 font-bold mt-0.5">+ เลือกแถวนี้</div>
+                                        </div>
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveRowSearchIdx(idx);
+                                setRowSearchTexts((prev) => ({ ...prev, [idx]: '' }));
+                              }}
+                              className={`w-full px-2.5 py-1.5 text-xs rounded-xl border text-left flex items-center justify-between gap-2 transition-all cursor-pointer ${
+                                selectedIng
+                                  ? 'bg-white border-slate-300 text-slate-800 hover:border-sky-500 hover:shadow-xs'
+                                  : 'bg-amber-50/80 border-amber-300 text-amber-800 hover:bg-amber-100/70'
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5 truncate min-w-0">
+                                <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                {selectedIng ? (
+                                  <span className="font-bold text-slate-800 truncate">
+                                    {selectedIng.name}{' '}
+                                    <span className="font-mono font-normal text-slate-400 text-[10px]">({selectedIng.code})</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-800 font-semibold truncate">🔍 คลิกเพื่อค้นหาวัตถุดิบแถวนี้...</span>
+                                )}
+                              </div>
+                              <div className="shrink-0 flex items-center gap-1.5">
+                                {selectedIng && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium hidden md:inline-block">
+                                    เหลือ: {Number(storeStock).toLocaleString()} {selectedIng.unit}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-200">
+                                  ค้นหา/เปลี่ยน
+                                </span>
+                              </div>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="w-full sm:w-36 flex items-center gap-1 shrink-0">
+                          <input
+                            type="number"
+                            min="0.001"
+                            step="any"
+                            required
+                            placeholder="จำนวน"
+                            value={item.requestedQty}
+                            onWheel={(e) => e.currentTarget.blur()}
+                            onChange={(e) => handleItemChange(idx, 'requestedQty', e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs rounded-xl border border-slate-200 bg-white font-mono text-right focus:outline-none focus:ring-2 focus:ring-sky-500/20 font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <span className="text-[11px] text-slate-500 font-mono w-10 truncate text-right">
+                            {selectedIng?.unit || 'หน่วย'}
+                          </span>
+                        </div>
+
+                        {/* Estimated Cost Preview per row */}
+                        <div className="hidden sm:block w-24 text-right font-mono font-bold text-slate-700 shrink-0 px-1">
+                          ฿{rowCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+
+                        {/* Delete Row Button */}
+                        <div className="w-full sm:w-8 flex justify-end shrink-0">
+                          {formItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemRow(idx)}
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                              title="ลบแถวนี้"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Real-time Store Stock Calculation Preview */}
+                      {selectedIng && (
+                        <div className="pt-1.5 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                          <div className="flex flex-wrap items-center gap-1 text-slate-500">
+                            <span>คงเหลือเดิมในร้าน:</span>
+                            <span className="font-mono font-bold text-slate-700">
+                              {Number(storeStock).toLocaleString()} {selectedIng.unit}
+                            </span>
+                            {reqQty > 0 && (
+                              <>
+                                <span className="text-sky-600 font-black">+</span>
+                                <span>ขอเบิก:</span>
+                                <span className="font-mono font-bold text-sky-700">
+                                  {reqQty.toLocaleString()} {selectedIng.unit}
+                                </span>
+                              </>
+                            )}
+                          </div>
+
+                          {reqQty > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-sky-600 font-semibold">ยอดคงเหลือใหม่:</span>
+                              <span className="font-mono font-black text-xs text-sky-700">
+                                {newBalance.toLocaleString()} {selectedIng.unit}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Total Estimated Cost */}
+              <div className="mt-3 p-3 rounded-2xl bg-sky-50 border border-sky-200 flex items-center justify-between shrink-0">
                 <span className="text-xs font-bold text-sky-900">ยอดเงินประมาณการที่ขอเบิกซื้อ:</span>
                 <span className="font-mono font-black text-base text-sky-800">
-                  ฿{totalEstimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  ฿{totalEstimatedCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
-              {/* Submit Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
+              {/* Modal Actions */}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-md shadow-sky-600/30 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-600/30 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
