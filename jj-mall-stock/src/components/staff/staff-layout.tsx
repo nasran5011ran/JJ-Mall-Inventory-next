@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import StaffNavbar from './staff-navbar';
 
@@ -11,7 +11,13 @@ interface StaffLayoutProps {
 
 export default function StaffLayout({ children }: StaffLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading } = useAuth();
+
+  const isWidePage =
+    pathname?.includes('/staff/stock-requests') ||
+    pathname?.includes('/staff/stock-count') ||
+    pathname?.includes('/staff/stock-adjustments');
 
   useEffect(() => {
     if (!loading) {
@@ -48,7 +54,11 @@ export default function StaffLayout({ children }: StaffLayoutProps) {
       <StaffNavbar />
 
       {/* Main POS Workspace */}
-      <main className="flex-1 p-3 sm:p-5 max-w-7xl w-full mx-auto">
+      <main
+        className={`flex-1 p-3 sm:p-5 w-full mx-auto transition-all ${
+          isWidePage ? 'max-w-none px-3 sm:px-6 lg:px-8' : 'max-w-7xl'
+        }`}
+      >
         {children}
       </main>
     </div>

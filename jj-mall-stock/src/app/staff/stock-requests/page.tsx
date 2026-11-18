@@ -311,7 +311,7 @@ export default function StaffStockRequestsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="space-y-6 w-full">
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs font-semibold animate-in fade-in slide-in-from-top-4">
@@ -476,18 +476,17 @@ export default function StaffStockRequestsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
-                      <th className="py-3.5 px-3 text-center w-12 text-slate-400">#</th>
-                      <th className="py-3.5 px-3 whitespace-nowrap">รหัสสินค้า</th>
-                      <th className="py-3.5 px-4">ชื่อวัตถุดิบ</th>
-                      <th className="py-3.5 px-3">หมวดหมู่</th>
-                      <th className="py-3.5 px-3 text-right">ยอดยกมา</th>
-                      <th className="py-3.5 px-3 text-right">รับเข้า (+)</th>
-                      <th className="py-3.5 px-3 text-right">ขาย POS (-)</th>
-                      <th className="py-3.5 px-3.5 text-right font-black text-slate-900">คงเหลือในร้าน</th>
-                      <th className="py-3.5 px-3 text-right">คลังกลางมี</th>
-                      <th className="py-3.5 px-3 text-center">หน่วยนับ</th>
-                      <th className="py-3.5 px-4 text-center">การกระทำ</th>
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-xs">
+                      <th className="py-4 px-4 text-center w-14 text-slate-400">#</th>
+                      <th className="py-4 px-4 whitespace-nowrap">รหัสสินค้า</th>
+                      <th className="py-4 px-5 text-sm">ชื่อวัตถุดิบ</th>
+                      <th className="py-4 px-4">หมวดหมู่</th>
+                      <th className="py-4 px-4 text-right">ยอดยกมา</th>
+                      <th className="py-4 px-4 text-right">รับเข้า (+)</th>
+                      <th className="py-4 px-4 text-right">ขาย POS (-)</th>
+                      <th className="py-4 px-5 text-right font-black text-slate-900 bg-sky-50/70">คงเหลือในร้าน</th>
+                      <th className="py-4 px-4 text-center">หน่วยนับ</th>
+                      <th className="py-4 px-5 text-center">การกระทำ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
@@ -497,49 +496,45 @@ export default function StaffStockRequestsPage() {
                       return (
                         <tr
                           key={item.ingredientId}
-                          className="hover:bg-slate-50/70 transition-colors"
+                          className="hover:bg-slate-50/80 transition-colors"
                         >
-                          <td className="py-3 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                          <td className="py-4 px-4 text-center text-slate-400 font-mono text-xs font-bold">
                             {rowNumber}
                           </td>
-                          <td className="py-3 px-3 font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
+                          <td className="py-4 px-4 font-mono font-bold text-slate-700 text-xs whitespace-nowrap">
                             {item.code}
                           </td>
-                          <td className="py-3 px-4 font-bold text-slate-900">
+                          <td className="py-4 px-5 font-bold text-slate-900 text-sm">
                             {item.name}
                           </td>
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                          <td className="py-4 px-4 whitespace-nowrap">
+                            <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
                               {item.category || '-'}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-slate-600 whitespace-nowrap">
+                          <td className="py-4 px-4 text-right font-mono text-slate-600 text-sm whitespace-nowrap">
                             {Number(item.openingQuantity).toLocaleString()}{' '}
-                            <span className="text-[10px] text-slate-400">{item.unit}</span>
+                            <span className="text-xs text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-emerald-700 font-bold whitespace-nowrap">
+                          <td className="py-4 px-4 text-right font-mono text-emerald-700 font-bold text-sm whitespace-nowrap">
                             {Number(item.inboundQuantity) > 0 ? `+${Number(item.inboundQuantity).toLocaleString()}` : '0'}{' '}
-                            <span className="text-[10px] text-slate-400">{item.unit}</span>
+                            <span className="text-xs text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono text-red-700 font-bold whitespace-nowrap">
+                          <td className="py-4 px-4 text-right font-mono text-red-700 font-bold text-sm whitespace-nowrap">
                             {Number(item.salesQuantity) > 0 ? `-${Number(item.salesQuantity).toLocaleString()}` : '0'}{' '}
-                            <span className="text-[10px] text-slate-400">{item.unit}</span>
+                            <span className="text-xs text-slate-400">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3.5 text-right font-mono font-bold text-sm bg-slate-50/50 text-slate-900 whitespace-nowrap">
+                          <td className="py-4 px-5 text-right font-mono font-black text-base bg-sky-50/50 text-slate-900 whitespace-nowrap">
                             {Number(item.expectedStock).toLocaleString()}{' '}
-                            <span className="text-[11px] font-normal text-slate-500">{item.unit}</span>
+                            <span className="text-xs font-normal text-slate-500">{item.unit}</span>
                           </td>
-                          <td className="py-3 px-3 text-right font-mono font-bold text-slate-600 whitespace-nowrap">
-                            {Number(item.warehouseStock).toLocaleString()}{' '}
-                            <span className="text-[10px] text-slate-400">{item.unit}</span>
-                          </td>
-                          <td className="py-3 px-3 text-center text-slate-600 font-sans whitespace-nowrap">
+                          <td className="py-4 px-4 text-center text-slate-600 font-sans text-xs whitespace-nowrap">
                             {item.unit}
                           </td>
-                          <td className="py-3 px-4 text-center whitespace-nowrap">
+                          <td className="py-4 px-5 text-center whitespace-nowrap">
                             <button
                               onClick={() => handleQuickRequestItem(item.ingredientId)}
-                              className="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer mx-auto"
+                              className="px-3.5 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 shadow-2xs hover:shadow-xs cursor-pointer mx-auto"
                               title={`ขอเบิก ${item.name}`}
                             >
                               <ArrowDownToLine className="w-3.5 h-3.5" />
