@@ -92,28 +92,32 @@ export default function StaffProductsPage() {
   const [recipeItems, setRecipeItems] = useState<RecipeFormItem[]>([]);
   const [recipeDescription, setRecipeDescription] = useState('');
   const [activeRecipeSearchIdx, setActiveRecipeSearchIdx] = useState<number | null>(null);
-  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    dropUp: boolean;
+  } | null>(null);
 
-  const updateSearchDirection = (idx: number, el?: HTMLElement | null) => {
+  const openSearchForIdx = (idx: number, el?: HTMLElement | null) => {
     const target = el || (typeof document !== 'undefined' ? document.getElementById('staff-recipe-ing-input-' + idx) : null);
     if (target) {
       const rect = target.getBoundingClientRect();
-      const modalEl = document.getElementById('staff-product-modal-dialog');
-      const modalBottom = modalEl ? modalEl.getBoundingClientRect().bottom : window.innerHeight;
-      const spaceBelowInModal = modalBottom - rect.bottom;
-      // If space below inside modal is less than 300px, flip upwards (Drop-up)
-      if (spaceBelowInModal < 300 && rect.top > 160) {
-        setDropdownDirection('up');
-      } else {
-        setDropdownDirection('down');
-      }
-    } else {
-      setDropdownDirection(idx > 0 ? 'up' : 'down');
-    }
-  };
+      const popoverHeight = 280;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropUp = spaceBelow < popoverHeight && rect.top > popoverHeight;
 
-  const openSearchForIdx = (idx: number, el?: HTMLElement | null) => {
-    updateSearchDirection(idx, el);
+      const targetTop = dropUp ? Math.max(10, rect.top - popoverHeight - 6) : rect.bottom + 6;
+      const targetWidth = Math.max(380, Math.min(460, rect.width * 1.5));
+      const targetLeft = Math.max(12, Math.min(rect.left, window.innerWidth - targetWidth - 16));
+
+      setDropdownPosition({
+        top: targetTop,
+        left: targetLeft,
+        width: targetWidth,
+        dropUp,
+      });
+    }
     setActiveRecipeSearchIdx(idx);
   };
   const [recipeSearchTexts, setRecipeSearchTexts] = useState<Record<number, string>>({});
@@ -183,7 +187,20 @@ export default function StaffProductsPage() {
     ]);
   };
 
-  const removeRecipeRow = (idx: number) => {
+  const removeRecipeRow = async (idx: number) => {
+    const item = recipeItems[idx];
+    const ing = availableIngredients.find((i) => i.ingredientId === Number(item?.ingredientId));
+    const ingName = item?.customName || ing?.name || `วัตถุดิบรายการที่ ${idx + 1}`;
+
+    const isConfirmed = await confirmDeleteAlert({
+      title: 'ลบวัตถุดิบออกจากสูตรหรือไม่?',
+      text: `คุณต้องการลบ "${ingName}" ออกจากสูตรสินค้านี้ใช่หรือไม่?`,
+      confirmButtonText: 'ลบวัตถุดิบ',
+      cancelButtonText: 'ยกเลิก',
+    });
+
+    if (!isConfirmed) return;
+
     setRecipeItems((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -252,6 +269,7 @@ export default function StaffProductsPage() {
     setRecipeItems([]);
     setRecipeDescription('');
     setActiveRecipeSearchIdx(null);
+    setDropdownPosition(null);
     setRecipeSearchTexts({});
     setFormError(null);
     setModalOpen(true);
@@ -604,7 +622,7 @@ export default function StaffProductsPage() {
       {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
-          <div id="staff-product-modal-dialog" className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[94vh] flex flex-col">
+          <div id="staff-product-modal-dialog" className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in duration-150 max-h-[94vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -928,84 +946,6 @@ export default function StaffProductsPage() {
                                         </button>
                                       </div>
 
-                                      {/* Dropdown Popover (Smart Up/Down Placement so it is NEVER cut off) */}
-                                      {activeRecipeSearchIdx === idx && (() => {
-                                        const keyword = (item.customName || '').trim().toLowerCase();
-                                        const filtered = availableIngredients.filter(
-                                          (ing) =>
-                                            !keyword ||
-                                            ing.name.toLowerCase().includes(keyword) ||
-                                            ing.code.toLowerCase().includes(keyword) ||
-                                            (ing.category && ing.category.toLowerCase().includes(keyword))
-                                        );
-
-                                        return (
-                                          <div
-                                            className={`absolute ${
-                                              dropdownDirection === 'up'
-                                                ? 'bottom-full mb-1.5 origin-bottom'
-                                                : 'top-full mt-1.5 origin-top'
-                                            } left-0 w-[360px] sm:w-[460px] max-w-[85vw] bg-white rounded-2xl shadow-2xl border border-slate-300 z-[9999] overflow-hidden flex flex-col ring-4 ring-black/10 animate-in fade-in zoom-in-95 duration-100`}
-                                          >
-                                            <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 shrink-0">
-                                              <span className="flex items-center gap-1.5">
-                                                <Layers className="w-3.5 h-3.5 text-emerald-600" />
-                                                <span>รายการวัตถุดิบ ({filtered.length})</span>
-                                              </span>
-                                              <button
-                                                type="button"
-                                                onClick={() => setActiveRecipeSearchIdx(null)}
-                                                className="text-slate-400 hover:text-slate-700 cursor-pointer font-bold text-[10px] px-1.5 py-0.5 rounded hover:bg-slate-200"
-                                              >
-                                                ✕ ปิด
-                                              </button>
-                                            </div>
-                                            <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
-                                              {filtered.length === 0 ? (
-                                                <div className="p-4 text-center text-xs text-slate-500">
-                                                  ไม่พบวัตถุดิบ "{keyword}" ในระบบ
-                                                </div>
-                                              ) : (
-                                                filtered.map((ing) => {
-                                                  const isSelected = item.ingredientId === String(ing.ingredientId);
-                                                  return (
-                                                    <div
-                                                      key={ing.ingredientId}
-                                                      onMouseDown={(e) => {
-                                                        e.preventDefault();
-                                                        updateRecipeRow(idx, 'ingredientId', String(ing.ingredientId));
-                                                        setActiveRecipeSearchIdx(null);
-                                                      }}
-                                                      className={`p-2 hover:bg-emerald-50/80 cursor-pointer flex items-center justify-between gap-2 transition-colors ${
-                                                        isSelected ? 'bg-emerald-50/90 font-bold border-l-4 border-emerald-600' : ''
-                                                      }`}
-                                                    >
-                                                      <div>
-                                                        <div className="text-xs text-slate-900 font-bold">{ing.name}</div>
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
-                                                          <span className="font-mono font-bold bg-slate-100 px-1 py-0.2 rounded text-slate-700">
-                                                            {ing.code}
-                                                          </span>
-                                                          {ing.category && (
-                                                            <span className="bg-emerald-50 text-emerald-800 px-1 py-0.2 rounded">
-                                                              {ing.category}
-                                                            </span>
-                                                          )}
-                                                          <span>฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}</span>
-                                                        </div>
-                                                      </div>
-                                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 shrink-0">
-                                                        คงเหลือ: {Number(ing.expectedStock || 0).toLocaleString()} {ing.unit}
-                                                      </span>
-                                                    </div>
-                                                  );
-                                                })
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })()}
-
                                       {/* Live badges under selected ingredient (3 Badges identical to Admin) */}
                                       {selectedIng && (
                                         <div className="flex flex-wrap items-center gap-1 mt-1 text-[10px]">
@@ -1093,7 +1033,11 @@ export default function StaffProductsPage() {
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0 mt-3">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => {
+                    setModalOpen(false);
+                    setDropdownPosition(null);
+                    setActiveRecipeSearchIdx(null);
+                  }}
                   className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   ยกเลิก
@@ -1107,6 +1051,103 @@ export default function StaffProductsPage() {
                 </button>
               </div>
             </form>
+
+            {/* Floating Fixed Dropdown Popover (Positioned outside table & scroll so it is 100% visible and NEVER clipped!) */}
+            {activeRecipeSearchIdx !== null && dropdownPosition && (() => {
+              const currentItem = recipeItems[activeRecipeSearchIdx];
+              const keyword = (currentItem?.customName || '').trim().toLowerCase();
+              const filtered = availableIngredients.filter(
+                (ing) =>
+                  !keyword ||
+                  ing.name.toLowerCase().includes(keyword) ||
+                  ing.code.toLowerCase().includes(keyword) ||
+                  (ing.category && ing.category.toLowerCase().includes(keyword))
+              );
+
+              return (
+                <>
+                  {/* Backdrop click outside to close */}
+                  <div
+                    className="fixed inset-0 z-[99998]"
+                    onClick={() => {
+                      setActiveRecipeSearchIdx(null);
+                      setDropdownPosition(null);
+                    }}
+                  />
+
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: dropdownPosition.top,
+                      left: dropdownPosition.left,
+                      width: dropdownPosition.width,
+                      zIndex: 99999,
+                    }}
+                    className="bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col ring-4 ring-black/15 animate-in fade-in duration-100 max-w-[92vw]"
+                  >
+                    <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 shrink-0">
+                      <span className="flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-emerald-600" />
+                        <span>รายการวัตถุดิบในระบบ ({filtered.length})</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveRecipeSearchIdx(null);
+                          setDropdownPosition(null);
+                        }}
+                        className="text-slate-400 hover:text-slate-700 cursor-pointer font-bold text-xs px-2 py-0.5 rounded-lg hover:bg-slate-200"
+                      >
+                        ✕ ปิด
+                      </button>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 [scrollbar-width:thin]">
+                      {filtered.length === 0 ? (
+                        <div className="p-6 text-center text-xs text-slate-500">
+                          ไม่พบวัตถุดิบ "{keyword}" ในระบบ
+                        </div>
+                      ) : (
+                        filtered.map((ing) => {
+                          const isSelected = currentItem?.ingredientId === String(ing.ingredientId);
+                          return (
+                            <div
+                              key={ing.ingredientId}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                updateRecipeRow(activeRecipeSearchIdx, 'ingredientId', String(ing.ingredientId));
+                                setActiveRecipeSearchIdx(null);
+                                setDropdownPosition(null);
+                              }}
+                              className={`p-3 hover:bg-emerald-50/80 cursor-pointer flex items-center justify-between gap-3 transition-colors ${
+                                isSelected ? 'bg-emerald-50/90 font-bold border-l-4 border-emerald-600' : ''
+                              }`}
+                            >
+                              <div className="min-w-0">
+                                <div className="text-xs text-slate-900 font-bold truncate">{ing.name}</div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
+                                  <span className="font-mono font-bold bg-slate-100 px-1 py-0.2 rounded text-slate-700">
+                                    {ing.code}
+                                  </span>
+                                  {ing.category && (
+                                    <span className="bg-emerald-50 text-emerald-800 px-1 py-0.2 rounded">
+                                      {ing.category}
+                                    </span>
+                                  )}
+                                  <span>ต้นทุน ฿{Number(ing.costPerUnit || 0).toFixed(2)}/{ing.unit}</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-700 shrink-0">
+                                คงเหลือ: {Number(ing.expectedStock || 0).toLocaleString()} {ing.unit}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
