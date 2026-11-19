@@ -284,7 +284,7 @@ export default function StaffProductsPage() {
       unit: p.unit || 'แก้ว',
       price: String(p.price || ''),
       cost: p.cost ? String(p.cost) : '',
-      image: p.image || '',
+      image: p.image && p.image !== 'null' ? p.image : '',
       status: p.status,
     });
     if (p.recipe?.items && p.recipe.items.length > 0) {
@@ -312,13 +312,19 @@ export default function StaffProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const validExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'jfif', 'bmp'];
+    const isImage = (file.type && file.type.startsWith('image/')) || validExts.includes(ext);
+
+    if (!isImage) {
       alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP, GIF)');
+      e.target.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ขนาดไฟล์ภาพต้องไม่เกิน 10 MB');
+      e.target.value = '';
       return;
     }
 
@@ -344,6 +350,7 @@ export default function StaffProductsPage() {
       setFormError(err.message || 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ');
     } finally {
       setUploadingImage(false);
+      e.target.value = '';
     }
   };
 

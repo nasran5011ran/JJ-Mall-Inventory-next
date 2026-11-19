@@ -453,13 +453,19 @@ export default function ProductsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const validExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'jfif', 'bmp'];
+    const isImage = (file.type && file.type.startsWith('image/')) || validExts.includes(ext);
+
+    if (!isImage) {
       alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น (JPG, PNG, WEBP, GIF)');
+      e.target.value = '';
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('ขนาดไฟล์ภาพต้องไม่เกิน 5 MB');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('ขนาดไฟล์ภาพต้องไม่เกิน 10 MB');
+      e.target.value = '';
       return;
     }
 
@@ -592,7 +598,7 @@ export default function ProductsPage() {
       price: p.price.toString(),
       cost: p.cost ? p.cost.toString() : '',
       minStock: p.minStock.toString(),
-      image: p.image || '',
+      image: p.image && p.image !== 'null' ? p.image : '',
       status: p.status,
       storeId: p.storeId ? String(p.storeId) : '',
     });

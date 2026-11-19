@@ -17,27 +17,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'ไม่พบไฟล์รูปภาพที่อัปโหลด' }, { status: 400 });
     }
 
-    // Validate MIME types
-    const validMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
-    if (!validMimes.includes(file.type)) {
+    // Validate MIME types and extensions
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const validExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'jfif', 'bmp'];
+    const isImageMime = file.type ? file.type.startsWith('image/') : false;
+    const isImageExt = validExts.includes(ext);
+
+    if (!isImageMime && !isImageExt) {
       return NextResponse.json(
         { success: false, message: 'รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP, GIF)' },
         { status: 400 }
       );
     }
 
-    // Max 5MB
-    if (file.size > 5 * 1024 * 1024) {
+    // Max 10MB
+    if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { success: false, message: 'ขนาดไฟล์ภาพต้องไม่เกิน 5 MB' },
+        { success: false, message: 'ขนาดไฟล์ภาพต้องไม่เกิน 10 MB' },
         { status: 400 }
       );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-
-    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext) ? ext : 'jpg';
+    const safeExt = validExts.includes(ext) ? ext : 'jpg';
     const filename = `prod_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}.${safeExt}`;
 
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
