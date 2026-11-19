@@ -2021,6 +2021,7 @@ export default function StaffStockRequestsPage() {
                     <th className="py-1 px-2 border-r border-black text-left w-24 bg-white">ผู้ยื่นคำขอ</th>
                     <th className="py-1 px-2 border-r border-black text-left bg-white">เหตุผล / หมายเหตุ</th>
                     <th className="py-1 px-2 border-r border-black text-left w-52 bg-white">รายการวัตถุดิบ & จำนวน</th>
+                    <th className="py-1 px-2 border-r border-black text-right w-24 bg-white">ยอดเงิน (บาท)</th>
                     <th className="py-1 px-1.5 border-r border-black text-center w-20 bg-white">สถานะ</th>
                     <th className="py-1 px-2 text-left w-24 bg-white">ผู้อนุมัติ</th>
                   </tr>
@@ -2048,6 +2049,16 @@ export default function StaffStockRequestsPage() {
                         )}
                       </td>
                       <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
+                        {req.items.map((i) => (
+                          <div key={i.id} className="text-[9.5px] leading-tight text-black py-0.5">
+                            • <span className="font-semibold">{i.ingredient?.name}</span>:{' '}
+                            <span className="font-mono font-bold">
+                              {Number(i.requestedQty).toLocaleString()} {i.ingredient?.unit}
+                            </span>
+                          </div>
+                        ))}
+                      </td>
+                      <td className="py-1 px-2 border-r border-black font-mono text-right text-black">
                         {req.items.map((i) => {
                           const mIng = ingredients.find((ing) => ing.id === i.ingredientId);
                           const cost = Number(i.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
@@ -2055,38 +2066,20 @@ export default function StaffStockRequestsPage() {
                           const lineTotal = reqQty * cost;
 
                           return (
-                            <div key={i.id} className="text-[9px] leading-tight text-black py-0.5">
-                              • <span className="font-semibold">{i.ingredient?.name}</span>:{' '}
-                              <span className="font-mono font-bold">
-                                {reqQty.toLocaleString()} {i.ingredient?.unit}
-                              </span>
-                              {cost > 0 && (
-                                <span className="text-[8.5px] text-slate-800 font-mono ml-1">
-                                  (@ ฿{cost.toFixed(2)} = <strong className="text-black font-bold">฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>)
-                                </span>
-                              )}
-                              {i.approvedQty !== null && (
-                                <span className="text-[8.5px] text-emerald-800 font-semibold ml-1">
-                                  (อนุมัติ {Number(i.approvedQty).toLocaleString()})
-                                </span>
-                              )}
+                            <div key={i.id} className="text-[9.5px] leading-tight text-slate-700 py-0.5">
+                              ฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           );
                         })}
-                        {/* Subtotal of this requisition */}
-                        {(() => {
-                          const reqTotal = req.items.reduce((sum, item) => {
-                            const mIng = ingredients.find((ing) => ing.id === item.ingredientId);
-                            const cost = Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
-                            return sum + Number(item.requestedQty || 0) * cost;
-                          }, 0);
-                          return (
-                            <div className="text-[9px] font-mono font-bold text-slate-900 mt-1 pt-0.5 border-t border-dotted border-black/40 flex justify-between items-center">
-                              <span className="font-sans text-[8.5px] text-slate-600">รวมมูลค่าใบขอ:</span>
-                              <span className="text-black font-bold">฿{reqTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                          );
-                        })()}
+                        {req.items.length > 1 && (
+                          <div className="text-[9.5px] font-bold text-black border-t border-black/30 mt-0.5 pt-0.5">
+                            ฿{req.items.reduce((sum, item) => {
+                              const mIng = ingredients.find((ing) => ing.id === item.ingredientId);
+                              const cost = Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                              return sum + Number(item.requestedQty || 0) * cost;
+                            }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
                       </td>
                       <td className="py-0.5 px-1.5 border-r border-black text-center font-sans text-black">
                         {req.status === 'PENDING' && <span className="font-bold text-amber-700">รออนุมัติ</span>}
@@ -2100,7 +2093,7 @@ export default function StaffStockRequestsPage() {
                   ))}
                   {printRequisitions.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-6 text-center text-black font-sans">
+                      <td colSpan={9} className="py-6 text-center text-black font-sans">
                         ไม่พบข้อมูลคำขอเบิกสต็อกตามเงื่อนไขที่เลือก
                       </td>
                     </tr>
@@ -2113,18 +2106,16 @@ export default function StaffStockRequestsPage() {
                         รวมใบขอเบิกทั้งหมด:
                       </td>
                       <td className="py-1.5 px-2 border-r border-black font-mono text-left text-black">
-                        <div>
-                          {printRequisitions.length} ฉบับ (รวม {printRequisitions.reduce((s, r) => s + r.items.length, 0)} รายการวัตถุดิบ)
-                        </div>
-                        <div className="text-[9.5px] font-bold text-black mt-0.5 font-mono">
-                          รวมมูลค่าขอเบิกทั้งสิ้น: ฿{printRequisitions.reduce((sum, req) => {
-                            return sum + req.items.reduce((s, it) => {
-                              const mIng = ingredients.find((i) => i.id === it.ingredientId);
-                              const c = Number(it.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
-                              return sum + Number(it.requestedQty || 0) * c;
-                            }, 0);
-                          }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
-                        </div>
+                        {printRequisitions.length} ฉบับ (รวม {printRequisitions.reduce((s, r) => s + r.items.length, 0)} รายการวัตถุดิบ)
+                      </td>
+                      <td className="py-1.5 px-2 border-r border-black font-mono text-right text-black font-bold">
+                        ฿{printRequisitions.reduce((sum, req) => {
+                          return sum + req.items.reduce((s, it) => {
+                            const mIng = ingredients.find((i) => i.id === it.ingredientId);
+                            const c = Number(it.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                            return sum + Number(it.requestedQty || 0) * c;
+                          }, 0);
+                        }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td colSpan={2} className="py-1.5 px-2 font-sans text-center text-slate-400">
                         -
