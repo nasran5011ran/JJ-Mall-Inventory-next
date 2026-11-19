@@ -13,15 +13,22 @@ export async function GET(
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    if (session.role !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขสินค้าได้ พนักงานขายไม่มีสิทธิ์นี้' },
-        { status: 403 }
-      );
-    }
-
     const { id } = await params;
     const productId = parseInt(id, 10);
+
+    // STAFF can only access their store's products or central products
+    if (session.role === 'STAFF') {
+      const p = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { storeId: true },
+      });
+      if (p && p.storeId && p.storeId !== session.id) {
+        return NextResponse.json(
+          { success: false, message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลเมนูของร้านอื่น' },
+          { status: 403 }
+        );
+      }
+    }
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
@@ -62,7 +69,20 @@ export async function PUT(
     const { id } = await params;
     const productId = parseInt(id, 10);
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status, storeId, image } = body;
+    const {
+      code,
+      name,
+      category,
+      unit,
+      price,
+      cost,
+      minStock,
+      status,
+      storeId,
+      image,
+      recipeItems,
+      recipeDescription,
+    } = body;
 
     // Check existing product and permission
     const currentProduct = await prisma.product.findUnique({
@@ -131,6 +151,57 @@ export async function PUT(
     // เฉพาะ Admin เท่านั้นที่สามารถเปลี่ยนร้านค้าเจ้าของเมนูได้
     if (session.role === 'ADMIN' && storeId !== undefined) {
       updateData.storeId = storeId ? Number(storeId) : null;
+    }
+
+    // Handle recipe (BOM) creation/update/deletion
+    if (recipeItems !== undefined && Array.isArray(recipeItems)) {
+      const validRecipeItems = recipeItems.filter(
+        (i: any) => Number(i.ingredientId) > 0 && Number(i.quantity) > 0
+      );
+
+      if (validRecipeItems.length > 0) {
+        const ingIds = validRecipeItems.map((i: any) => Number(i.ingredientId));
+        const dbIngs = await prisma.ingredient.findMany({
+          where: { id: { in: ingIds } },
+          select: { id: true, costPerUnit: true },
+        });
+        const ingCostMap = new Map(dbIngs.map((ing) => [ing.id, Number(ing.costPerUnit || 0)]));
+        let sumCost = 0;
+        for (const item of validRecipeItems) {
+          sumCost += Number(item.quantity) * (ingCostMap.get(Number(item.ingredientId)) || 0);
+        }
+        updateData.cost = Number(sumCost.toFixed(2));
+
+        await prisma.recipe.upsert({
+          where: { productId },
+          create: {
+            productId,
+            description: recipeDescription || `สูตร ${name || currentProduct.name}`,
+            items: {
+              create: validRecipeItems.map((it: any) => ({
+                ingredientId: Number(it.ingredientId),
+                quantity: Number(it.quantity),
+                unit: it.unit || 'กรัม',
+              })),
+            },
+          },
+          update: {
+            description: recipeDescription || `สูตร ${name || currentProduct.name}`,
+            items: {
+              deleteMany: {},
+              create: validRecipeItems.map((it: any) => ({
+                ingredientId: Number(it.ingredientId),
+                quantity: Number(it.quantity),
+                unit: it.unit || 'กรัม',
+              })),
+            },
+          },
+        });
+      } else {
+        await prisma.recipe.deleteMany({
+          where: { productId },
+        });
+      }
     }
 
     const updated = await prisma.product.update({

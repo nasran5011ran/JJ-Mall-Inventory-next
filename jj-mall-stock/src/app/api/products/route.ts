@@ -127,12 +127,41 @@ export async function GET(req: NextRequest) {
     }
 
     let storeStockMap: Map<number, number> | null = null;
+    let storeBalancesList: any[] = [];
     if (targetStoreId) {
       try {
         const storeBalances = await calculateStoreReconciliation(targetStoreId);
+        storeBalancesList = storeBalances;
         storeStockMap = new Map(storeBalances.map((b) => [b.ingredientId, b.expectedStock]));
       } catch (err) {
         console.error('Error calculating store reconciliation in GET /api/products:', err);
+      }
+    } else {
+      try {
+        const activeIngs = await prisma.ingredient.findMany({
+          where: { status: 'ACTIVE' },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            category: true,
+            unit: true,
+            costPerUnit: true,
+            currentStock: true,
+          },
+          orderBy: { name: 'asc' },
+        });
+        storeBalancesList = activeIngs.map((i) => ({
+          ingredientId: i.id,
+          code: i.code,
+          name: i.name,
+          category: i.category,
+          unit: i.unit,
+          costPerUnit: Number(i.costPerUnit || 0),
+          expectedStock: Number(i.currentStock || 0),
+        }));
+      } catch (err) {
+        console.error('Error fetching fallback ingredients:', err);
       }
     }
 
@@ -164,6 +193,7 @@ export async function GET(req: NextRequest) {
       products: formattedProducts,
       categories,
       staffStores,
+      ingredients: storeBalancesList,
     });
   } catch (error: any) {
     console.error('Error fetching products:', error);
@@ -183,7 +213,20 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { code, name, category, unit, price, cost, minStock, status, storeId, image } = body;
+    const {
+      code,
+      name,
+      category,
+      unit,
+      price,
+      cost,
+      minStock,
+      status,
+      storeId,
+      image,
+      recipeItems,
+      recipeDescription,
+    } = body;
 
     let targetStoreId: number | null = null;
     if (session.role === 'STAFF') {
@@ -229,6 +272,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const validRecipeItems = Array.isArray(recipeItems)
+      ? recipeItems.filter((i: any) => Number(i.ingredientId) > 0 && Number(i.quantity) > 0)
+      : [];
+
+    // Calculate recipe cost if items provided
+    let calculatedCost = cost !== undefined && cost !== '' ? Number(cost) : null;
+    if (validRecipeItems.length > 0) {
+      const ingIds = validRecipeItems.map((i: any) => Number(i.ingredientId));
+      const dbIngs = await prisma.ingredient.findMany({
+        where: { id: { in: ingIds } },
+        select: { id: true, costPerUnit: true },
+      });
+      const ingCostMap = new Map(dbIngs.map((ing) => [ing.id, Number(ing.costPerUnit || 0)]));
+      let sumCost = 0;
+      for (const item of validRecipeItems) {
+        sumCost += Number(item.quantity) * (ingCostMap.get(Number(item.ingredientId)) || 0);
+      }
+      calculatedCost = Number(sumCost.toFixed(2));
+    }
+
     const product = await prisma.product.create({
       data: {
         code: code.trim().toUpperCase(),
@@ -236,11 +299,25 @@ export async function POST(req: NextRequest) {
         category: category?.trim() || 'ทั่วไป',
         unit: unit?.trim() || 'แก้ว',
         price: Number(price),
-        cost: cost !== undefined && cost !== '' ? Number(cost) : null,
+        cost: calculatedCost,
         minStock: minStock !== undefined && minStock !== '' ? Number(minStock) : 10,
         image: image || null,
         status: status || 'ACTIVE',
         storeId: targetStoreId,
+        ...(validRecipeItems.length > 0 && {
+          recipe: {
+            create: {
+              description: recipeDescription || `สูตร ${name.trim()}`,
+              items: {
+                create: validRecipeItems.map((it: any) => ({
+                  ingredientId: Number(it.ingredientId),
+                  quantity: Number(it.quantity),
+                  unit: it.unit || 'กรัม',
+                })),
+              },
+            },
+          },
+        }),
       },
       include: {
         store: {
