@@ -92,6 +92,30 @@ export default function StaffProductsPage() {
   const [recipeItems, setRecipeItems] = useState<RecipeFormItem[]>([]);
   const [recipeDescription, setRecipeDescription] = useState('');
   const [activeRecipeSearchIdx, setActiveRecipeSearchIdx] = useState<number | null>(null);
+  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
+
+  const updateSearchDirection = (idx: number, el?: HTMLElement | null) => {
+    const target = el || (typeof document !== 'undefined' ? document.getElementById('staff-recipe-ing-input-' + idx) : null);
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const modalEl = document.getElementById('staff-product-modal-dialog');
+      const modalBottom = modalEl ? modalEl.getBoundingClientRect().bottom : window.innerHeight;
+      const spaceBelowInModal = modalBottom - rect.bottom;
+      // If space below inside modal is less than 300px, flip upwards (Drop-up)
+      if (spaceBelowInModal < 300 && rect.top > 160) {
+        setDropdownDirection('up');
+      } else {
+        setDropdownDirection('down');
+      }
+    } else {
+      setDropdownDirection(idx > 0 ? 'up' : 'down');
+    }
+  };
+
+  const openSearchForIdx = (idx: number, el?: HTMLElement | null) => {
+    updateSearchDirection(idx, el);
+    setActiveRecipeSearchIdx(idx);
+  };
   const [recipeSearchTexts, setRecipeSearchTexts] = useState<Record<number, string>>({});
 
   // Modal State
@@ -580,7 +604,7 @@ export default function StaffProductsPage() {
       {/* Add / Edit Modal */}
       {modalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[94vh] flex flex-col">
+          <div id="staff-product-modal-dialog" className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[94vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
               <div className="flex items-center gap-2.5">
@@ -799,7 +823,7 @@ export default function StaffProductsPage() {
                 </div>
 
                 {/* Right Column: Recipe Builder (7 cols) - Visible immediately side-by-side without scrolling! */}
-                <div className="lg:col-span-7 flex flex-col space-y-2.5">
+                <div className="lg:col-span-7 flex flex-col space-y-2.5 overflow-visible pb-16 lg:pb-24">
                   <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5 shrink-0">
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -840,7 +864,7 @@ export default function StaffProductsPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="border border-slate-200 rounded-2xl overflow-visible bg-white flex flex-col flex-1">
+                    <div className="border border-slate-200 rounded-2xl overflow-visible bg-white flex flex-col flex-1 min-h-[300px]">
                       <div className="overflow-x-auto overflow-y-visible">
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
@@ -877,28 +901,34 @@ export default function StaffProductsPage() {
                                     <div className="relative">
                                       <div className="relative flex items-center">
                                         <input
+                                          id={`staff-recipe-ing-input-${idx}`}
                                           type="text"
                                           value={item.customName || ''}
-                                          onClick={() => setActiveRecipeSearchIdx(idx)}
+                                          onClick={(e) => openSearchForIdx(idx, e.currentTarget)}
+                                          onFocus={(e) => openSearchForIdx(idx, e.currentTarget)}
                                           onChange={(e) => {
                                             updateRecipeRow(idx, 'customName', e.target.value);
-                                            setActiveRecipeSearchIdx(idx);
+                                            openSearchForIdx(idx, e.currentTarget);
                                           }}
                                           placeholder="พิมพ์ค้นหาหรือคลิกเลือกวัตถุดิบ..."
-                                          className="w-full pl-2.5 pr-7 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 font-medium"
+                                          className="w-full pl-2.5 pr-7 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 font-medium bg-white"
                                         />
                                         <button
                                           type="button"
-                                          onClick={() =>
-                                            setActiveRecipeSearchIdx(activeRecipeSearchIdx === idx ? null : idx)
-                                          }
+                                          onClick={(e) => {
+                                            if (activeRecipeSearchIdx === idx) {
+                                              setActiveRecipeSearchIdx(null);
+                                            } else {
+                                              openSearchForIdx(idx, e.currentTarget);
+                                            }
+                                          }}
                                           className="absolute right-1.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
                                         >
                                           <ChevronDown className="w-3.5 h-3.5" />
                                         </button>
                                       </div>
 
-                                      {/* Dropdown Popover */}
+                                      {/* Dropdown Popover (Smart Up/Down Placement so it is NEVER cut off) */}
                                       {activeRecipeSearchIdx === idx && (() => {
                                         const keyword = (item.customName || '').trim().toLowerCase();
                                         const filtered = availableIngredients.filter(
@@ -910,13 +940,22 @@ export default function StaffProductsPage() {
                                         );
 
                                         return (
-                                          <div className="absolute top-full left-0 mt-1.5 w-[340px] sm:w-[420px] max-w-[85vw] bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col ring-4 ring-black/5 animate-in fade-in zoom-in-95 duration-100">
-                                            <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-600">
-                                              <span>รายการวัตถุดิบ ({filtered.length})</span>
+                                          <div
+                                            className={`absolute ${
+                                              dropdownDirection === 'up'
+                                                ? 'bottom-full mb-1.5 origin-bottom'
+                                                : 'top-full mt-1.5 origin-top'
+                                            } left-0 w-[360px] sm:w-[460px] max-w-[85vw] bg-white rounded-2xl shadow-2xl border border-slate-300 z-[9999] overflow-hidden flex flex-col ring-4 ring-black/10 animate-in fade-in zoom-in-95 duration-100`}
+                                          >
+                                            <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 shrink-0">
+                                              <span className="flex items-center gap-1.5">
+                                                <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>รายการวัตถุดิบ ({filtered.length})</span>
+                                              </span>
                                               <button
                                                 type="button"
                                                 onClick={() => setActiveRecipeSearchIdx(null)}
-                                                className="text-slate-400 hover:text-slate-700 cursor-pointer font-bold"
+                                                className="text-slate-400 hover:text-slate-700 cursor-pointer font-bold text-[10px] px-1.5 py-0.5 rounded hover:bg-slate-200"
                                               >
                                                 ✕ ปิด
                                               </button>
