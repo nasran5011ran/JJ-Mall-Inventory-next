@@ -2027,70 +2027,108 @@ export default function StaffStockRequestsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black font-mono text-[9.5px] text-black">
-                  {printRequisitions.map((req, idx) => (
-                    <tr key={req.id} className="border-b border-black">
-                      <td className="py-0.5 px-1 text-center border-r border-black font-sans text-black">
-                        {idx + 1}
-                      </td>
-                      <td className="py-0.5 px-1.5 border-r border-black font-bold text-black font-mono text-center">
-                        #{req.requisitionNumber}
-                      </td>
-                      <td className="py-0.5 px-1.5 border-r border-black font-mono text-black text-center">
-                        {new Date(req.createdAt).toLocaleDateString('th-TH')}
-                      </td>
-                      <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left">
-                        {req.store?.name}
-                      </td>
-                      <td className="py-0.5 px-2 border-r border-black font-sans text-black text-left">
-                        <div>{req.reason || 'ขอเบิกวัตถุดิบ'}</div>
-                        {req.note && <div className="text-[8.5px] text-slate-600 font-normal">({req.note})</div>}
-                        {req.rejectReason && (
-                          <div className="text-[8.5px] text-red-600 font-bold">(เหตุผลไม่อนุมัติ: {req.rejectReason})</div>
-                        )}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
-                        {req.items.map((i) => (
-                          <div key={i.id} className="text-[9.5px] leading-tight text-black py-0.5">
-                            • <span className="font-semibold">{i.ingredient?.name}</span>:{' '}
-                            <span className="font-mono font-bold">
-                              {Number(i.requestedQty).toLocaleString()} {i.ingredient?.unit}
-                            </span>
-                          </div>
-                        ))}
-                      </td>
-                      <td className="py-1 px-2 border-r border-black font-mono text-right text-black">
-                        {req.items.map((i) => {
-                          const mIng = ingredients.find((ing) => ing.id === i.ingredientId);
-                          const cost = Number(i.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
-                          const reqQty = Number(i.requestedQty || 0);
-                          const lineTotal = reqQty * cost;
+                  {printRequisitions.map((req, reqIdx) => {
+                    const items = req.items.length > 0 ? req.items : [null];
 
-                          return (
-                            <div key={i.id} className="text-[9.5px] leading-tight text-slate-700 py-0.5">
-                              ฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                          );
-                        })}
-                        {req.items.length > 1 && (
-                          <div className="text-[9.5px] font-bold text-black border-t border-black/30 mt-0.5 pt-0.5">
-                            ฿{req.items.reduce((sum, item) => {
-                              const mIng = ingredients.find((ing) => ing.id === item.ingredientId);
-                              const cost = Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
-                              return sum + Number(item.requestedQty || 0) * cost;
-                            }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-0.5 px-1.5 border-r border-black text-center font-sans text-black">
-                        {req.status === 'PENDING' && <span className="font-bold text-amber-700">รออนุมัติ</span>}
-                        {req.status === 'APPROVED' && <span className="font-bold text-emerald-700">อนุมัติแล้ว</span>}
-                        {req.status === 'REJECTED' && <span className="font-bold text-rose-700">ไม่อนุมัติ</span>}
-                      </td>
-                      <td className="py-0.5 px-2 font-sans text-black text-left text-[9px]">
-                        {req.approvedBy?.name || '-'}
-                      </td>
-                    </tr>
-                  ))}
+                    return items.map((item, itemIdx) => {
+                      const isFirst = itemIdx === 0;
+                      const mIng = item ? ingredients.find((ing) => ing.id === item.ingredientId) : null;
+                      const cost = item ? Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0) : 0;
+                      const reqQty = item ? Number(item.requestedQty || 0) : 0;
+                      const lineTotal = reqQty * cost;
+
+                      return (
+                        <tr key={`${req.id}-${item?.id ?? itemIdx}`} className="border-b border-black">
+                          {isFirst && (
+                            <>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-1 text-center border-r border-black font-sans text-black align-top"
+                              >
+                                {reqIdx + 1}
+                              </td>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-1.5 border-r border-black font-bold text-black font-mono text-center align-top"
+                              >
+                                #{req.requisitionNumber}
+                              </td>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-1.5 border-r border-black font-mono text-black text-center align-top"
+                              >
+                                {new Date(req.createdAt).toLocaleDateString('th-TH')}
+                              </td>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-2 border-r border-black font-sans text-black text-left align-top"
+                              >
+                                {req.store?.name}
+                              </td>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-2 border-r border-black font-sans text-black text-left align-top"
+                              >
+                                <div>{req.reason || 'ขอเบิกวัตถุดิบ'}</div>
+                                {req.note && (
+                                  <div className="text-[8.5px] text-slate-600 font-normal">({req.note})</div>
+                                )}
+                                {req.rejectReason && (
+                                  <div className="text-[8.5px] text-red-600 font-bold">
+                                    (เหตุผลไม่อนุมัติ: {req.rejectReason})
+                                  </div>
+                                )}
+                              </td>
+                            </>
+                          )}
+
+                          {/* รายการวัตถุดิบ & จำนวน (1 บรรทัด 1 วัตถุดิบ) */}
+                          <td className="py-1 px-2 border-r border-black font-sans text-left text-black align-top">
+                            {item ? (
+                              <div>
+                                <span className="font-semibold">{item.ingredient?.name}</span>:{' '}
+                                <span className="font-mono font-bold">
+                                  {reqQty.toLocaleString()} {item.ingredient?.unit}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+
+                          {/* ยอดเงิน (บาท) (ไม่มีการรวมย่อยในแต่ละแถว) */}
+                          <td className="py-1 px-2 border-r border-black font-mono text-right text-black align-top">
+                            {item ? (
+                              <span>
+                                ฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </td>
+
+                          {isFirst && (
+                            <>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-1.5 border-r border-black text-center font-sans text-black align-top"
+                              >
+                                {req.status === 'PENDING' && <span className="font-bold text-amber-700">รออนุมัติ</span>}
+                                {req.status === 'APPROVED' && <span className="font-bold text-emerald-700">อนุมัติแล้ว</span>}
+                                {req.status === 'REJECTED' && <span className="font-bold text-rose-700">ไม่อนุมัติ</span>}
+                              </td>
+                              <td
+                                rowSpan={items.length}
+                                className="py-1 px-2 font-sans text-black text-left text-[9px] align-top"
+                              >
+                                {req.approvedBy?.name || '-'}
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    });
+                  })}
                   {printRequisitions.length === 0 && (
                     <tr>
                       <td colSpan={9} className="py-6 text-center text-black font-sans">
