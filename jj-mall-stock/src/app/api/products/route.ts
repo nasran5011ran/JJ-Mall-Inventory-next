@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET /api/products - List products with optional search and filter
 export async function GET(req: NextRequest) {
@@ -117,9 +118,50 @@ export async function GET(req: NextRequest) {
       (p) => !p.storeId || activeStoreIds.has(p.storeId)
     );
 
+    // Calculate in-store ingredient balances for STAFF or requested store
+    let targetStoreId: number | null = null;
+    if (session.role === 'STAFF') {
+      targetStoreId = session.id;
+    } else if (storeIdParam && storeIdParam !== 'ALL' && storeIdParam !== 'CENTRAL') {
+      targetStoreId = Number(storeIdParam);
+    }
+
+    let storeStockMap: Map<number, number> | null = null;
+    if (targetStoreId) {
+      try {
+        const storeBalances = await calculateStoreReconciliation(targetStoreId);
+        storeStockMap = new Map(storeBalances.map((b) => [b.ingredientId, b.expectedStock]));
+      } catch (err) {
+        console.error('Error calculating store reconciliation in GET /api/products:', err);
+      }
+    }
+
+    const formattedProducts = visibleProducts.map((p) => {
+      if (!p.recipe?.items) return p;
+      return {
+        ...p,
+        recipe: {
+          ...p.recipe,
+          items: p.recipe.items.map((item) => {
+            const inStore = storeStockMap
+              ? (storeStockMap.get(item.ingredient.id) ?? 0)
+              : Number(item.ingredient.currentStock);
+            return {
+              ...item,
+              ingredient: {
+                ...item.ingredient,
+                storeStock: inStore,
+                currentStock: inStore,
+              },
+            };
+          }),
+        },
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      products: visibleProducts,
+      products: formattedProducts,
       categories,
       staffStores,
     });

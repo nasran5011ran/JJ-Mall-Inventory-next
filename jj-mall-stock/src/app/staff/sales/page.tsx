@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import Image from 'next/image';
 import useSWR from 'swr';
 import QRCode from 'qrcode';
+import Swal from 'sweetalert2';
 import { useAuth } from '@/context/auth-context';
 import {
   ShoppingCart,
@@ -52,6 +53,7 @@ interface ProductItem {
         name: string;
         unit: string;
         currentStock: number;
+        storeStock?: number;
       };
     }>;
   };
@@ -108,11 +110,225 @@ function maskPromptPay(id: string) {
   return clean.slice(0, 3) + '***' + clean.slice(-2);
 }
 
+interface IngredientShortage {
+  id: number;
+  name: string;
+  unit: string;
+  inStore: number;
+  totalNeeded: number;
+  missing: number;
+}
+
+// Helper: ตรวจสอบความพร้อมของวัตถุดิบสำหรับ 1 หน่วยสินค้า
+function getProductStockStatus(product: ProductItem) {
+  if (!product.recipe?.items || product.recipe.items.length === 0) {
+    return {
+      hasRecipe: false,
+      isAvailable: true,
+      maxServings: 9999,
+      missingForOne: [] as IngredientShortage[],
+    };
+  }
+
+  let isAvailable = true;
+  let maxServings = 999999;
+  const missingForOne: IngredientShortage[] = [];
+
+  for (const item of product.recipe.items) {
+    const inStore = Number(item.ingredient.storeStock ?? item.ingredient.currentStock ?? 0);
+    const needed = Number(item.quantity);
+    if (needed > 0) {
+      const servings = Math.floor(inStore / needed);
+      if (servings < maxServings) {
+        maxServings = servings;
+      }
+      if (inStore < needed) {
+        isAvailable = false;
+        missingForOne.push({
+          id: item.ingredient.id,
+          name: item.ingredient.name,
+          unit: item.unit || item.ingredient.unit,
+          inStore,
+          totalNeeded: needed,
+          missing: Number((needed - inStore).toFixed(2)),
+        });
+      }
+    }
+  }
+
+  if (maxServings === 999999) maxServings = 0;
+
+  return {
+    hasRecipe: true,
+    isAvailable,
+    maxServings,
+    missingForOne,
+  };
+}
+
+// Helper: ตรวจสอบการใช้วัตถุดิบสะสมของทั้งตะกร้า
+function checkCartStock(cartItems: CartItem[]) {
+  const usageMap = new Map<
+    number,
+    {
+      id: number;
+      name: string;
+      unit: string;
+      inStore: number;
+      totalNeeded: number;
+      productNames: string[];
+    }
+  >();
+
+  for (const item of cartItems) {
+    if (!item.product.recipe?.items) continue;
+    for (const recipeItem of item.product.recipe.items) {
+      const ing = recipeItem.ingredient;
+      const needed = Number(recipeItem.quantity) * item.quantity;
+      const inStore = Number(ing.storeStock ?? ing.currentStock ?? 0);
+
+      const existing = usageMap.get(ing.id) || {
+        id: ing.id,
+        name: ing.name,
+        unit: recipeItem.unit || ing.unit,
+        inStore,
+        totalNeeded: 0,
+        productNames: [],
+      };
+
+      existing.totalNeeded += needed;
+      if (!existing.productNames.includes(item.product.name)) {
+        existing.productNames.push(item.product.name);
+      }
+      usageMap.set(ing.id, existing);
+    }
+  }
+
+  const shortages: Array<{
+    id: number;
+    name: string;
+    unit: string;
+    inStore: number;
+    totalNeeded: number;
+    missing: number;
+    productNames: string[];
+  }> = [];
+
+  for (const [_, usage] of usageMap.entries()) {
+    if (usage.totalNeeded > usage.inStore) {
+      shortages.push({
+        id: usage.id,
+        name: usage.name,
+        unit: usage.unit,
+        inStore: usage.inStore,
+        totalNeeded: Number(usage.totalNeeded.toFixed(2)),
+        missing: Number((usage.totalNeeded - usage.inStore).toFixed(2)),
+        productNames: usage.productNames,
+      });
+    }
+  }
+
+  return {
+    isValid: shortages.length === 0,
+    shortages,
+  };
+}
+
+// Helper: แสดง SweetAlert เตือนวัตถุดิบไม่พอขาย
+function showInsufficientStockAlert(options: {
+  title?: string;
+  subtitle?: string;
+  productName?: string;
+  targetQty?: number;
+  unit?: string;
+  shortages: Array<{
+    name: string;
+    unit: string;
+    inStore: number;
+    totalNeeded: number;
+    missing: number;
+  }>;
+  maxServings?: number;
+}) {
+  const {
+    title = 'วัตถุดิบในร้านไม่พอขาย',
+    subtitle = 'ไม่สามารถทำรายการได้เนื่องจากวัตถุดิบไม่เพียงพอ',
+    productName,
+    targetQty,
+    unit = 'แก้ว',
+    shortages,
+    maxServings,
+  } = options;
+
+  const shortagesHtml = shortages
+    .map(
+      (s) => `
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; text-align: left;">
+        <div style="font-weight: 700; color: #b91c1c; font-size: 13px; margin-bottom: 6px;">
+          • วัตถุดิบ: ${s.name}
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; font-size: 11px; color: #475569;">
+          <div style="background: white; border: 1px solid #fee2e2; border-radius: 8px; padding: 6px 8px; text-align: center;">
+            <div style="color: #64748b; font-size: 10px;">คงเหลือในร้าน</div>
+            <div style="font-weight: 700; color: #047857; font-size: 12px; margin-top: 2px;">${s.inStore} ${s.unit}</div>
+          </div>
+          <div style="background: white; border: 1px solid #fee2e2; border-radius: 8px; padding: 6px 8px; text-align: center;">
+            <div style="color: #64748b; font-size: 10px;">ต้องใช้</div>
+            <div style="font-weight: 700; color: #b45309; font-size: 12px; margin-top: 2px;">${s.totalNeeded} ${s.unit}</div>
+          </div>
+          <div style="background: white; border: 1px solid #fecaca; border-radius: 8px; padding: 6px 8px; text-align: center;">
+            <div style="color: #dc2626; font-size: 10px;">ขาดอีก</div>
+            <div style="font-weight: 800; color: #dc2626; font-size: 12px; margin-top: 2px;">${s.missing} ${s.unit}</div>
+          </div>
+        </div>
+      </div>
+    `
+    )
+    .join('');
+
+  const targetInfoHtml = productName
+    ? `<div style="text-align: left; margin-bottom: 12px; font-size: 13px; color: #1e293b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px;">
+        <div>สินค้า: <strong style="color: #0f172a;">${productName}</strong> ${
+          targetQty !== undefined ? `(ขายจำนวน: <strong style="color: #dc2626;">${targetQty}</strong> ${unit})` : ''
+        }</div>
+        ${
+          maxServings !== undefined
+            ? `<div style="font-size: 11px; color: #059669; font-weight: 600; margin-top: 4px;">
+                💡 วัตถุดิบคงเหลือในร้านสามารถทำได้สูงสุด <strong>${maxServings}</strong> ${unit}
+               </div>`
+            : ''
+        }
+       </div>`
+    : '';
+
+  Swal.fire({
+    icon: 'warning',
+    title: `<span style="font-size: 18px; font-weight: 800; color: #991b1b;">${title}</span>`,
+    html: `
+      <div>
+        <p style="font-size: 12px; color: #64748b; margin-bottom: 12px; text-align: left;">${subtitle}</p>
+        ${targetInfoHtml}
+        <div style="max-height: 250px; overflow-y: auto;">
+          ${shortagesHtml}
+        </div>
+      </div>
+    `,
+    confirmButtonText: 'รับทราบ',
+    confirmButtonColor: '#ef4444',
+    width: 440,
+    customClass: {
+      popup: 'swal2-thai-popup',
+      title: 'swal2-thai-title',
+      confirmButton: 'swal2-thai-confirm',
+    },
+  });
+}
+
 export default function SalesPage() {
   const { user } = useAuth();
 
   // Instant SWR Cache for POS: Instant products catalog
-  const { data: swrData, isLoading } = useSWR('/api/products');
+  const { data: swrData, isLoading, mutate } = useSWR('/api/products');
   const products: ProductItem[] = useMemo(() => {
     if (!swrData?.success || !Array.isArray(swrData.products)) return [];
     return swrData.products
@@ -220,6 +436,96 @@ export default function SalesPage() {
     setErrorMessage(null);
   };
 
+  // Handle selecting product from menu grid (Click product card)
+  const handleSelectProduct = (product: ProductItem) => {
+    const stockStatus = getProductStockStatus(product);
+
+    if (!stockStatus.isAvailable) {
+      showInsufficientStockAlert({
+        title: '⚠️ วัตถุดิบไม่พอขาย',
+        subtitle: `วัตถุดิบในร้านไม่เพียงพอสำหรับการขาย ${product.name} (1 ${product.unit})`,
+        productName: product.name,
+        targetQty: 1,
+        unit: product.unit,
+        shortages: stockStatus.missingForOne,
+        maxServings: 0,
+      });
+      setErrorMessage(
+        `ไม่สามารถขาย "${product.name}" ได้: วัตถุดิบในร้านไม่เพียงพอ (${stockStatus.missingForOne
+          .map((m) => `${m.name} คงเหลือ ${m.inStore} ขาดอีก ${m.missing} ${m.unit}`)
+          .join(', ')})`
+      );
+      return;
+    }
+
+    const existing = cart.find((it) => it.product.id === product.id);
+    const targetQty = (existing?.quantity || 0) + 1;
+    const candidateCart = existing
+      ? cart.map((it) => (it.product.id === product.id ? { ...it, quantity: it.quantity + 1 } : it))
+      : [...cart, { product, quantity: 1 }];
+
+    const cartCheck = checkCartStock(candidateCart);
+    if (!cartCheck.isValid) {
+      showInsufficientStockAlert({
+        title: '❌ วัตถุดิบไม่พอขาย',
+        subtitle: `ไม่สามารถเพิ่ม "${product.name}" เป็นจำนวน ${targetQty} ${product.unit} ได้ เนื่องจากวัตถุดิบในร้านไม่เพียงพอ`,
+        productName: product.name,
+        targetQty,
+        unit: product.unit,
+        shortages: cartCheck.shortages,
+        maxServings: stockStatus.maxServings,
+      });
+      setErrorMessage(
+        `วัตถุดิบไม่พอขายสำหรับ ${targetQty} ${product.unit} (${cartCheck.shortages
+          .map((s) => `${s.name} ขาดอีก ${s.missing} ${s.unit}`)
+          .join(', ')})`
+      );
+      return;
+    }
+
+    addToCart(product);
+  };
+
+  // Handle increasing/decreasing cart quantity with in-store stock check
+  const handleUpdateQuantity = (productId: number, delta: number) => {
+    if (delta < 0) {
+      updateQuantity(productId, delta);
+      setErrorMessage(null);
+      return;
+    }
+
+    const existing = cart.find((it) => it.product.id === productId);
+    if (!existing) return;
+
+    const targetQty = existing.quantity + delta;
+    const candidateCart = cart.map((it) =>
+      it.product.id === productId ? { ...it, quantity: targetQty } : it
+    );
+
+    const cartCheck = checkCartStock(candidateCart);
+    if (!cartCheck.isValid) {
+      const stockStatus = getProductStockStatus(existing.product);
+      showInsufficientStockAlert({
+        title: '❌ วัตถุดิบไม่พอขาย',
+        subtitle: `ไม่สามารถเพิ่ม "${existing.product.name}" เป็น ${targetQty} ${existing.product.unit} ได้`,
+        productName: existing.product.name,
+        targetQty,
+        unit: existing.product.unit,
+        shortages: cartCheck.shortages,
+        maxServings: stockStatus.maxServings,
+      });
+      setErrorMessage(
+        `วัตถุดิบไม่พอขายสำหรับ ${existing.product.name} ${targetQty} ${existing.product.unit} (${cartCheck.shortages
+          .map((s) => `${s.name} ขาดอีก ${s.missing} ${s.unit}`)
+          .join(', ')})`
+      );
+      return;
+    }
+
+    updateQuantity(productId, delta);
+    setErrorMessage(null);
+  };
+
   // Cart totals
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalAmount = cart.reduce(
@@ -251,6 +557,23 @@ export default function SalesPage() {
       setErrorMessage('ผู้ดูแลระบบ (Admin) ไม่มีหน้าที่ขายสินค้าหน้าร้าน บัญชีเจ้าหน้าที่ขายประจำร้าน (Staff) เท่านั้นที่สามารถทำรายการขายได้');
       return;
     }
+
+    // Pre-validate stock for entire cart before opening payment modal
+    const cartCheck = checkCartStock(cart);
+    if (!cartCheck.isValid) {
+      showInsufficientStockAlert({
+        title: '❌ ไม่สามารถชำระเงินได้',
+        subtitle: 'มีวัตถุดิบในร้านไม่เพียงพอสำหรับรายการสินค้าในตะกร้า กรุณาปรับลดจำนวนสินค้าก่อนชำระเงิน',
+        shortages: cartCheck.shortages,
+      });
+      setErrorMessage(
+        `ไม่สามารถชำระเงินได้: วัตถุดิบไม่พอขาย (${cartCheck.shortages
+          .map((s) => `${s.name} ขาดอีก ${s.missing} ${s.unit}`)
+          .join(', ')})`
+      );
+      return;
+    }
+
     setErrorMessage(null);
     setCashReceived('');
     setShowConfirmModal(true);
@@ -263,6 +586,20 @@ export default function SalesPage() {
       setErrorMessage('ผู้ดูแลระบบ (Admin) ไม่มีหน้าที่ขายสินค้าหน้าร้าน บัญชีเจ้าหน้าที่ขายประจำร้าน (Staff) เท่านั้นที่สามารถทำรายการขายได้');
       return;
     }
+
+    // Double check stock before sending
+    const cartCheck = checkCartStock(cart);
+    if (!cartCheck.isValid) {
+      setShowConfirmModal(false);
+      showInsufficientStockAlert({
+        title: '❌ ไม่สามารถบันทึกการขายได้',
+        subtitle: 'มีวัตถุดิบในร้านไม่เพียงพอสำหรับการขาย กรุณาปรับลดจำนวนสินค้า',
+        shortages: cartCheck.shortages,
+      });
+      setErrorMessage('ไม่สามารถบันทึกการขายได้: วัตถุดิบไม่พอขาย');
+      return;
+    }
+
     setProcessing(true);
     setErrorMessage(null);
 
@@ -285,6 +622,19 @@ export default function SalesPage() {
       const json = await res.json();
 
       if (!res.ok || !json.success) {
+        if (json.missingIngredients && Array.isArray(json.missingIngredients)) {
+          showInsufficientStockAlert({
+            title: '❌ ไม่สามารถบันทึกการขายได้',
+            subtitle: 'วัตถุดิบในร้านไม่เพียงพอสำหรับการขาย',
+            shortages: json.missingIngredients.map((m: any) => ({
+              name: m.name,
+              unit: m.unit,
+              inStore: m.inStore,
+              totalNeeded: m.required,
+              missing: m.missing,
+            })),
+          });
+        }
         throw new Error(json.message || 'บันทึกการขายไม่สำเร็จ');
       }
 
@@ -301,6 +651,7 @@ export default function SalesPage() {
         changeAmount: changeNum,
       });
       clearCart();
+      mutate(); // Reload product stock immediately
     } catch (err: any) {
       setErrorMessage(err.message || 'เกิดข้อผิดพลาดในการขาย');
     } finally {
@@ -380,24 +731,32 @@ export default function SalesPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredProducts.map((prod) => {
                   const inCart = cart.find((it) => it.product.id === prod.id);
-                  const hasRecipe = prod.recipe && prod.recipe.items?.length > 0;
+                  const stockStatus = getProductStockStatus(prod);
+                  const isOutOfStock = stockStatus.hasRecipe && !stockStatus.isAvailable;
 
                   return (
                     <button
                       key={prod.id}
-                      onClick={() => addToCart(prod)}
+                      onClick={() => handleSelectProduct(prod)}
                       className={`p-3 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between h-full group relative cursor-pointer ${
-                        inCart
+                        isOutOfStock
+                          ? 'border-red-200 bg-red-50/30 hover:border-red-300 hover:shadow-xs'
+                          : inCart
                           ? 'border-emerald-500 bg-emerald-50/40 shadow-xs ring-2 ring-emerald-500/20'
                           : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm'
                       }`}
                     >
-                      {/* Badge if in cart */}
-                      {inCart && (
+                      {/* Badge if Out of Stock or In Cart */}
+                      {isOutOfStock ? (
+                        <span className="absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>ไม่พอขาย</span>
+                        </span>
+                      ) : inCart ? (
                         <span className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-emerald-600 text-white text-[11px] font-black flex items-center justify-center shadow-xs">
                           {inCart.quantity}
                         </span>
-                      )}
+                      ) : null}
 
                       {/* Product Image Thumbnail - Uniform Equal Size (aspect-square) */}
                       <div className="w-full aspect-square mb-2.5 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center relative">
@@ -405,7 +764,9 @@ export default function SalesPage() {
                           <img
                             src={prod.image}
                             alt={prod.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ${
+                              isOutOfStock ? 'opacity-70 grayscale-[30%]' : ''
+                            }`}
                           />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-300 bg-slate-50/80">
@@ -419,16 +780,55 @@ export default function SalesPage() {
                         <div className="text-[10px] font-mono font-bold text-slate-400">
                           {prod.code}
                         </div>
-                        <div className="text-sm font-bold text-slate-800 mt-0.5 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
+                        <div
+                          className={`text-sm font-bold mt-0.5 leading-snug line-clamp-2 transition-colors ${
+                            isOutOfStock
+                              ? 'text-red-950 group-hover:text-red-700'
+                              : 'text-slate-800 group-hover:text-emerald-700'
+                          }`}
+                        >
                           {prod.name}
                         </div>
                         <div className="text-[11px] text-slate-400 mt-auto pt-1">
                           {prod.category}
                         </div>
+
+                        {/* Missing Ingredients Warning on Card */}
+                        {isOutOfStock && stockStatus.missingForOne.length > 0 && (
+                          <div className="mt-2 p-1.5 rounded-lg bg-red-100/90 border border-red-200 text-[10px] text-red-800 leading-tight">
+                            <div className="font-bold flex items-center gap-1 mb-0.5 text-red-700">
+                              <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                              <span>วัตถุดิบไม่พอขาย:</span>
+                            </div>
+                            <div className="space-y-0.5 pl-1">
+                              {stockStatus.missingForOne.slice(0, 2).map((m) => (
+                                <div key={m.id} className="truncate">
+                                  • {m.name}: เหลือ <strong className="text-slate-900">{m.inStore}</strong> (ขาด <strong className="text-red-700">{m.missing} {m.unit}</strong>)
+                                </div>
+                              ))}
+                              {stockStatus.missingForOne.length > 2 && (
+                                <div className="text-[9px] text-red-600 font-semibold">
+                                  และอีก {stockStatus.missingForOne.length - 2} รายการ...
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Available Servings Pill */}
+                        {!isOutOfStock && stockStatus.hasRecipe && stockStatus.maxServings <= 5 && (
+                          <div className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-700 w-fit">
+                            <span>คงเหลือทำได้ {stockStatus.maxServings} {prod.unit}</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                        <span className="text-base font-black text-emerald-700 font-mono">
+                        <span
+                          className={`text-base font-black font-mono ${
+                            isOutOfStock ? 'text-red-700' : 'text-emerald-700'
+                          }`}
+                        >
                           ฿{Number(prod.price).toFixed(2)}
                         </span>
                         <span className="text-[10px] text-slate-400 font-semibold">
@@ -507,7 +907,7 @@ export default function SalesPage() {
                   {/* Quantity Stepper */}
                   <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => updateQuantity(item.product.id, -1)}
+                      onClick={() => handleUpdateQuantity(item.product.id, -1)}
                       className="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer"
                     >
                       <Minus className="w-3 h-3" />
@@ -516,7 +916,7 @@ export default function SalesPage() {
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQuantity(item.product.id, 1)}
+                      onClick={() => handleUpdateQuantity(item.product.id, 1)}
                       className="w-7 h-7 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold cursor-pointer"
                     >
                       <Plus className="w-3 h-3" />

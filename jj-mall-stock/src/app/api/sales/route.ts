@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
+import { calculateStoreReconciliation } from '@/lib/store-stock';
 
 // GET /api/sales - List recent sales
 export async function GET(req: NextRequest) {
@@ -220,6 +221,49 @@ export async function POST(req: NextRequest) {
           requiredIngredientsMap.set(ing.id, existing);
         }
       }
+    }
+
+    // 2.5 Verify In-Store Stock Availability for Staff Store
+    const storeBalances = await calculateStoreReconciliation(session.id);
+    const storeStockMap = new Map(storeBalances.map((b) => [b.ingredientId, b.expectedStock]));
+
+    const missingIngredients: Array<{
+      name: string;
+      unit: string;
+      inStore: number;
+      required: number;
+      missing: number;
+    }> = [];
+
+    for (const [_, reqIng] of requiredIngredientsMap.entries()) {
+      const inStore = storeStockMap.get(reqIng.ingredientId) ?? 0;
+      if (inStore < reqIng.requiredQty) {
+        missingIngredients.push({
+          name: reqIng.name,
+          unit: reqIng.unit,
+          inStore,
+          required: reqIng.requiredQty,
+          missing: Number((reqIng.requiredQty - inStore).toFixed(2)),
+        });
+      }
+    }
+
+    if (missingIngredients.length > 0) {
+      const details = missingIngredients
+        .map(
+          (m) =>
+            `• ${m.name}: คงเหลือในร้าน ${m.inStore} ${m.unit} (ขายจำนวนนี้ต้องใช้ ${m.required} ${m.unit}, ขาดอีก ${m.missing} ${m.unit})`
+        )
+        .join('\n');
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: `ไม่สามารถทำรายการขายได้ เนื่องจากวัตถุดิบในร้านไม่พอขาย:\n${details}`,
+          missingIngredients,
+        },
+        { status: 400 }
+      );
     }
 
     // 3. Generate Sale Number (e.g. SALE-20261110-0001)
