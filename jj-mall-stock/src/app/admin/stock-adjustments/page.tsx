@@ -301,6 +301,19 @@ export default function AdminStockAdjustmentsPage() {
     }
 
     const activeIngList = formIngredients.length > 0 ? formIngredients : ingredients;
+
+    const zeroStockItem = validItems.find((item) => {
+      const ing = activeIngList.find((i) => i.id === Number(item.ingredientId));
+      return ing && Number(ing.currentStock) <= 0;
+    });
+    if (zeroStockItem) {
+      const ing = activeIngList.find((i) => i.id === Number(zeroStockItem.ingredientId));
+      setFormError(
+        `วัตถุดิบ "${ing?.name}" มียอดสต็อกเป็น 0 ไม่สามารถแจ้งของเสียได้`
+      );
+      return;
+    }
+
     const overItem = validItems.find((item) => {
       const ing = activeIngList.find((i) => i.id === Number(item.ingredientId));
       return ing && parseFloat(item.actualQuantity) > Number(ing.currentStock);
@@ -1242,40 +1255,61 @@ export default function AdminStockAdjustmentsPage() {
                                   );
                                 }
 
-                                return matchedIngs.map((ing) => (
-                                  <button
-                                    key={ing.id}
-                                    type="button"
-                                    onClick={() => {
-                                      handleItemChange(idx, 'ingredientId', String(ing.id));
-                                      setRowIngQueries((prev) => ({
-                                        ...prev,
-                                        [idx]: `${ing.name} (${ing.code})`,
-                                      }));
-                                      setActiveIngDropdownIdx(null);
-                                    }}
-                                    className={`w-full text-left px-3 py-2 hover:bg-emerald-50 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                                      String(ing.id) === String(item.ingredientId)
-                                        ? 'bg-emerald-50/70 font-bold'
-                                        : ''
-                                    }`}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <div className="font-bold text-xs text-slate-800 break-words">
-                                        {ing.name}{' '}
-                                        <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
-                                      </div>
-                                      {ing.category && (
-                                        <div className="text-[10px] text-slate-400">
-                                          หมวด: {ing.category}
+                                return matchedIngs.map((ing) => {
+                                  const stock = Number(ing.currentStock || 0);
+                                  const isOutOfStock = stock <= 0;
+
+                                  return (
+                                    <button
+                                      key={ing.id}
+                                      type="button"
+                                      disabled={isOutOfStock}
+                                      onClick={() => {
+                                        if (isOutOfStock) return;
+                                        handleItemChange(idx, 'ingredientId', String(ing.id));
+                                        setRowIngQueries((prev) => ({
+                                          ...prev,
+                                          [idx]: `${ing.name} (${ing.code})`,
+                                        }));
+                                        setActiveIngDropdownIdx(null);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors ${
+                                        isOutOfStock
+                                          ? 'opacity-40 bg-slate-50 cursor-not-allowed text-slate-400'
+                                          : 'hover:bg-emerald-50 cursor-pointer'
+                                      } ${
+                                        String(ing.id) === String(item.ingredientId)
+                                          ? 'bg-emerald-50/70 font-bold'
+                                          : ''
+                                      }`}
+                                      title={isOutOfStock ? `วัตถุดิบ "${ing.name}" มียอดสต็อกเป็น 0 ไม่สามารถแจ้งของเสียได้` : undefined}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className={`font-bold text-xs break-words ${isOutOfStock ? 'text-slate-400' : 'text-slate-800'}`}>
+                                          <span className={isOutOfStock ? 'line-through text-slate-500' : ''}>{ing.name}</span>{' '}
+                                          <span className="font-mono text-[10px] text-slate-400">({ing.code})</span>
+                                          {isOutOfStock && (
+                                            <span className="ml-1.5 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                              สต็อกหมด
+                                            </span>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                    <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">
-                                      ในระบบ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
-                                    </span>
-                                  </button>
-                                ));
+                                        {ing.category && (
+                                          <div className="text-[10px] text-slate-400">
+                                            หมวด: {ing.category}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isOutOfStock
+                                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                          : 'bg-slate-100 text-slate-700'
+                                      }`}>
+                                        ในระบบ: {stock.toLocaleString()} {ing.unit}
+                                      </span>
+                                    </button>
+                                  );
+                                });
                               })()}
                             </div>
                           )}

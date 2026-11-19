@@ -272,14 +272,29 @@ export async function POST(req: NextRequest) {
         let actualQty: number;
         if (item.wasteQuantity !== undefined && item.wasteQuantity !== null && item.wasteQuantity !== '') {
           const waste = parseFloat(item.wasteQuantity);
-          if (isNaN(waste) || waste <= 0) continue;
+          if (isNaN(waste) || waste <= 0) {
+            throw new Error(`กรุณาระบุจำนวนของเสียของ "${dbIng.name}" ให้มากกว่า 0`);
+          }
+          if (systemQty <= 0) {
+            throw new Error(`วัตถุดิบ "${dbIng.name}" มียอดสต็อกเป็น 0 ไม่สามารถแจ้งของเสียได้`);
+          }
+          if (waste > systemQty) {
+            throw new Error(`จำนวนของเสียของ "${dbIng.name}" (${waste} ${dbIng.unit}) มากกว่าสต็อกในระบบ (${systemQty} ${dbIng.unit})`);
+          }
           actualQty = Math.max(0, systemQty - waste);
         } else {
           actualQty = parseFloat(item.actualQuantity);
           if (isNaN(actualQty) || actualQty < 0) continue;
+          if (actualQty < systemQty && systemQty <= 0) {
+            throw new Error(`วัตถุดิบ "${dbIng.name}" มียอดสต็อกเป็น 0 ไม่สามารถปรับลดสต็อกได้`);
+          }
         }
         actualQty = Math.round((actualQty + Number.EPSILON) * 10000) / 10000;
         const diffQty = Math.round((actualQty - systemQty + Number.EPSILON) * 10000) / 10000;
+
+        if (diffQty === 0) {
+          throw new Error(`วัตถุดิบ "${dbIng.name}" ไม่มีการเปลี่ยนแปลงจำนวนสต็อก (ผลต่างเป็น 0)`);
+        }
 
         adjustmentItemsData.push({
           ingredientId: ingId,

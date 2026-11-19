@@ -300,15 +300,47 @@ export default function StaffStockAdjustmentsPage() {
       return;
     }
 
-    const payloadItems = formItems
-      .filter((item) => item.ingredientId && item.inputValue !== '' && !isNaN(parseFloat(item.inputValue)))
-      .map((item) => {
-        const { actualQty } = resolveActualQuantity(item);
-        return {
-          ingredientId: Number(item.ingredientId),
-          actualQuantity: actualQty,
-        };
-      });
+    const filledRows = formItems.filter((item) => item.ingredientId);
+    if (filledRows.length === 0) {
+      setFormError('กรุณาเลือกวัตถุดิบอย่างน้อย 1 รายการ');
+      return;
+    }
+
+    // Validate each row
+    for (let i = 0; i < filledRows.length; i++) {
+      const row = filledRows[i];
+      const ing = ingredients.find((item) => item.id === Number(row.ingredientId));
+      const ingName = ing ? ing.name : `รายการที่ ${i + 1}`;
+      const sysStock = ing ? Number(ing.currentStock || 0) : 0;
+
+      if (sysStock <= 0) {
+        setFormError(`วัตถุดิบ "${ingName}" มียอดสต็อกในร้านเป็น 0 ไม่สามารถแจ้งของเสียได้ กรุณาลบรายการนี้ออก`);
+        return;
+      }
+
+      const val = parseFloat(row.inputValue);
+      if (isNaN(val) || val <= 0) {
+        setFormError(`กรุณาระบุจำนวนที่เสีย/ชำรุดของ "${ingName}" ให้ถูกต้องและมากกว่า 0`);
+        return;
+      }
+
+      if (val > sysStock) {
+        setFormError(
+          `จำนวนของเสียของ "${ingName}" (${val} ${ing?.unit || ''}) มากกว่าสต็อกที่มีอยู่ในร้าน (${sysStock} ${ing?.unit || ''})`
+        );
+        return;
+      }
+    }
+
+    const payloadItems = filledRows.map((item) => {
+      const { actualQty } = resolveActualQuantity(item);
+      const val = parseFloat(item.inputValue);
+      return {
+        ingredientId: Number(item.ingredientId),
+        actualQuantity: actualQty,
+        wasteQuantity: val,
+      };
+    });
 
     if (payloadItems.length === 0) {
       setFormError('กรุณาเลือกวัตถุดิบและระบุจำนวนอย่างน้อย 1 รายการ');
@@ -789,40 +821,64 @@ export default function StaffStockAdjustmentsPage() {
                       </div>
                     );
                   }
-                  return filtered.map((ing) => (
-                    <button
-                      key={ing.id}
-                      type="button"
-                      onClick={() => {
-                        handleItemChange(activeRowSearchIdx, 'ingredientId', String(ing.id));
-                        setActiveRowSearchIdx(null);
-                        setRowSearchTexts((prev) => ({ ...prev, [activeRowSearchIdx]: '' }));
-                      }}
-                      className={`w-full text-left px-3.5 py-2.5 hover:bg-sky-50 transition-colors flex items-center justify-between gap-3 group cursor-pointer ${
-                        ing.id === Number(formItems[activeRowSearchIdx]?.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-xs text-slate-800 group-hover:text-sky-700 flex items-center gap-1.5 flex-wrap">
-                          <Package className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 shrink-0" />
-                          <span className="font-bold text-slate-900">{ing.name}</span>
-                          {ing.category && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 shrink-0">
-                              {ing.category}
+                  return filtered.map((ing) => {
+                    const stock = Number(ing.currentStock || 0);
+                    const isOutOfStock = stock <= 0;
+
+                    return (
+                      <button
+                        key={ing.id}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => {
+                          if (isOutOfStock) return;
+                          handleItemChange(activeRowSearchIdx, 'ingredientId', String(ing.id));
+                          handleItemChange(activeRowSearchIdx, 'inputValue', '');
+                          setActiveRowSearchIdx(null);
+                          setRowSearchTexts((prev) => ({ ...prev, [activeRowSearchIdx]: '' }));
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 transition-colors flex items-center justify-between gap-3 ${
+                          isOutOfStock
+                            ? 'opacity-40 bg-slate-50 cursor-not-allowed'
+                            : 'hover:bg-sky-50 group cursor-pointer'
+                        } ${
+                          ing.id === Number(formItems[activeRowSearchIdx]?.ingredientId) ? 'bg-sky-50/80 font-bold' : ''
+                        }`}
+                        title={isOutOfStock ? `วัตถุดิบ "${ing.name}" มียอดสต็อกเป็น 0 ไม่สามารถแจ้งของเสียได้` : undefined}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className={`font-bold text-xs flex items-center gap-1.5 flex-wrap ${isOutOfStock ? 'text-slate-400' : 'text-slate-800 group-hover:text-sky-700'}`}>
+                            <Package className={`w-3.5 h-3.5 shrink-0 ${isOutOfStock ? 'text-slate-300' : 'text-slate-400 group-hover:text-sky-600'}`} />
+                            <span className={isOutOfStock ? 'line-through text-slate-500' : 'text-slate-900'}>{ing.name}</span>
+                            {ing.category && (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500 shrink-0">
+                                {ing.category}
+                              </span>
+                            )}
+                            {isOutOfStock && (
+                              <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                                สต็อกหมด (ไม่สามารถแจ้งเสียได้)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                            รหัส: {ing.code}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {isOutOfStock ? (
+                            <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200 whitespace-nowrap">
+                              คงเหลือ: 0 {ing.unit}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 whitespace-nowrap">
+                              คงเหลือ: {stock.toLocaleString()} {ing.unit}
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
-                          รหัส: {ing.code}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 whitespace-nowrap">
-                          คงเหลือ: {Number(ing.currentStock).toLocaleString()} {ing.unit}
-                        </span>
-                      </div>
-                    </button>
-                  ));
+                      </button>
+                    );
+                  });
                 })()}
               </div>
             )}
@@ -932,6 +988,10 @@ export default function StaffStockAdjustmentsPage() {
                   {formItems.map((item, idx) => {
                     const selectedIng = ingredients.find((i) => i.id === Number(item.ingredientId));
                     const sysStock = selectedIng ? Number(selectedIng.currentStock) : 0;
+                    const isOutOfStock = selectedIng ? sysStock <= 0 : false;
+                    const parsedVal = parseFloat(item.inputValue);
+                    const isOverStock = selectedIng && !isOutOfStock && !isNaN(parsedVal) && parsedVal > sysStock;
+                    const isNegativeOrZero = selectedIng && item.inputValue.trim() !== '' && (!isNaN(parsedVal) && parsedVal <= 0);
                     const { actualQty, diff } = resolveActualQuantity(item);
                     const isSearchingThisRow = activeRowSearchIdx === idx;
                     const filteredRowIngs = getRowFilteredIngredients(idx);
@@ -943,6 +1003,8 @@ export default function StaffStockAdjustmentsPage() {
                         className={`p-2 rounded-xl border transition-colors space-y-1.5 ${
                           isSearchingThisRow
                             ? 'border-sky-400 shadow-md relative z-[9995] bg-white ring-2 ring-sky-500/20'
+                            : isOutOfStock
+                            ? 'border-rose-200 bg-rose-50/30'
                             : 'border-slate-200 bg-slate-50/70 hover:border-slate-300'
                         }`}
                       >
@@ -1013,7 +1075,9 @@ export default function StaffStockAdjustmentsPage() {
                                 }}
                                 className={`w-full px-2.5 py-1 h-9 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between gap-1.5 min-w-0 overflow-hidden ${
                                   selectedIng
-                                    ? 'bg-white border-slate-300 hover:border-sky-400 hover:bg-sky-50/30'
+                                    ? isOutOfStock
+                                      ? 'bg-rose-50/50 border-rose-200 hover:border-rose-400'
+                                      : 'bg-white border-slate-300 hover:border-sky-400 hover:bg-sky-50/30'
                                     : 'bg-white border-dashed border-sky-300 hover:border-sky-500 hover:bg-sky-50/40'
                                 }`}
                               >
@@ -1022,7 +1086,7 @@ export default function StaffStockAdjustmentsPage() {
                                     <span className="hidden sm:flex w-4 h-4 rounded bg-slate-100 text-slate-600 font-mono font-bold text-[9px] items-center justify-center shrink-0">
                                       {idx + 1}
                                     </span>
-                                    <span className="font-bold text-xs text-slate-900 truncate" title={selectedIng.name}>
+                                    <span className={`font-bold text-xs truncate ${isOutOfStock ? 'text-rose-900 line-through' : 'text-slate-900'}`} title={selectedIng.name}>
                                       {selectedIng.name}
                                     </span>
                                     {selectedIng.category && (
@@ -1069,7 +1133,11 @@ export default function StaffStockAdjustmentsPage() {
                             <label className="sm:hidden block text-[10px] font-bold text-slate-500 mb-0.5">
                               สต็อกในร้าน
                             </label>
-                            <div className="h-9 flex items-center justify-center px-1.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 text-center truncate">
+                            <div className={`h-9 flex items-center justify-center px-1.5 rounded-xl text-xs font-bold text-center truncate border ${
+                              isOutOfStock
+                                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                            }`}>
                               {sysStock} {selectedIng?.unit || ''}
                             </div>
                           </div>
@@ -1083,10 +1151,17 @@ export default function StaffStockAdjustmentsPage() {
                               type="number"
                               step="any"
                               min="0"
+                              disabled={isOutOfStock}
                               value={item.inputValue}
                               onChange={(e) => handleItemChange(idx, 'inputValue', e.target.value)}
-                              placeholder="0"
-                              className="h-9 w-full px-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
+                              placeholder={isOutOfStock ? 'สต็อกเป็น 0' : '0'}
+                              className={`h-9 w-full px-2 rounded-xl text-xs font-bold text-center focus:outline-none focus:ring-2 border transition-all ${
+                                isOutOfStock
+                                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                  : isOverStock || isNegativeOrZero
+                                  ? 'bg-rose-50 border-rose-400 text-rose-700 focus:ring-rose-400'
+                                  : 'bg-white border-slate-300 focus:ring-sky-500'
+                              }`}
                             />
                           </div>
 
@@ -1097,15 +1172,19 @@ export default function StaffStockAdjustmentsPage() {
                             </label>
                             <div
                               className={`h-9 flex items-center justify-center px-1.5 rounded-xl text-xs font-bold truncate ${
-                                item.inputValue.trim() === ''
+                                item.inputValue.trim() === '' || isOutOfStock
                                   ? 'bg-slate-100 text-slate-400'
+                                  : isOverStock
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
                                   : diff < 0
                                   ? 'bg-rose-50 text-rose-800 border border-rose-200'
                                   : 'bg-slate-100 text-slate-700'
                               }`}
                             >
-                              {item.inputValue.trim() === '' ? (
+                              {item.inputValue.trim() === '' || isOutOfStock ? (
                                 '-'
+                              ) : isOverStock ? (
+                                <span className="text-[10px] text-rose-700 font-bold">เกินสต็อก</span>
                               ) : (
                                 <span>
                                   {actualQty} {selectedIng?.unit || ''}{' '}
@@ -1132,23 +1211,42 @@ export default function StaffStockAdjustmentsPage() {
                           </div>
                         </div>
 
-                        {/* Calculated Target Preview */}
+                        {/* Calculated Target Preview & Warning Messages */}
                         {selectedIng && (
-                          <div className="text-[10.5px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-100">
-                            {item.inputValue.trim() === '' ? (
-                              <span className="text-slate-400 italic truncate">
-                                สต็อกปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียเพื่อคำนวณคงเหลือ)
-                              </span>
+                          <div className="space-y-1">
+                            {isOutOfStock ? (
+                              <div className="text-[11px] font-bold text-rose-700 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                <span>วัตถุดิบ &quot;{selectedIng.name}&quot; มียอดสต็อกในร้านเป็น 0 ไม่สามารถแจ้งของเสียได้ (กรุณากดลบแถวหรือเปลี่ยนวัตถุดิบ)</span>
+                              </div>
+                            ) : isOverStock ? (
+                              <div className="text-[11px] font-bold text-rose-700 flex items-center gap-1.5 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                                <span>จำนวนของเสียที่ระบุ ({parsedVal}) เกินสต็อกที่มีอยู่ในร้าน (มีอยู่ {sysStock} {selectedIng.unit})</span>
+                              </div>
+                            ) : isNegativeOrZero ? (
+                              <div className="text-[11px] font-bold text-amber-700 flex items-center gap-1.5 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                                <span>กรุณาระบุจำนวนของเสียที่มากกว่า 0</span>
+                              </div>
                             ) : (
-                              <span className="truncate">
-                                สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → หักของเสีย:{' '}
-                                <strong className="text-rose-600 font-bold">-{parseFloat(item.inputValue) || 0}</strong> → คงเหลือใหม่:{' '}
-                                <strong className="text-emerald-700 font-bold">{actualQty}</strong> {selectedIng.unit}
-                              </span>
+                              <div className="text-[10.5px] text-slate-500 flex flex-col sm:flex-row sm:items-center justify-between gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-100">
+                                {item.inputValue.trim() === '' ? (
+                                  <span className="text-slate-400 italic truncate">
+                                    สต็อกปัจจุบัน: <strong className="text-slate-700 not-italic">{sysStock}</strong> {selectedIng.unit} (ระบุจำนวนที่เสียเพื่อคำนวณคงเหลือ)
+                                  </span>
+                                ) : (
+                                  <span className="truncate">
+                                    สต็อกปัจจุบัน: <strong className="text-slate-700">{sysStock}</strong> → หักของเสีย:{' '}
+                                    <strong className="text-rose-600 font-bold">-{parseFloat(item.inputValue) || 0}</strong> → คงเหลือใหม่:{' '}
+                                    <strong className="text-emerald-700 font-bold">{actualQty}</strong> {selectedIng.unit}
+                                  </span>
+                                )}
+                                <span className="font-medium text-slate-600 shrink-0">
+                                  มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.round((Math.abs(diff) * Number(selectedIng.costPerUnit || 0) + Number.EPSILON) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ฿
+                                </span>
+                              </div>
                             )}
-                            <span className="font-medium text-slate-600 shrink-0">
-                              มูลค่าของเสีย: {item.inputValue.trim() === '' ? '0' : (Math.round((Math.abs(diff) * Number(selectedIng.costPerUnit || 0) + Number.EPSILON) * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ฿
-                            </span>
                           </div>
                         )}
                       </div>
