@@ -175,6 +175,8 @@ export default function StaffStockRequestsPage() {
   // --- TAB 2: REQUISITIONS STATE ---
   const [reqSearch, setReqSearch] = useState('');
   const [reqStatusFilter, setReqStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [dateFilterType, setDateFilterType] = useState<'DAY' | 'MONTH'>('DAY');
+  const [reqDateFilter, setReqDateFilter] = useState(''); // 'YYYY-MM-DD' or ''
   const [reqMonthFilter, setReqMonthFilter] = useState(''); // 'YYYY-MM' or ''
   const [reqPage, setReqPage] = useState(1);
   const reqPageSize = 10;
@@ -189,11 +191,12 @@ export default function StaffStockRequestsPage() {
         (req.reason && req.reason.toLowerCase().includes(q)) ||
         req.items.some((it) => it.ingredient.name.toLowerCase().includes(q) || it.ingredient.code.toLowerCase().includes(q));
 
-      const matchMonth = !reqMonthFilter || req.createdAt.startsWith(reqMonthFilter);
+      const matchDate = reqDateFilter ? req.createdAt.startsWith(reqDateFilter) : true;
+      const matchMonth = reqMonthFilter ? req.createdAt.startsWith(reqMonthFilter) : true;
 
-      return matchStatus && matchSearch && matchMonth;
+      return matchStatus && matchSearch && matchDate && matchMonth;
     });
-  }, [requisitions, reqStatusFilter, reqSearch, reqMonthFilter]);
+  }, [requisitions, reqStatusFilter, reqSearch, reqDateFilter, reqMonthFilter]);
 
   const paginatedRequisitions = useMemo(() => {
     const start = (reqPage - 1) * reqPageSize;
@@ -223,10 +226,13 @@ export default function StaffStockRequestsPage() {
         req.requisitionNumber.toLowerCase().includes(q) ||
         (req.reason && req.reason.toLowerCase().includes(q)) ||
         req.items.some((it) => it.ingredient.name.toLowerCase().includes(q) || it.ingredient.code.toLowerCase().includes(q));
-      const matchMonth = !reqMonthFilter || req.createdAt.startsWith(reqMonthFilter);
-      return matchStatus && matchSearch && matchMonth;
+
+      const matchDate = reqDateFilter ? req.createdAt.startsWith(reqDateFilter) : true;
+      const matchMonth = reqMonthFilter ? req.createdAt.startsWith(reqMonthFilter) : true;
+
+      return matchStatus && matchSearch && matchDate && matchMonth;
     });
-  }, [requisitions, printListStatus, reqSearch, reqMonthFilter]);
+  }, [requisitions, printListStatus, reqSearch, reqDateFilter, reqMonthFilter]);
 
   // New Request Form State (Admin-style design)
   const [formReason, setFormReason] = useState('ขอเบิกวัตถุดิบเข้าหน้าร้าน');
@@ -752,34 +758,123 @@ export default function StaffStockRequestsPage() {
                 />
               </div>
 
-              {/* Month / Year Selector */}
-              <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5 text-xs text-slate-700 w-full sm:w-auto">
-                  <Calendar className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
-                  <span className="text-[11px] font-bold text-slate-500 mr-1.5 whitespace-nowrap">เดือน/ปี:</span>
-                  <input
-                    type="month"
-                    value={reqMonthFilter}
-                    onChange={(e) => {
-                      setReqMonthFilter(e.target.value);
+              {/* Day / Month / Year Selector */}
+              <div className="flex items-center gap-1.5 flex-wrap w-full sm:w-auto">
+                {/* Toggle Day vs Month */}
+                <div className="inline-flex p-0.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFilterType('DAY');
+                      setReqMonthFilter('');
                       setReqPage(1);
                     }}
-                    className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-                  />
-                  {reqMonthFilter && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReqMonthFilter('');
+                    className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                      dateFilterType === 'DAY'
+                        ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    ตามวัน
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDateFilterType('MONTH');
+                      setReqDateFilter('');
+                      setReqPage(1);
+                    }}
+                    className={`px-2.5 py-1 rounded-xl transition-all cursor-pointer ${
+                      dateFilterType === 'MONTH'
+                        ? 'bg-white text-slate-900 shadow-2xs font-extrabold'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    ตามเดือน/ปี
+                  </button>
+                </div>
+
+                {dateFilterType === 'DAY' ? (
+                  <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5 text-xs text-slate-700 w-full sm:w-auto">
+                    <Calendar className="w-3.5 h-3.5 text-sky-600 mr-2 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-500 mr-1.5 whitespace-nowrap">วันที่:</span>
+                    <input
+                      type="date"
+                      value={reqDateFilter}
+                      onChange={(e) => {
+                        setReqDateFilter(e.target.value);
                         setReqPage(1);
                       }}
-                      className="ml-2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                      title="ล้างตัวกรองเดือน"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
+                      className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                    />
+                    {reqDateFilter ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReqDateFilter('');
+                          setReqPage(1);
+                        }}
+                        className="ml-2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                        title="ล้างตัวกรองวันที่"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const today = new Date().toISOString().slice(0, 10);
+                          setReqDateFilter(today);
+                          setReqPage(1);
+                        }}
+                        className="ml-2 text-[10px] font-bold text-sky-600 hover:text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded cursor-pointer whitespace-nowrap"
+                        title="เลือกวันนี้"
+                      >
+                        วันนี้
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="relative flex items-center bg-slate-50 border border-slate-200 rounded-2xl px-3 py-1.5 text-xs text-slate-700 w-full sm:w-auto">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 mr-2 shrink-0" />
+                    <span className="text-[11px] font-bold text-slate-500 mr-1.5 whitespace-nowrap">เดือน/ปี:</span>
+                    <input
+                      type="month"
+                      value={reqMonthFilter}
+                      onChange={(e) => {
+                        setReqMonthFilter(e.target.value);
+                        setReqPage(1);
+                      }}
+                      className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                    />
+                    {reqMonthFilter ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReqMonthFilter('');
+                          setReqPage(1);
+                        }}
+                        className="ml-2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                        title="ล้างตัวกรองเดือน"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const thisMonth = new Date().toISOString().slice(0, 7);
+                          setReqMonthFilter(thisMonth);
+                          setReqPage(1);
+                        }}
+                        className="ml-2 text-[10px] font-bold text-sky-600 hover:text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded cursor-pointer whitespace-nowrap"
+                        title="เลือกเดือนนี้"
+                      >
+                        เดือนนี้
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -882,6 +977,18 @@ export default function StaffStockRequestsPage() {
                         <td className="py-3 px-3 text-center">
                           <span className="font-bold text-slate-700">{req.items.length}</span>{' '}
                           <span className="text-[11px] text-slate-400">รายการ</span>
+                          {(() => {
+                            const totalCost = req.items.reduce((sum, it) => {
+                              const mIng = ingredients.find((i) => i.id === it.ingredientId);
+                              const c = Number(it.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                              return sum + Number(it.requestedQty || 0) * c;
+                            }, 0);
+                            return totalCost > 0 ? (
+                              <div className="text-[11px] font-mono font-bold text-emerald-700 mt-0.5">
+                                ฿{totalCost.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                            ) : null;
+                          })()}
                         </td>
                         <td className="py-3 px-3 text-center">
                           {req.status === 'PENDING' && (
@@ -1453,33 +1560,62 @@ export default function StaffStockRequestsPage() {
                       <th className="py-2.5 px-3">รหัส/ชื่อวัตถุดิบ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่ขอ</th>
                       <th className="py-2.5 px-3 text-right">จำนวนที่อนุมัติ</th>
+                      <th className="py-2.5 px-3 text-right">ราคา/หน่วย</th>
+                      <th className="py-2.5 px-3 text-right">มูลค่ารวม (฿)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {selectedRequisition.items.map((item, idx) => (
-                      <tr key={item.id}>
-                        <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
-                          {idx + 1}
-                        </td>
-                        <td className="py-2.5 px-3">
-                          <span className="font-bold text-slate-800">{item.ingredient.name}</span>
-                          <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
-                          {Number(item.requestedQty).toLocaleString()} {item.ingredient.unit}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold">
-                          {item.approvedQty !== null ? (
-                            <span className="text-emerald-700">
-                              {Number(item.approvedQty).toLocaleString()} {item.ingredient.unit}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {selectedRequisition.items.map((item, idx) => {
+                      const mIng = ingredients.find((i) => i.id === item.ingredientId);
+                      const cost = Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                      const reqQty = Number(item.requestedQty || 0);
+                      const lineTotal = reqQty * cost;
+
+                      return (
+                        <tr key={item.id}>
+                          <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px] font-bold">
+                            {idx + 1}
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="font-bold text-slate-800">{item.ingredient.name}</span>
+                            <span className="text-[10px] font-mono text-slate-400 ml-1.5">({item.ingredient.code})</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-700">
+                            {reqQty.toLocaleString()} {item.ingredient.unit}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold">
+                            {item.approvedQty !== null ? (
+                              <span className="text-emerald-700">
+                                {Number(item.approvedQty).toLocaleString()} {item.ingredient.unit}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-600">
+                            ฿{cost.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-800">
+                            ฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50/90 border-t border-slate-200 font-bold text-xs">
+                      <td colSpan={5} className="py-2.5 px-3 text-right text-slate-700">
+                        รวมมูลค่าประมาณการทั้งหมด:
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-extrabold text-emerald-700 text-sm">
+                        ฿{selectedRequisition.items.reduce((sum, it) => {
+                          const mIng = ingredients.find((i) => i.id === it.ingredientId);
+                          const c = Number(it.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                          return sum + (Number(it.requestedQty || 0) * c);
+                        }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             </div>
@@ -1856,10 +1992,12 @@ export default function StaffStockRequestsPage() {
                 <div>
                   <span className="font-bold">สาขา/ร้านค้า: </span>
                   <span>{user?.name || 'หน้าร้าน'}</span>
-                  <span className="ml-4 font-bold">ช่วงเวลา/เดือน: </span>
+                  <span className="ml-4 font-bold">ช่วงเวลา/วันที่: </span>
                   <span>
-                    {reqMonthFilter
-                      ? new Date(reqMonthFilter + '-01').toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
+                    {reqDateFilter
+                      ? `วันที่ ${new Date(reqDateFilter).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}`
+                      : reqMonthFilter
+                      ? `เดือน ${new Date(reqMonthFilter + '-01').toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}`
                       : 'ทั้งหมดทุกช่วงเวลา'}
                   </span>
                 </div>
@@ -1909,20 +2047,46 @@ export default function StaffStockRequestsPage() {
                           <div className="text-[8.5px] text-red-600 font-bold">(เหตุผลไม่อนุมัติ: {req.rejectReason})</div>
                         )}
                       </td>
-                      <td className="py-0.5 px-2 border-r border-black font-sans text-left text-black">
-                        {req.items.map((i) => (
-                          <div key={i.id} className="text-[9px] leading-tight text-black">
-                            • {i.ingredient?.name}:{' '}
-                            <span className="font-mono font-bold">
-                              {Number(i.requestedQty).toLocaleString()} {i.ingredient?.unit}
-                            </span>
-                            {i.approvedQty !== null && (
-                              <span className="text-[8.5px] text-emerald-800 ml-1">
-                                (อนุมัติ {Number(i.approvedQty).toLocaleString()})
+                      <td className="py-1 px-2 border-r border-black font-sans text-left text-black">
+                        {req.items.map((i) => {
+                          const mIng = ingredients.find((ing) => ing.id === i.ingredientId);
+                          const cost = Number(i.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                          const reqQty = Number(i.requestedQty || 0);
+                          const lineTotal = reqQty * cost;
+
+                          return (
+                            <div key={i.id} className="text-[9px] leading-tight text-black py-0.5">
+                              • <span className="font-semibold">{i.ingredient?.name}</span>:{' '}
+                              <span className="font-mono font-bold">
+                                {reqQty.toLocaleString()} {i.ingredient?.unit}
                               </span>
-                            )}
-                          </div>
-                        ))}
+                              {cost > 0 && (
+                                <span className="text-[8.5px] text-slate-800 font-mono ml-1">
+                                  (@ ฿{cost.toFixed(2)} = <strong className="text-black font-bold">฿{lineTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>)
+                                </span>
+                              )}
+                              {i.approvedQty !== null && (
+                                <span className="text-[8.5px] text-emerald-800 font-semibold ml-1">
+                                  (อนุมัติ {Number(i.approvedQty).toLocaleString()})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {/* Subtotal of this requisition */}
+                        {(() => {
+                          const reqTotal = req.items.reduce((sum, item) => {
+                            const mIng = ingredients.find((ing) => ing.id === item.ingredientId);
+                            const cost = Number(item.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                            return sum + Number(item.requestedQty || 0) * cost;
+                          }, 0);
+                          return (
+                            <div className="text-[9px] font-mono font-bold text-slate-900 mt-1 pt-0.5 border-t border-dotted border-black/40 flex justify-between items-center">
+                              <span className="font-sans text-[8.5px] text-slate-600">รวมมูลค่าใบขอ:</span>
+                              <span className="text-black font-bold">฿{reqTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-0.5 px-1.5 border-r border-black text-center font-sans text-black">
                         {req.status === 'PENDING' && <span className="font-bold text-amber-700">รออนุมัติ</span>}
@@ -1945,11 +2109,25 @@ export default function StaffStockRequestsPage() {
                 {printRequisitions.length > 0 && (
                   <tfoot>
                     <tr className="border-t border-black font-bold text-black bg-slate-50 text-[10px]">
-                      <td colSpan={5} className="py-1 px-2 border-r border-black text-right font-sans">
+                      <td colSpan={5} className="py-1.5 px-2 border-r border-black text-right font-sans">
                         รวมใบขอเบิกทั้งหมด:
                       </td>
-                      <td colSpan={3} className="py-1 px-2 font-sans text-left">
-                        {printRequisitions.length} ฉบับ (รวม {printRequisitions.reduce((s, r) => s + r.items.length, 0)} รายการวัตถุดิบ)
+                      <td className="py-1.5 px-2 border-r border-black font-mono text-left text-black">
+                        <div>
+                          {printRequisitions.length} ฉบับ (รวม {printRequisitions.reduce((s, r) => s + r.items.length, 0)} รายการวัตถุดิบ)
+                        </div>
+                        <div className="text-[9.5px] font-bold text-black mt-0.5 font-mono">
+                          รวมมูลค่าขอเบิกทั้งสิ้น: ฿{printRequisitions.reduce((sum, req) => {
+                            return sum + req.items.reduce((s, it) => {
+                              const mIng = ingredients.find((i) => i.id === it.ingredientId);
+                              const c = Number(it.ingredient?.costPerUnit ?? mIng?.costPerUnit ?? 0);
+                              return sum + Number(it.requestedQty || 0) * c;
+                            }, 0);
+                          }, 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                        </div>
+                      </td>
+                      <td colSpan={2} className="py-1.5 px-2 font-sans text-center text-slate-400">
+                        -
                       </td>
                     </tr>
                   </tfoot>
