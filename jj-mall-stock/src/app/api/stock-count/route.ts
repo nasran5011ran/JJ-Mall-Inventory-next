@@ -139,19 +139,33 @@ export async function GET(req: NextRequest) {
       storeSalesMap.set(`${s.createdById}_${s.ingredientId}`, Number(s._sum.quantityOut || 0));
     });
 
-    // 7. Fetch approved waste / damage transactions for store count periods
-    const wasteTransactions = await prisma.stockTransaction.findMany({
-      where: {
-        type: { in: [TransactionType.ADJUST_SUB, TransactionType.DAMAGE_OUT] },
-      },
-      select: {
-        ingredientId: true,
-        quantityOut: true,
-        createdAt: true,
-        createdById: true,
-        note: true,
-      },
-    });
+    // 7. Fetch approved waste / damage transactions and sale transactions for store count periods
+    const [wasteTransactions, saleTransactions] = await Promise.all([
+      prisma.stockTransaction.findMany({
+        where: {
+          type: { in: [TransactionType.ADJUST_SUB, TransactionType.DAMAGE_OUT] },
+        },
+        select: {
+          ingredientId: true,
+          quantityOut: true,
+          createdAt: true,
+          createdById: true,
+          note: true,
+        },
+      }),
+      prisma.stockTransaction.findMany({
+        where: {
+          type: TransactionType.SALE_DEDUCT,
+        },
+        select: {
+          ingredientId: true,
+          quantityOut: true,
+          createdAt: true,
+          createdById: true,
+          note: true,
+        },
+      }),
+    ]);
 
     const stockCounts = rawStockCounts.map((sc) => {
       const isStore = sc.location === 'STORE' || Boolean(sc.storeId);
@@ -179,6 +193,7 @@ export async function GET(req: NextRequest) {
       const toTime = isLatestStoreCount ? Date.now() : new Date(sc.createdAt).getTime();
 
       const periodWasteMap = new Map<number, number>();
+      const periodSalesMap = new Map<number, number>();
       if (isStore && storeUser) {
         for (const wtx of wasteTransactions) {
           const t = new Date(wtx.createdAt).getTime();
@@ -198,6 +213,25 @@ export async function GET(req: NextRequest) {
             );
           }
         }
+
+        for (const stx of saleTransactions) {
+          const t = new Date(stx.createdAt).getTime();
+          if (t <= fromTime || t > toTime) continue;
+          const belongsToStore =
+            stx.createdById === storeUser ||
+            Boolean(stx.note && stx.note.includes(`[STORE_ID:${storeUser}]`)) ||
+            Boolean(
+              storeObj &&
+                stx.note &&
+                (stx.note.includes(storeObj.name) || stx.note.includes(`@${storeObj.username}`))
+            );
+          if (belongsToStore) {
+            periodSalesMap.set(
+              stx.ingredientId,
+              (periodSalesMap.get(stx.ingredientId) || 0) + Number(stx.quantityOut || 0)
+            );
+          }
+        }
       }
 
       const enrichedItems = sc.items.map((item) => {
@@ -207,16 +241,17 @@ export async function GET(req: NextRequest) {
 
         if (isStore) {
           // For Store count records, use stored breakdown or fallback
-          const openingQty = item.openingQuantity !== null && item.openingQuantity !== undefined
-            ? Number(item.openingQuantity)
-            : 0;
           const inboundQty = item.inboundQuantity !== null && item.inboundQuantity !== undefined
             ? Number(item.inboundQuantity)
             : 0;
-          const salesQty = item.salesQuantity !== null && item.salesQuantity !== undefined
+          const storedSales = item.salesQuantity !== null && item.salesQuantity !== undefined
             ? Number(item.salesQuantity)
             : 0;
+          const salesQty = storedSales > 0 ? storedSales : (periodSalesMap.get(ingId) || 0);
           const wasteQty = periodWasteMap.get(ingId) || 0;
+          const openingQty = item.openingQuantity !== null && item.openingQuantity !== undefined
+            ? Number(item.openingQuantity)
+            : Math.max(0, sysQty - inboundQty + salesQty + wasteQty);
 
           // Calculate DOH: (Actual Stock / Daily Sales Rate)
           const recent7DaySales = storeSalesMap.get(`${storeUser}_${ingId}`) || salesQty;
@@ -234,7 +269,10 @@ export async function GET(req: NextRequest) {
         } else {
           // For Central Warehouse count records
           const inboundQty = (txMap.get(`${ingId}_PURCHASE_IN_IN`) || 0) + (txMap.get(`${ingId}_ADJUST_ADD_IN`) || 0);
-          const salesQty = txMap.get(`${ingId}_SALE_DEDUCT_OUT`) || 0;
+          const storedSales = item.salesQuantity !== null && item.salesQuantity !== undefined
+            ? Number(item.salesQuantity)
+            : 0;
+          const salesQty = storedSales > 0 ? storedSales : (txMap.get(`${ingId}_SALE_DEDUCT_OUT`) || 0);
           const wasteQty = (txMap.get(`${ingId}_ADJUST_SUB_OUT`) || 0) + (txMap.get(`${ingId}_DAMAGE_OUT_OUT`) || 0);
           const openingQty = item.openingQuantity !== null && item.openingQuantity !== undefined
             ? Number(item.openingQuantity)
@@ -370,14 +408,16 @@ export async function POST(req: NextRequest) {
         if (location === 'STORE') {
           // For store count: Expected in-store balance
           const bal = storeReconciliationMap.get(ingId);
-          openingQty = bal ? bal.openingQuantity : 0;
-          inboundQty = bal ? bal.inboundQuantity : 0;
-          salesQty = bal ? bal.salesQuantity : 0;
-          systemQty = bal ? bal.expectedStock : 0;
+          openingQty = item.openingQuantity !== undefined ? Number(item.openingQuantity) : (bal ? bal.openingQuantity : 0);
+          inboundQty = item.inboundQuantity !== undefined ? Number(item.inboundQuantity) : (bal ? bal.inboundQuantity : 0);
+          salesQty = item.salesQuantity !== undefined ? Number(item.salesQuantity) : (bal ? bal.salesQuantity : 0);
+          systemQty = item.systemQuantity !== undefined ? Number(item.systemQuantity) : (bal ? bal.expectedStock : 0);
         } else {
           // For warehouse count: Current stock in Central Warehouse
-          systemQty = parseFloat(String(dbIng.currentStock));
-          openingQty = systemQty;
+          systemQty = item.systemQuantity !== undefined ? Number(item.systemQuantity) : parseFloat(String(dbIng.currentStock));
+          openingQty = item.openingQuantity !== undefined ? Number(item.openingQuantity) : systemQty;
+          inboundQty = item.inboundQuantity !== undefined ? Number(item.inboundQuantity) : 0;
+          salesQty = item.salesQuantity !== undefined ? Number(item.salesQuantity) : 0;
         }
 
         const diffQty = actualQty - systemQty;

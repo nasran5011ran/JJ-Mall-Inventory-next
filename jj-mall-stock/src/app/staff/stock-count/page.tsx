@@ -244,10 +244,17 @@ export default function StaffStockCountPage() {
 
     const itemsToSubmit = Object.entries(countInputs)
       .filter(([_, val]) => val !== undefined && val.trim() !== '' && !isNaN(parseFloat(val)))
-      .map(([ingId, val]) => ({
-        ingredientId: Number(ingId),
-        actualQuantity: parseFloat(val),
-      }));
+      .map(([ingId, val]) => {
+        const b = myStoreBalancesMap.get(Number(ingId));
+        return {
+          ingredientId: Number(ingId),
+          actualQuantity: parseFloat(val),
+          openingQuantity: b ? Number(b.openingQuantity || 0) : 0,
+          inboundQuantity: b ? Number(b.inboundQuantity || 0) : 0,
+          salesQuantity: b ? Number(b.salesQuantity || 0) : 0,
+          systemQuantity: b ? Number(b.expectedStock || 0) : 0,
+        };
+      });
 
     if (itemsToSubmit.length === 0) {
       setFormError('กรุณากรอกยอดที่นับได้จริงอย่างน้อย 1 รายการ');
@@ -1177,13 +1184,13 @@ export default function StaffStockCountPage() {
                           {openQty < 0 ? `(${Math.abs(openQty).toFixed(2)})` : openQty.toFixed(2)}
                         </td>
                         <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
-                          {inQty > 0 ? inQty.toFixed(2) : ''}
+                          {inQty > 0 ? inQty.toFixed(2) : '-'}
                         </td>
                         <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
-                          {saleQty > 0 ? `(${saleQty.toFixed(2)})` : ''}
+                          {saleQty > 0 ? `(${saleQty.toFixed(2)})` : '-'}
                         </td>
                         <td className="py-0.5 px-1 border-r border-black text-right text-black align-middle">
-                          {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : ''}
+                          {wasteQty > 0 ? `(${wasteQty.toFixed(2)})` : '-'}
                         </td>
                         <td className="py-0.5 px-1.5 text-right border-r border-black font-bold text-black align-middle">
                           {sysQty.toFixed(2)}
