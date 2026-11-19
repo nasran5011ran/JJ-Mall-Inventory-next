@@ -633,19 +633,14 @@ export default function StaffStockRequestsPage() {
               </div>
             )}
 
-            {/* Pagination Footer */}
-            {filteredStoreBalances.length > stockPageSize && (
-              <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  แสดงหน้า {stockPage} จาก {Math.ceil(filteredStoreBalances.length / stockPageSize)}
-                </span>
-                <Pagination
-                  currentPage={stockPage}
-                  totalItems={filteredStoreBalances.length}
-                  pageSize={stockPageSize}
-                  onPageChange={setStockPage}
-                />
-              </div>
+            {/* Pagination Footer (10 items per page with Next/Prev) */}
+            {filteredStoreBalances.length > 0 && (
+              <Pagination
+                currentPage={stockPage}
+                totalItems={filteredStoreBalances.length}
+                pageSize={stockPageSize}
+                onPageChange={setStockPage}
+              />
             )}
           </div>
         </div>
@@ -967,19 +962,14 @@ export default function StaffStockRequestsPage() {
               </div>
             )}
 
-            {/* Pagination Footer */}
-            {filteredRequisitions.length > reqPageSize && (
-              <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  แสดงหน้า {reqPage} จาก {Math.ceil(filteredRequisitions.length / reqPageSize)}
-                </span>
-                <Pagination
-                  currentPage={reqPage}
-                  totalItems={filteredRequisitions.length}
-                  pageSize={reqPageSize}
-                  onPageChange={setReqPage}
-                />
-              </div>
+            {/* Pagination Footer (10 items per page with Next/Prev) */}
+            {filteredRequisitions.length > 0 && (
+              <Pagination
+                currentPage={reqPage}
+                totalItems={filteredRequisitions.length}
+                pageSize={reqPageSize}
+                onPageChange={setReqPage}
+              />
             )}
           </div>
         </div>

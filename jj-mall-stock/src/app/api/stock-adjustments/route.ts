@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || 'ALL';
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = parseInt(searchParams.get('limit') || '1000', 10);
 
     // Lightweight mode (Admin): return current system stock for a chosen store
     const stockFor = searchParams.get('stockFor');

@@ -774,16 +774,14 @@ export default function StaffStockAdjustmentsPage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {filteredAdjustments.length > pageSize && (
-          <div className="pt-2">
-            <Pagination
-              currentPage={currentPage}
-              totalItems={filteredAdjustments.length}
-              pageSize={pageSize}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+        {/* Pagination (10 items per page with Next/Prev) */}
+        {filteredAdjustments.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredAdjustments.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
       </div>
