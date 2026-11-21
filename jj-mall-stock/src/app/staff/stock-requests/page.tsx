@@ -64,6 +64,7 @@ interface RequisitionItem {
   ingredientId: number;
   requestedQty: number;
   approvedQty: number | null;
+  receivedQty?: number | null;
   ingredient: {
     id: number;
     code: string;
@@ -80,10 +81,12 @@ interface RequisitionRecord {
   requisitionNumber: string;
   reason: string | null;
   note: string | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED';
   rejectReason: string | null;
+  receiveNote?: string | null;
   createdAt: string;
   approvedAt: string | null;
+  receivedAt?: string | null;
   store: {
     id: number;
     name: string;
@@ -174,7 +177,7 @@ export default function StaffStockRequestsPage() {
 
   // --- TAB 2: REQUISITIONS STATE ---
   const [reqSearch, setReqSearch] = useState('');
-  const [reqStatusFilter, setReqStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [reqStatusFilter, setReqStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED'>('ALL');
   const [dateFilterType, setDateFilterType] = useState<'DAY' | 'MONTH'>('DAY');
   const [reqDateFilter, setReqDateFilter] = useState(''); // 'YYYY-MM-DD' or ''
   const [reqMonthFilter, setReqMonthFilter] = useState(''); // 'YYYY-MM' or ''
@@ -215,7 +218,7 @@ export default function StaffStockRequestsPage() {
 
   // Summary / Print All Modal
   const [printListModalOpen, setPrintListModalOpen] = useState(false);
-  const [printListStatus, setPrintListStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [printListStatus, setPrintListStatus] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'COMPLETED' | 'REJECTED'>('ALL');
 
   const printRequisitions = useMemo(() => {
     return requisitions.filter((req) => {
@@ -881,11 +884,12 @@ export default function StaffStockRequestsPage() {
             <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
               {/* Status Filter Chips */}
               <div className="flex items-center gap-1 overflow-x-auto">
-                {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map((st) => {
+                {(['ALL', 'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED'] as const).map((st) => {
                   const labels = {
                     ALL: 'ทั้งหมด',
                     PENDING: 'รออนุมัติ',
-                    APPROVED: 'อนุมัติแล้ว',
+                    APPROVED: 'อนุมัติแล้ว (รอบันทึกสต็อก)',
+                    COMPLETED: 'บันทึกเข้าสต็อกแล้ว',
                     REJECTED: 'ไม่อนุมัติ',
                   };
                   return (
@@ -998,9 +1002,15 @@ export default function StaffStockRequestsPage() {
                             </span>
                           )}
                           {req.status === 'APPROVED' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                              <CheckCircle2 className="w-3 h-3 text-sky-600" />
+                              อนุมัติแล้ว (รอบันทึกสต็อก)
+                            </span>
+                          )}
+                          {req.status === 'COMPLETED' && (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                              อนุมัติแล้ว
+                              บันทึกเข้าสต็อกแล้ว
                             </span>
                           )}
                           {req.status === 'REJECTED' && (
@@ -1531,8 +1541,13 @@ export default function StaffStockRequestsPage() {
                     </span>
                   )}
                   {selectedRequisition.status === 'APPROVED' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">
+                      อนุมัติแล้ว (รอบันทึกเข้าสต็อก)
+                    </span>
+                  )}
+                  {selectedRequisition.status === 'COMPLETED' && (
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                      อนุมัติและโอนของแล้ว
+                      บันทึกเข้าสต็อกเรียบร้อยแล้ว
                     </span>
                   )}
                   {selectedRequisition.status === 'REJECTED' && (
@@ -1734,7 +1749,7 @@ export default function StaffStockRequestsPage() {
                     {new Date(printRecord.createdAt).toLocaleDateString('th-TH')} {new Date(printRecord.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
                   </span>
                   <span className="font-bold ml-4">
-                    สถานะ: {printRecord.status === 'PENDING' ? 'รอการอนุมัติ' : printRecord.status === 'APPROVED' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ'}
+                    สถานะ: {printRecord.status === 'PENDING' ? 'รอการอนุมัติ' : printRecord.status === 'APPROVED' ? 'อนุมัติแล้ว (รอบันทึกสต็อก)' : printRecord.status === 'COMPLETED' ? 'บันทึกเข้าสต็อกแล้ว' : 'ไม่อนุมัติ'}
                   </span>
                 </div>
               </div>
@@ -2114,7 +2129,8 @@ export default function StaffStockRequestsPage() {
                                 className="py-1 px-1.5 border-r border-black text-center font-sans text-black align-top"
                               >
                                 {req.status === 'PENDING' && <span className="font-bold text-amber-700">รออนุมัติ</span>}
-                                {req.status === 'APPROVED' && <span className="font-bold text-emerald-700">อนุมัติแล้ว</span>}
+                                {req.status === 'APPROVED' && <span className="font-bold text-sky-700">รอบันทึกสต็อก</span>}
+                                {req.status === 'COMPLETED' && <span className="font-bold text-emerald-700">บันทึกสต็อกแล้ว</span>}
                                 {req.status === 'REJECTED' && <span className="font-bold text-rose-700">ไม่อนุมัติ</span>}
                               </td>
                               <td

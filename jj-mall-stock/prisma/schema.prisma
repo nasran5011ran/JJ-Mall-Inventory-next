@@ -21,6 +21,7 @@ enum AdjustmentStatus {
 enum RequisitionStatus {
   PENDING
   APPROVED
+  COMPLETED
   REJECTED
 }
 
@@ -280,6 +281,8 @@ model StockRequisition {
   approvedById      Int?
   approvedBy        User?                   @relation("ApprovedRequisitions", fields: [approvedById], references: [id])
   approvedAt        DateTime?
+  receivedAt        DateTime?
+  receiveNote       String?                 @db.Text
   rejectReason      String?                 @db.Text
   note              String?                 @db.Text
   createdAt         DateTime                @default(now())
@@ -298,6 +301,7 @@ model StockRequisitionItem {
   ingredient    Ingredient       @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
   requestedQty  Decimal          @db.Decimal(12, 3)
   approvedQty   Decimal?         @db.Decimal(12, 3)
+  receivedQty   Decimal?         @db.Decimal(12, 3)
 
   @@map("stock_requisition_items")
 }

@@ -39,13 +39,23 @@ async function main() {
   // 2. Create Ingredients
   const ingredientsData = [
     { code: 'ING-MILO001', name: 'ผงไมโล', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 5000, minStock: 1000, costPerUnit: 0.25 },
+    { code: 'ING-TEA001', name: 'ใบชาไทยพรีเมียม', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 5000, minStock: 500, costPerUnit: 0.35 },
+    { code: 'ING-COF001', name: 'ผงกาแฟโบราณ', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 5000, minStock: 500, costPerUnit: 0.30 },
+    { code: 'ING-MAT001', name: 'ผงชาเขียวมัทฉะ', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 3000, minStock: 500, costPerUnit: 0.45 },
+    { code: 'ING-COC001', name: 'ผงโกโก้เข้มข้น', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 4000, minStock: 500, costPerUnit: 0.35 },
+    { code: 'ING-ESP001', name: 'เมล็ดกาแฟคั่วสด (อาราบิก้า)', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 5000, minStock: 1000, costPerUnit: 0.50 },
+    { code: 'ING-PNK001', name: 'น้ำหวานเฮลส์บลูบอย (แดง)', category: 'ไซรัปและน้ำเชื่อม', unit: 'มิลลิลิตร', currentStock: 5000, minStock: 1000, costPerUnit: 0.09 },
     { code: 'ING-SUG001', name: 'น้ำตาลทราย', category: 'เครื่องปรุง', unit: 'กรัม', currentStock: 10000, minStock: 2000, costPerUnit: 0.03 },
-    { code: 'ING-MILK001', name: 'นมข้นหวาน', category: 'เครื่องปรุง', unit: 'มิลลิลิตร', currentStock: 4000, minStock: 1000, costPerUnit: 0.08 },
-    { code: 'ING-CUP001', name: 'แก้วพลาสติก 22oz', category: 'บรรจุภัณฑ์', unit: 'ใบ', currentStock: 500, minStock: 100, costPerUnit: 1.50 },
-    { code: 'ING-LID001', name: 'ฝาแก้วโดม', category: 'บรรจุภัณฑ์', unit: 'ชิ้น', currentStock: 500, minStock: 100, costPerUnit: 0.80 },
-    { code: 'ING-STR001', name: 'หลอดดูดหุ้มฟิล์ม', category: 'บรรจุภัณฑ์', unit: 'อัน', currentStock: 1000, minStock: 200, costPerUnit: 0.30 },
-    { code: 'ING-TEA001', name: 'ใบชาไทยพรีเมียม', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 3000, minStock: 500, costPerUnit: 0.35 },
-    { code: 'ING-COF001', name: 'ผงกาแฟโบราณ', category: 'ผงเครื่องดื่ม', unit: 'กรัม', currentStock: 3000, minStock: 500, costPerUnit: 0.30 },
+    { code: 'ING-MILK001', name: 'นมข้นหวาน', category: 'นมและครีม', unit: 'มิลลิลิตร', currentStock: 8000, minStock: 1000, costPerUnit: 0.08 },
+    { code: 'ING-EVA001', name: 'นมข้นจืด (คาร์เนชั่น)', category: 'นมและครีม', unit: 'มิลลิลิตร', currentStock: 8000, minStock: 1000, costPerUnit: 0.07 },
+    { code: 'ING-FMILK01', name: 'นมสดพาสเจอร์ไรส์', category: 'นมและครีม', unit: 'มิลลิลิตร', currentStock: 10000, minStock: 2000, costPerUnit: 0.06 },
+    { code: 'ING-CRM001', name: 'ครีมเทียม', category: 'นมและครีม', unit: 'กรัม', currentStock: 5000, minStock: 1000, costPerUnit: 0.12 },
+    { code: 'ING-SYR001', name: 'น้ำเชื่อมสำเร็จรูป (มิตรผล)', category: 'ไซรัปและน้ำเชื่อม', unit: 'มิลลิลิตร', currentStock: 8000, minStock: 1500, costPerUnit: 0.06 },
+    { code: 'ING-BOBA01', name: 'ไข่มุกบราวน์ชูการ์', category: 'ท็อปปิ้งและไข่มุก', unit: 'กรัม', currentStock: 5000, minStock: 1000, costPerUnit: 0.15 },
+    { code: 'ING-ICE001', name: 'น้ำแข็งหลอดเล็ก', category: 'วัตถุดิบทั่วไป', unit: 'กรัม', currentStock: 50000, minStock: 5000, costPerUnit: 0.005 },
+    { code: 'ING-CUP001', name: 'แก้วพลาสติก 22oz', category: 'บรรจุภัณฑ์', unit: 'ใบ', currentStock: 1000, minStock: 100, costPerUnit: 1.50 },
+    { code: 'ING-LID001', name: 'ฝาแก้วโดม', category: 'บรรจุภัณฑ์', unit: 'ชิ้น', currentStock: 1000, minStock: 100, costPerUnit: 0.80 },
+    { code: 'ING-STR001', name: 'หลอดดูดหุ้มฟิล์ม', category: 'บรรจุภัณฑ์', unit: 'อัน', currentStock: 2000, minStock: 200, costPerUnit: 0.30 },
   ];
 
   const createdIngredients: Record<string, any> = {};

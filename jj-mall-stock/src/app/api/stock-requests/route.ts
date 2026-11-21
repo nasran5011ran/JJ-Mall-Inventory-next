@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
 
     const pendingCount = allRequisitions.filter((r) => r.status === 'PENDING').length;
     const approvedCount = allRequisitions.filter((r) => r.status === 'APPROVED').length;
+    const completedCount = allRequisitions.filter((r) => r.status === 'COMPLETED').length;
     const rejectedCount = allRequisitions.filter((r) => r.status === 'REJECTED').length;
 
     // Store level low items count
@@ -140,6 +141,7 @@ export async function GET(req: NextRequest) {
       metrics: {
         pendingCount,
         approvedCount,
+        completedCount,
         rejectedCount,
         totalCount: allRequisitions.length,
         storeLowItemsCount,
@@ -265,7 +267,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT: Approve or Reject a Stock Requisition (Admin only)
+// PUT: Approve, Reject, or Receive/Record into Stock a Stock Requisition (Admin only)
 export async function PUT(req: NextRequest) {
   try {
     const session = await getSession();
@@ -278,13 +280,13 @@ export async function PUT(req: NextRequest) {
 
     if (session.role !== 'ADMIN') {
       return NextResponse.json(
-        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถอนุมัติใบขอเบิกได้' },
+        { success: false, message: 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถอนุมัติหรือบันทึกวัตถุดิบเข้าสต็อกได้' },
         { status: 403 }
       );
     }
 
     const body = await req.json();
-    const { requisitionId, action, rejectReason, items } = body;
+    const { requisitionId, action, rejectReason, receiveNote, items } = body;
 
     if (!requisitionId) {
       return NextResponse.json(
@@ -310,15 +312,15 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    if (reqRecord.status !== 'PENDING') {
-      return NextResponse.json(
-        { success: false, message: `ใบขอเบิกนี้ดำเนินการไปแล้ว (สถานะ: ${reqRecord.status})` },
-        { status: 400 }
-      );
-    }
-
-    // ACTION: REJECT
+    // ACTION 1: REJECT
     if (action === 'REJECT') {
+      if (reqRecord.status !== 'PENDING') {
+        return NextResponse.json(
+          { success: false, message: `ใบขอเบิกนี้ดำเนินการไปแล้ว (สถานะ: ${reqRecord.status})` },
+          { status: 400 }
+        );
+      }
+
       const updated = await prisma.stockRequisition.update({
         where: { id: reqRecord.id },
         data: {
@@ -357,8 +359,15 @@ export async function PUT(req: NextRequest) {
       });
     }
 
-    // ACTION: APPROVE (Fulfill Requisition & Purchase Stock for Store)
+    // ACTION 2: APPROVE (Step 1: Approve permission to buy, DO NOT add to stock yet!)
     if (action === 'APPROVE') {
+      if (reqRecord.status !== 'PENDING') {
+        return NextResponse.json(
+          { success: false, message: `ใบขอเบิกนี้ได้รับการอนุมัติหรือดำเนินการไปแล้ว (สถานะ: ${reqRecord.status})` },
+          { status: 400 }
+        );
+      }
+
       // Allow custom approved quantities if passed
       const itemQtyMap = new Map<number, number>();
       if (items && Array.isArray(items)) {
@@ -369,11 +378,7 @@ export async function PUT(req: NextRequest) {
         });
       }
 
-      const destinationLabel = `อนุมัติซื้อเข้าสต็อกร้าน: ${reqRecord.store.name} (@${reqRecord.store.username})`;
-
-      // Execute in atomic transaction
       const result = await prisma.$transaction(async (tx) => {
-        // 1. Update items approvedQty
         for (const item of reqRecord.items) {
           const approvedQty = itemQtyMap.has(item.id)
             ? itemQtyMap.get(item.id)!
@@ -383,36 +388,8 @@ export async function PUT(req: NextRequest) {
             where: { id: item.id },
             data: { approvedQty },
           });
-
-          if (approvedQty > 0) {
-            // 2. Increment ingredient stock in database
-            const updatedIng = await tx.ingredient.update({
-              where: { id: item.ingredientId },
-              data: {
-                currentStock: { increment: approvedQty },
-              },
-            });
-
-            // 3. Record StockTransaction (PURCHASE_IN directly for this store)
-            const txNumber = `TX-REQ-${reqRecord.requisitionNumber}-${updatedIng.code}-${Date.now().toString().slice(-4)}`;
-            await tx.stockTransaction.create({
-              data: {
-                transactionNumber: txNumber,
-                ingredientId: item.ingredientId,
-                type: TransactionType.PURCHASE_IN,
-                quantityIn: approvedQty,
-                quantityOut: 0,
-                balanceAfter: updatedIng.currentStock,
-                refType: 'PURCHASE_APPROVAL',
-                refId: reqRecord.requisitionNumber,
-                note: `${destinationLabel} • ตามใบขอเบิกซื้อ ${reqRecord.requisitionNumber}${reqRecord.reason ? ' (' + reqRecord.reason + ')' : ''} [STORE_ID:${reqRecord.storeId}]`,
-                createdById: reqRecord.storeId,
-              },
-            });
-          }
         }
 
-        // 4. Mark requisition as APPROVED
         const approvedRecord = await tx.stockRequisition.update({
           where: { id: reqRecord.id },
           data: {
@@ -430,15 +407,154 @@ export async function PUT(req: NextRequest) {
         return approvedRecord;
       });
 
-      // Notify Staff
+      // Notify Staff that request is approved to buy (waiting for stock recording after purchase)
       try {
         await prisma.systemNotification.create({
           data: {
             category: 'INVENTORY',
             type: 'STOCK_REQUISITION_APPROVED',
             severity: 'INFO',
-            title: `ใบขอเบิกซื้อ ${reqRecord.requisitionNumber} ได้รับการอนุมัติแล้ว`,
-            description: `ผู้ดูแลระบบได้อนุมัติงบซื้อและเพิ่มสต็อกเข้าหน้าร้าน ${reqRecord.store.name} เรียบร้อยแล้ว`,
+            title: `ใบขอเบิกซื้อ ${reqRecord.requisitionNumber} อนุมัติให้จัดซื้อแล้ว`,
+            description: `ผู้ดูแลระบบอนุมัติใบขอเบิกซื้อของร้าน ${reqRecord.store.name} แล้ว (เมื่อซื้อของเสร็จแล้ว แอดมินจะทำการตรวจรับและบันทึกเข้าสต็อก)`,
+            actionUrl: `/staff/stock-requests`,
+            actionLabel: 'ดูใบขอเบิก',
+            storeId: reqRecord.storeId,
+            storeName: reqRecord.store.name,
+            actorId: session.id,
+            actorName: session.name,
+          },
+        });
+      } catch (e) {
+        console.warn('Failed to notify staff:', e);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `อนุมัติใบขอเบิกซื้อเลขที่ ${reqRecord.requisitionNumber} เรียบร้อยแล้ว (รอบันทึกวัตถุดิบที่ซื้อจริงเข้าสต็อก)`,
+        requisition: result,
+      });
+    }
+
+    // ACTION 3: RECEIVE / RECORD INTO STOCK (Step 2: After store buys items, Admin edits actual items/quantities and records into stock!)
+    if (action === 'RECEIVE') {
+      if (reqRecord.status !== 'APPROVED') {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              reqRecord.status === 'COMPLETED'
+                ? 'ใบขอเบิกนี้ถูกบันทึกเข้าสต็อกเรียบร้อยแล้ว ไม่สามารถบันทึกซ้ำได้'
+                : 'ต้องอนุมัติใบขอเบิกก่อน จึงจะสามารถบันทึกวัตถุดิบเข้าสต็อกได้',
+          },
+          { status: 400 }
+        );
+      }
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return NextResponse.json(
+          { success: false, message: 'กรุณาระบุรายการวัตถุดิบที่ต้องการบันทึกเข้าสต็อกอย่างน้อย 1 รายการ' },
+          { status: 400 }
+        );
+      }
+
+      const destinationLabel = `บันทึกรับของที่ซื้อเข้าสต็อกร้าน: ${reqRecord.store.name} (@${reqRecord.store.username})`;
+
+      const result = await prisma.$transaction(async (tx) => {
+        // Track existing items by id
+        const existingMap = new Map(reqRecord.items.map((it) => [it.id, it]));
+        const incomingIds = new Set<number>();
+
+        for (const incoming of items) {
+          const itemId = incoming.id ? Number(incoming.id) : null;
+          const ingId = Number(incoming.ingredientId);
+          const receivedQty = Math.max(0, parseFloat(incoming.receivedQty) || 0);
+
+          if (!ingId) continue;
+
+          if (itemId && existingMap.has(itemId)) {
+            incomingIds.add(itemId);
+            await tx.stockRequisitionItem.update({
+              where: { id: itemId },
+              data: {
+                ingredientId: ingId,
+                receivedQty,
+              },
+            });
+          } else {
+            // New item added by Admin during stock recording
+            await tx.stockRequisitionItem.create({
+              data: {
+                requisitionId: reqRecord.id,
+                ingredientId: ingId,
+                requestedQty: 0,
+                approvedQty: receivedQty,
+                receivedQty,
+              },
+            });
+          }
+
+          if (receivedQty > 0) {
+            const updatedIng = await tx.ingredient.update({
+              where: { id: ingId },
+              data: {
+                currentStock: { increment: receivedQty },
+              },
+            });
+
+            const txNumber = `TX-REQ-${reqRecord.requisitionNumber}-${updatedIng.code}-${Date.now().toString().slice(-4)}-${Math.floor(10 + Math.random() * 89)}`;
+            await tx.stockTransaction.create({
+              data: {
+                transactionNumber: txNumber,
+                ingredientId: ingId,
+                type: TransactionType.PURCHASE_IN,
+                quantityIn: receivedQty,
+                quantityOut: 0,
+                balanceAfter: updatedIng.currentStock,
+                refType: 'PURCHASE_APPROVAL',
+                refId: reqRecord.requisitionNumber,
+                note: `${destinationLabel} • ตามใบขอเบิกซื้อ ${reqRecord.requisitionNumber}${receiveNote ? ' (' + receiveNote.trim() + ')' : reqRecord.reason ? ' (' + reqRecord.reason + ')' : ''} [STORE_ID:${reqRecord.storeId}]`,
+                createdById: reqRecord.storeId,
+              },
+            });
+          }
+        }
+
+        // For any existing item that was removed from the modal list by Admin, mark its receivedQty as 0 (not purchased)
+        for (const oldItem of reqRecord.items) {
+          if (!incomingIds.has(oldItem.id)) {
+            await tx.stockRequisitionItem.update({
+              where: { id: oldItem.id },
+              data: { receivedQty: 0 },
+            });
+          }
+        }
+
+        const completedRecord = await tx.stockRequisition.update({
+          where: { id: reqRecord.id },
+          data: {
+            status: 'COMPLETED',
+            receivedAt: new Date(),
+            receiveNote: receiveNote ? receiveNote.trim() : null,
+          },
+          include: {
+            items: { include: { ingredient: true } },
+            store: true,
+            approvedBy: true,
+          },
+        });
+
+        return completedRecord;
+      });
+
+      // Notify Staff that actual purchased items have been recorded into store stock
+      try {
+        await prisma.systemNotification.create({
+          data: {
+            category: 'INVENTORY',
+            type: 'STOCK_REQUISITION_COMPLETED',
+            severity: 'INFO',
+            title: `บันทึกวัตถุดิบเข้าสต็อกเรียบร้อย: ${reqRecord.requisitionNumber}`,
+            description: `ผู้ดูแลระบบได้ตรวจสอบและบันทึกวัตถุดิบที่ซื้อจริงเข้าสต็อกร้าน ${reqRecord.store.name} เรียบร้อยแล้ว`,
             actionUrl: `/staff/stock-requests`,
             actionLabel: 'ตรวจเช็คสต็อก',
             storeId: reqRecord.storeId,
@@ -453,13 +569,13 @@ export async function PUT(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: `อนุมัติเบิกซื้อและเพิ่มสต็อกเข้าหน้าร้าน "${reqRecord.store.name}" เรียบร้อยแล้ว`,
+        message: `บันทึกวัตถุดิบที่ซื้อจริงเข้าสต็อกร้าน "${reqRecord.store.name}" เรียบร้อยแล้ว`,
         requisition: result,
       });
     }
 
     return NextResponse.json(
-      { success: false, message: 'การดำเนินการไม่ถูกต้อง (action ต้องเป็น APPROVE หรือ REJECT)' },
+      { success: false, message: 'การดำเนินการไม่ถูกต้อง (action ต้องเป็น APPROVE, RECEIVE หรือ REJECT)' },
       { status: 400 }
     );
   } catch (error: any) {
