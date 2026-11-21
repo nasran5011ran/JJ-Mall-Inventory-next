@@ -166,9 +166,20 @@ export async function GET(req: NextRequest) {
     }
 
     const formattedProducts = visibleProducts.map((p) => {
-      if (!p.recipe?.items) return p;
+      const normalizedImage =
+        p.image && p.image.startsWith('/uploads/products/')
+          ? p.image.replace('/uploads/products/', '/api/uploads/products/')
+          : p.image;
+
+      if (!p.recipe?.items) {
+        return {
+          ...p,
+          image: normalizedImage,
+        };
+      }
       return {
         ...p,
+        image: normalizedImage,
         recipe: {
           ...p.recipe,
           items: p.recipe.items.map((item) => {
@@ -365,7 +376,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'เพิ่มสินค้าใหม่เรียบร้อยแล้ว',
-      product,
+      product: {
+        ...product,
+        image:
+          product.image && product.image.startsWith('/uploads/products/')
+            ? product.image.replace('/uploads/products/', '/api/uploads/products/')
+            : product.image,
+      },
     });
   } catch (error: any) {
     console.error('Error creating product:', error);

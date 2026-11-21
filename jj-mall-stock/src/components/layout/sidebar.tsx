@@ -41,40 +41,40 @@ export default function Sidebar({ userRole = 'ADMIN', isOpen, onClose }: Sidebar
     {
       title: 'ผู้บริหาร & สรุปภาพรวม',
       items: [
-        { href: '/dashboard', label: 'Dashboard ผู้บริหาร', icon: LayoutDashboard },
+        { href: '/admin/dashboard', label: 'Dashboard ผู้บริหาร', icon: LayoutDashboard },
       ],
     },
     {
       title: 'จัดการสินค้า & สูตรการผลิต (Admin)',
       items: [
-        { href: '/products', label: 'จัดการสินค้า & ราคา', icon: Package },
-        { href: '/ingredients', label: 'จัดการคลังวัตถุดิบ', icon: Layers },
-        { href: '/recipes', label: 'จัดการสูตรการผลิต (BOM)', icon: ChefHat },
+        { href: '/admin/products', label: 'จัดการสินค้า & ราคา', icon: Package },
+        { href: '/admin/ingredients', label: 'จัดการคลังวัตถุดิบ', icon: Layers },
+        { href: '/admin/recipes', label: 'จัดการสูตรการผลิต (BOM)', icon: ChefHat },
       ],
     },
     {
       title: 'งานคลัง & อนุมัติสต็อก',
       items: [
-        { href: '/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
+        { href: '/admin/stock-in', label: 'รับสินค้าเข้าคลัง (ซื้อเข้า)', icon: ArrowDownToLine },
         { href: '/admin/stock-out', label: 'เบิกจ่ายสินค้าไปหน้าร้าน', icon: ArrowUpFromLine },
-        { href: '/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
-        { href: '/stock-adjustments', label: 'อนุมัติใบขอปรับปรุงสต็อก', icon: FileEdit },
-        { href: '/stock-transactions', label: 'ประวัติเคลื่อนไหวสต็อก', icon: History },
+        { href: '/admin/stock-count', label: 'ตรวจนับสินค้าจริง', icon: ClipboardCheck },
+        { href: '/admin/stock-adjustments', label: 'อนุมัติใบขอปรับปรุงสต็อก', icon: FileEdit },
+        { href: '/admin/stock-transactions', label: 'ประวัติเคลื่อนไหวสต็อก', icon: History },
       ],
     },
     {
       title: 'รายงาน & การเงิน',
       items: [
-        { href: '/reports/sales', label: 'รายงานยอดขายประจำวัน', icon: TrendingUp },
-        { href: '/reports/stock', label: 'ตารางรายงานสต็อก (DoH)', icon: FileSpreadsheet },
-        { href: '/reports/ingredients', label: 'รายงานวัตถุดิบที่ใช้', icon: Wheat },
+        { href: '/admin/reports/sales', label: 'รายงานยอดขายประจำวัน', icon: TrendingUp },
+        { href: '/admin/reports/stock', label: 'ตารางรายงานสต็อก (DoH)', icon: FileSpreadsheet },
+        { href: '/admin/reports/ingredients', label: 'รายงานวัตถุดิบที่ใช้', icon: Wheat },
       ],
     },
     {
       title: 'ผู้ใช้งาน & ตั้งค่าระบบ',
       items: [
-        { href: '/users', label: 'จัดการผู้ใช้งานระบบ', icon: Users },
-        { href: '/settings', label: 'ตั้งค่าระบบ', icon: Settings },
+        { href: '/admin/users', label: 'จัดการผู้ใช้งานระบบ', icon: Users },
+        { href: '/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
       ],
     },
   ] : [
@@ -82,16 +82,16 @@ export default function Sidebar({ userRole = 'ADMIN', isOpen, onClose }: Sidebar
     {
       title: 'งานขายหน้าร้าน (งานหลัก)',
       items: [
-        { href: '/sales', label: 'ระบบขายสินค้าหน้าร้าน (POS)', icon: ShoppingCart },
-        { href: '/sales/history', label: 'ประวัติการขายของฉัน', icon: ShoppingBag },
+        { href: '/staff/sales', label: 'ระบบขายสินค้าหน้าร้าน (POS)', icon: ShoppingCart },
+        { href: '/staff/history', label: 'ประวัติการขายของฉัน', icon: ShoppingBag },
       ],
     },
     {
       title: 'สต็อกหน้าร้าน (ดูข้อมูล & ตรวจนับ)',
       items: [
-        { href: '/products', label: 'เช็คราคาสินค้า (ดูเท่านั้น)', icon: Package },
-        { href: '/stock-count', label: 'บันทึกตรวจนับสต็อกจริง', icon: ClipboardCheck },
-        { href: '/stock-adjustments', label: 'สร้างใบขอปรับปรุงสต็อก', icon: FileEdit },
+        { href: '/staff/products', label: 'เช็คราคาสินค้า', icon: Package },
+        { href: '/staff/stock-count', label: 'บันทึกตรวจนับสต็อกจริง', icon: ClipboardCheck },
+        { href: '/staff/stock-adjustments', label: 'สร้างใบขอปรับปรุงสต็อก', icon: FileEdit },
       ],
     },
   ];

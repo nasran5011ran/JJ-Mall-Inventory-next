@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "swr"],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/products/:filename",
+        destination: "/api/uploads/products/:filename",
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

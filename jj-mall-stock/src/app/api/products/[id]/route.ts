@@ -253,7 +253,13 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       message: 'อัปเดตข้อมูลสินค้าเรียบร้อยแล้ว',
-      product: updated,
+      product: {
+        ...updated,
+        image:
+          updated.image && updated.image.startsWith('/uploads/products/')
+            ? updated.image.replace('/uploads/products/', '/api/uploads/products/')
+            : updated.image,
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

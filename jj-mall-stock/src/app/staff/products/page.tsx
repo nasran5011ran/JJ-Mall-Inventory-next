@@ -511,12 +511,20 @@ export default function StaffProductsPage() {
                       {/* Product Image Thumbnail */}
                       <td className="py-2.5 px-4 text-center">
                         {p.image ? (
-                          <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shadow-2xs bg-slate-50 mx-auto flex items-center justify-center relative">
                             <img
-                              src={p.image}
+                              src={p.image.startsWith('/uploads/products/') ? p.image.replace('/uploads/products/', '/api/uploads/products/') : p.image}
                               alt={p.name}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
                             />
+                            <div className="hidden w-full h-full items-center justify-center text-slate-400 bg-slate-100">
+                              <Coffee className="w-5 h-5 text-slate-300" />
+                            </div>
                           </div>
                         ) : (
                           <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mx-auto">

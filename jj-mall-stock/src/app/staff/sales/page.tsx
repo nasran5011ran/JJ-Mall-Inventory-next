@@ -761,13 +761,24 @@ export default function SalesPage() {
                       {/* Product Image Thumbnail - Uniform Equal Size (aspect-square) */}
                       <div className="w-full aspect-square mb-2.5 rounded-xl overflow-hidden bg-slate-50 border border-slate-100 flex items-center justify-center relative">
                         {prod.image ? (
-                          <img
-                            src={prod.image}
-                            alt={prod.name}
-                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ${
-                              isOutOfStock ? 'opacity-70 grayscale-[30%]' : ''
-                            }`}
-                          />
+                          <>
+                            <img
+                              src={prod.image.startsWith('/uploads/products/') ? prod.image.replace('/uploads/products/', '/api/uploads/products/') : prod.image}
+                              alt={prod.name}
+                              className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 ${
+                                isOutOfStock ? 'opacity-70 grayscale-[30%]' : ''
+                              }`}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'flex';
+                              }}
+                            />
+                            <div className="hidden w-full h-full flex-col items-center justify-center gap-1 text-slate-300 bg-slate-50/80">
+                              <Coffee className="w-8 h-8 text-slate-300" />
+                              <span className="text-[10px] text-slate-400 font-medium">ไม่มีรูปภาพ</span>
+                            </div>
+                          </>
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-slate-300 bg-slate-50/80">
                             <Coffee className="w-8 h-8 text-slate-300" />

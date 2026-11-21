@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const filePath = path.join(uploadDir, filename);
     fs.writeFileSync(filePath, buffer);
 
-    const publicUrl = `/uploads/products/${filename}`;
+    const publicUrl = `/api/uploads/products/${filename}`;
 
     return NextResponse.json({
       success: true,
